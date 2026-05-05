@@ -40,6 +40,19 @@ function App() {
     calendar: t.showCalendar, weather: t.showWeather, alarms: t.showAlarms, tv: t.showTv,
   };
 
+  // Hydration splash — avoids a flash of <AuthScreen/> when a cached
+  // Supabase session is being resolved.
+  if (auth.loading) {
+    return (
+      <div style={{
+        width:'100vw', height:'100vh', display:'grid', placeItems:'center',
+        background:'#161310', color:'#e87f4a',
+        fontFamily:'"Newsreader","Iowan Old Style",Georgia,serif',
+        fontStyle:'italic', fontSize:28, letterSpacing:'.01em',
+      }}>HomeCNTRD</div>
+    );
+  }
+
   // Auth gate
   if (!auth.user) {
     return (
@@ -104,4 +117,5 @@ const HEARTH_MAP = { tangerine:'#e87f4a', terracotta:'#c96442', ochre:'#b8843e',
 function hearthSwatch(name) { return HEARTH_MAP[name] || HEARTH_MAP.tangerine; }
 function hearthFromSwatch(hex) { return Object.entries(HEARTH_MAP).find(([,v]) => v === hex)?.[0] || 'tangerine'; }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+// Mount happens in main.jsx (after window.React / window.ReactDOM are set).
+window.App = App;

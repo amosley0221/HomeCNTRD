@@ -1,21 +1,28 @@
-// auth.jsx — Mock cloud account + email/password signup/login.
-// Persists in localStorage under 'homecntrd_account_v1'. The "cloud" is
-// simulated — we treat localStorage as the source of truth for the user's
-// profile, integrations, layout preferences, and connected sessions.
+// auth.jsx — Real Supabase-backed auth with offline-first profile sync.
+//
+// Public surface (unchanged from the prototype, so view files keep working):
+//   window.useAuth()            → { user, busy, err, doSignup, doLogin,
+//                                   doLogout, patchUser, setErr }
+//   window.AuthScreen           → React component
+//   window.validatePassword(pw) → string[] of unmet requirements
+//   window.validateEmail(s)     → boolean
+//
+// Storage:
+//   - Supabase Auth handles session tokens (persisted in localStorage under
+//     'homecntrd_supabase_auth' — see lib/supabase.js).
+//   - The profile row (firstName, plan, layout, integrations, members,
+//     sessions, privacy) lives in the public.profiles table and is mirrored
+//     into IndexedDB via lib/sync.js so the PWA boots offline and queues
+//     writes for replay when the network returns.
 
-const ACCOUNT_KEY = 'homecntrd_account_v1';
-const SESSION_KEY = 'homecntrd_session_v1';
+import { supabase } from './lib/supabase.js';
+import {
+  readCache, writeCache, clearCache,
+  fetchProfile, upsertProfile, drainQueue,
+} from './lib/sync.js';
 
-function loadAccount() {
-  try { return JSON.parse(localStorage.getItem(ACCOUNT_KEY) || 'null'); } catch { return null; }
-}
-function saveAccount(a) { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(a)); }
-function loadSession() {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
-}
-function saveSession(s) { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); }
+// ── Validation ──────────────────────────────────────────────────────────────
 
-// Validation rule per user spec
 function validatePassword(pw) {
   const errs = [];
   if (pw.length < 8) errs.push('At least 8 characters');
@@ -26,88 +33,7 @@ function validatePassword(pw) {
 }
 function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
-// Demo account so we have something to show
-function ensureDemoAccount() {
-  const a = loadAccount();
-  if (a && a.users) return a;
-  const demo = {
-    users: {
-      'frances@home.com': {
-        firstName: 'Frances',
-        email: 'frances@home.com',
-        password: 'Hearth1!',          // demo only — never do this in real apps
-        createdAt: '2024-05-12',
-        plan: 'plus-annual',
-        layout: null,                  // home tile layout (set by app)
-        integrations: null,            // (set by app — mirrors registry)
-        sessions: [
-          { id:'s1', device:'iPhone 16 Pro', os:'iOS 18.2', loc:'Bernal Heights, SF', ip:'73.140.•.•',  last:'now',          current:true  },
-          { id:'s2', device:'MacBook Pro',   os:'macOS 15.1', loc:'Bernal Heights, SF', ip:'73.140.•.•', last:'2 hours ago',  current:false },
-          { id:'s3', device:'Living Room display', os:'HomeCNTRD Hub', loc:'Willowbrook', ip:'192.168.•.•', last:'always',  current:false },
-          { id:'s4', device:'iPad Air',      os:'iPadOS 18',  loc:'Bernal Heights, SF', ip:'73.140.•.•', last:'yesterday',   current:false },
-        ],
-        members: [
-          { name:'Jamie Willows',  role:'Member',     email:'jamie.w@willowstudio.com',  perms:'Full access' },
-          { name:'Mateo Willows',  role:'Member',     email:'mateo.w@willowstudio.com',  perms:'Lights & music · no cameras' },
-          { name:'Cleaner · Guest', role:'Guest',     email:'temp · door code 4821',     perms:'Tue 9–11 AM only' },
-        ],
-        privacy: {
-          cameraIndoorRecording: false,
-          shareWithApple:        true,
-          shareWithGoogle:       false,
-          analytics:             true,
-          voiceTraining:         false,
-        },
-      },
-    },
-  };
-  saveAccount(demo);
-  return demo;
-}
-
-// Simulated network latency for that "cloud sync" feel
-const fakeDelay = (ms = 600) => new Promise(r => setTimeout(r, ms));
-
-async function signup({ firstName, email, password }) {
-  await fakeDelay(900);
-  ensureDemoAccount();
-  const a = loadAccount();
-  if (!firstName || !firstName.trim()) throw new Error('First name is required');
-  if (!validateEmail(email)) throw new Error('That email looks off — try again');
-  const pwErrs = validatePassword(password);
-  if (pwErrs.length) throw new Error('Password needs: ' + pwErrs.join(', '));
-  const norm = email.trim().toLowerCase();
-  if (a.users[norm]) throw new Error('An account already exists for that email');
-  a.users[norm] = {
-    firstName: firstName.trim(),
-    email: norm,
-    password,
-    createdAt: new Date().toISOString().slice(0,10),
-    plan: 'free',
-    layout: null,
-    integrations: null,
-    sessions: [{ id:'s1', device: detectDevice(), os: detectOS(), loc:'Current location', ip:'·.·.·.·', last:'now', current:true }],
-    members: [],
-    privacy: { cameraIndoorRecording: false, shareWithApple: false, shareWithGoogle: false, analytics: true, voiceTraining: false },
-  };
-  saveAccount(a);
-  saveSession({ email: norm, since: Date.now() });
-  return a.users[norm];
-}
-
-async function login({ email, password }) {
-  await fakeDelay(700);
-  ensureDemoAccount();
-  const a = loadAccount();
-  const norm = (email || '').trim().toLowerCase();
-  const u = a.users[norm];
-  if (!u) throw new Error("We couldn't find an account for that email");
-  if (u.password !== password) throw new Error('That password doesn\'t match');
-  saveSession({ email: norm, since: Date.now() });
-  return u;
-}
-
-function logout() { saveSession(null); }
+// ── Device detection (used to label the current session entry) ────────────
 
 function detectDevice() {
   const ua = navigator.userAgent;
@@ -120,47 +46,198 @@ function detectDevice() {
 }
 function detectOS() {
   const ua = navigator.userAgent;
-  if (/Mac OS X (\d+[._]\d+)/.test(ua)) return 'macOS';
+  if (/Mac OS X/.test(ua)) return 'macOS';
   if (/Windows NT/.test(ua)) return 'Windows';
   if (/Android/.test(ua)) return 'Android';
   if (/iPhone OS|iPad/.test(ua)) return 'iOS';
   return 'Web';
 }
 
-// React hook the app uses to gate the shell
+// View code reads `user.firstName`, `user.layout`, etc. Supabase rows use
+// snake_case. profileToUser/userToProfile bridge the two so views are
+// untouched.
+function profileToUser(profile, authEmail) {
+  return {
+    email: authEmail,
+    firstName: profile.first_name ?? '',
+    plan: profile.plan ?? 'free',
+    layout: profile.layout ?? null,
+    integrations: profile.integrations ?? null,
+    members: profile.members ?? [],
+    sessions: profile.sessions ?? [],
+    privacy: profile.privacy ?? {
+      cameraIndoorRecording: false, shareWithApple: false,
+      shareWithGoogle: false, analytics: true, voiceTraining: false,
+    },
+    createdAt: (profile.created_at || '').slice(0, 10),
+  };
+}
+function userToProfile(user) {
+  return {
+    first_name: user.firstName ?? '',
+    plan: user.plan ?? 'free',
+    layout: user.layout ?? null,
+    integrations: user.integrations ?? null,
+    members: user.members ?? [],
+    sessions: user.sessions ?? [],
+    privacy: user.privacy ?? {},
+  };
+}
+
+// Stamp this device into the user's "trusted devices" list on login. These
+// are advisory entries the Settings view lists/revokes — distinct from
+// Supabase's own session tokens.
+function withCurrentSession(user) {
+  const me = {
+    id: `s-${Date.now().toString(36)}`,
+    device: detectDevice(),
+    os: detectOS(),
+    loc: 'Current location',
+    ip: '·.·.·.·',
+    last: 'now',
+    current: true,
+  };
+  const others = (user.sessions || []).map(s => ({ ...s, current: false }));
+  return { ...user, sessions: [me, ...others] };
+}
+
+function humanizeAuthError(e) {
+  const m = (e?.message || '').toLowerCase();
+  if (m.includes('invalid login')) return "We couldn't sign you in — check your email and password";
+  if (m.includes('user already registered')) return 'An account already exists for that email';
+  if (m.includes('email not confirmed')) return 'Check your inbox to confirm your email, then sign in';
+  if (m.includes('email rate limit')) return 'Too many attempts — try again in a minute';
+  return e?.message || 'Something went wrong';
+}
+
+// ── React hook ──────────────────────────────────────────────────────────────
+
 function useAuth() {
-  const [user, setUser] = React.useState(() => {
-    const s = loadSession();
-    if (!s) return null;
-    const a = loadAccount() || ensureDemoAccount();
-    return a.users[s.email] || null;
-  });
-  const [busy, setBusy] = React.useState(false);
+  const [user, setUser] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);     // an action is in flight
+  const [loading, setLoading] = React.useState(true); // initial session hydrate
   const [err, setErr] = React.useState(null);
 
-  const doSignup = async (data) => { setBusy(true); setErr(null); try { const u = await signup(data); setUser(u); } catch(e){ setErr(e.message); } finally { setBusy(false); } };
-  const doLogin  = async (data) => { setBusy(true); setErr(null); try { const u = await login(data);  setUser(u); } catch(e){ setErr(e.message); } finally { setBusy(false); } };
-  const doLogout = () => { logout(); setUser(null); };
+  React.useEffect(() => {
+    let alive = true;
 
-  // Patch the user record (and persist) — used by all of the rest of the app
-  // for layout, integrations, members, privacy etc.
+    async function hydrate(session) {
+      if (!session?.user) {
+        if (alive) { setUser(null); setLoading(false); }
+        return;
+      }
+      const authUser = session.user;
+
+      // Show cached profile immediately so an offline boot has something
+      // to render.
+      const cached = await readCache(authUser.id);
+      if (alive && cached) setUser(profileToUser(cached, authUser.email));
+
+      // Replay any patches captured while offline before reload.
+      drainQueue();
+
+      // Refresh from Supabase if online.
+      if (navigator.onLine !== false) {
+        try {
+          let profile = await fetchProfile(authUser.id);
+          if (!profile) {
+            const { data, error } = await supabase
+              .from('profiles')
+              .insert({ id: authUser.id, first_name: authUser.user_metadata?.first_name || '' })
+              .select()
+              .single();
+            if (error) throw error;
+            profile = data;
+          }
+          await writeCache(authUser.id, profile);
+          if (alive) {
+            const u = withCurrentSession(profileToUser(profile, authUser.email));
+            setUser(u);
+            // Persist the freshly stamped current-session entry.
+            upsertProfile(authUser.id, { sessions: u.sessions });
+          }
+        } catch (e) {
+          if (!cached) setErr(e.message || 'Could not load your profile');
+        }
+      }
+
+      if (alive) setLoading(false);
+    }
+
+    supabase.auth.getSession().then(({ data }) => hydrate(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => hydrate(session));
+    return () => { alive = false; sub?.subscription?.unsubscribe?.(); };
+  }, []);
+
+  const doSignup = async ({ firstName, email, password }) => {
+    setBusy(true); setErr(null);
+    try {
+      if (!firstName || !firstName.trim()) throw new Error('First name is required');
+      if (!validateEmail(email)) throw new Error('That email looks off — try again');
+      const pwErrs = validatePassword(password);
+      if (pwErrs.length) throw new Error('Password needs: ' + pwErrs.join(', '));
+
+      const { error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: { data: { first_name: firstName.trim() } },
+      });
+      if (error) throw error;
+      // onAuthStateChange will hydrate. If email confirmation is on, the
+      // user lands back on the auth screen until they confirm.
+    } catch (e) {
+      setErr(humanizeAuthError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doLogin = async ({ email, password }) => {
+    setBusy(true); setErr(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: (email || '').trim().toLowerCase(),
+        password,
+      });
+      if (error) throw error;
+    } catch (e) {
+      setErr(humanizeAuthError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doLogout = async () => {
+    const { data } = await supabase.auth.getUser();
+    const id = data.user?.id;
+    await supabase.auth.signOut();
+    if (id) clearCache(id);
+    setUser(null);
+  };
+
+  // Optimistic patch: update React state immediately, mirror to IDB cache,
+  // queue an upsert to Supabase. Same call signature as the prototype.
   const patchUser = (patch) => {
     setUser(prev => {
       if (!prev) return prev;
       const next = typeof patch === 'function' ? patch(prev) : { ...prev, ...patch };
-      const a = loadAccount();
-      a.users[next.email] = next;
-      saveAccount(a);
+      supabase.auth.getUser().then(({ data }) => {
+        const id = data.user?.id;
+        if (!id) return;
+        writeCache(id, { id, ...userToProfile(next), created_at: prev.createdAt });
+        upsertProfile(id, userToProfile(next));
+      });
       return next;
     });
   };
 
-  return { user, busy, err, doSignup, doLogin, doLogout, patchUser, setErr };
+  return { user, busy, loading, err, doSignup, doLogin, doLogout, patchUser, setErr };
 }
 
-// ── AUTH SCREEN ─────────────────────────────────────────────────────────
+// ── AUTH SCREEN (UI unchanged from the prototype) ──────────────────────────
+
 const AuthScreen = ({ onSignup, onLogin, busy, err, setErr }) => {
-  const [mode, setMode] = React.useState('login');   // login | signup
+  const [mode, setMode] = React.useState('login');
   const [firstName, setFirstName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -180,7 +257,6 @@ const AuthScreen = ({ onSignup, onLogin, busy, err, setErr }) => {
     else onLogin({ email, password });
   };
 
-  // Hardcoded warm tangerine palette (no shell yet)
   const accent = '#e87f4a';
   const bg = '#161310', surface = '#1f1b16', surface2 = '#27221c';
   const fg = '#f1ead9', fg2 = 'rgba(241,234,217,0.7)', fg3 = 'rgba(241,234,217,0.42)';
@@ -194,7 +270,6 @@ const AuthScreen = ({ onSignup, onLogin, busy, err, setErr }) => {
       background: `radial-gradient(ellipse at 80% 20%, oklch(36% 0.08 30 / 0.6), ${bg} 60%), ${bg}`,
       color: fg, fontFamily: body, display:'grid', placeItems:'center', padding:24, position:'relative', overflow:'hidden',
     }}>
-      {/* Ambient dots */}
       <svg style={{position:'absolute', inset:0, width:'100%', height:'100%', opacity:.4, pointerEvents:'none'}}>
         <defs>
           <radialGradient id="g1"><stop offset="0%" stopColor={accent} stopOpacity=".4"/><stop offset="100%" stopColor={accent} stopOpacity="0"/></radialGradient>
@@ -213,7 +288,6 @@ const AuthScreen = ({ onSignup, onLogin, busy, err, setErr }) => {
           <div style={{fontSize:12, color:fg3, marginTop:8, letterSpacing:'.06em'}}>YOUR HOME · EVERYWHERE YOU ARE</div>
         </div>
 
-        {/* Tabs */}
         <div style={{display:'flex', background:surface, borderRadius:10, padding:3, marginBottom:22, border:`.5px solid ${border}`}}>
           {[{id:'login', label:'Sign in'}, {id:'signup', label:'Create account'}].map(tab => (
             <button key={tab.id} type="button" onClick={() => { setMode(tab.id); setErr(null); }} style={{
@@ -278,12 +352,6 @@ const AuthScreen = ({ onSignup, onLogin, busy, err, setErr }) => {
             {busy && <span style={{width:14, height:14, border:'2px solid rgba(255,255,255,.5)', borderTopColor:'#fff', borderRadius:'50%', animation:'authSpin 0.8s linear infinite'}}/>}
             {busy ? (mode === 'signup' ? 'Creating account…' : 'Signing in…') : (mode === 'signup' ? 'Create account' : 'Sign in')}
           </button>
-
-          {mode === 'login' && (
-            <div style={{textAlign:'center', fontSize:11, color:fg3, marginTop:4, lineHeight:1.6}}>
-              Demo · sign in with <span style={{color:fg2}}>frances@home.com</span> / <span style={{color:fg2}}>Hearth1!</span>
-            </div>
-          )}
         </form>
 
         <div style={{textAlign:'center', fontSize:10.5, color:fg3, marginTop:22, lineHeight:1.6}}>
