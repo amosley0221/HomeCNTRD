@@ -52,7 +52,7 @@ Edit `/config/configuration.yaml` and add:
 ```yaml
 panel_custom:
   - name: homecntrd-panel
-    url_path: home
+    url_path: homecntrd
     sidebar_title: HomeCNTRD
     sidebar_icon: mdi:home-roof
     module_url: /local/homecntrd.js
