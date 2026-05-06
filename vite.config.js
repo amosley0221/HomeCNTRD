@@ -24,10 +24,10 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     minify: 'esbuild',
-    // Sourcemap off for the shipped bundle: the .map file ends up bigger
-    // than the bundle itself and HA's frontend logs a confusing 404 for it
-    // every page load. Local dev rebuilds can flip this back on.
-    sourcemap: false,
+    // Sourcemaps on: the .map file is bigger than the bundle, but the
+    // alternative is reading minified stack traces, which is brutal when
+    // debugging from a phone. Worth the extra ~2 MB on disk.
+    sourcemap: true,
     lib: {
       entry: path.resolve(__dirname, 'src/ha-panel.jsx'),
       formats: ['es'],
@@ -38,6 +38,13 @@ export default defineConfig({
         // Inline everything into the single homecntrd.js so HA only has to
         // serve one file. React is bundled in.
         inlineDynamicImports: true,
+        // Banner runs at the very top of the emitted bundle, before any
+        // module-level code. This catches bare `process` references that
+        // the `define` step doesn't (some npm packages reference `process`
+        // wholesale, not just `process.env.NODE_ENV`). Without this, React
+        // throws `process is not defined` at module-load time and the
+        // panel never renders.
+        banner: 'if(typeof globalThis!=="undefined"&&typeof globalThis.process==="undefined"){globalThis.process={env:{NODE_ENV:"production"}};}',
       },
     },
   },

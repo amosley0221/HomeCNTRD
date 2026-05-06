@@ -1,3 +1,4 @@
+typeof globalThis < "u" && typeof globalThis.process > "u" && (globalThis.process = { env: { NODE_ENV: "production" } });
 function Ac(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
 }
@@ -7881,7 +7882,9 @@ const oo = [
     }
   );
 }, og = ({ ctx: e }) => {
-  const { p: t, fonts: n, state: i, setState: o, room: l, setPage: s } = e, a = i.speakers.find((u) => u.room === l) || i.speakers[0], c = window.trackById(a.trackId), d = () => o((u) => ({ ...u, speakers: u.speakers.map((f) => f.id === a.id ? { ...f, playing: !a.playing } : f) }));
+  const { p: t, fonts: n, state: i, setState: o, room: l, setPage: s } = e, a = i.speakers.find((u) => u.room === l) || i.speakers[0];
+  if (!a) return null;
+  const c = window.trackById(a.trackId), d = () => o((u) => ({ ...u, speakers: u.speakers.map((f) => f.id === a.id ? { ...f, playing: !a.playing } : f) }));
   return /* @__PURE__ */ r.jsx(
     window.Section,
     {
@@ -10734,3 +10737,4 @@ customElements.get("homecntrd-panel") || customElements.define("homecntrd-panel"
 export {
   Dc as HassContext
 };
+//# sourceMappingURL=homecntrd.js.map

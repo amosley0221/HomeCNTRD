@@ -208,6 +208,7 @@ const LightsSection = ({ ctx }) => {
 const MusicSection = ({ ctx }) => {
   const { p, fonts, state, setState, room, setPage } = ctx;
   const speaker = state.speakers.find(s => s.room === room) || state.speakers[0];
+  if (!speaker) return null; // no media players known to HA yet → hide the section
   const track = window.trackById(speaker.trackId);
   const togglePlay = () => setState(s => ({...s, speakers: s.speakers.map(sp => sp.id === speaker.id ? {...sp, playing: !speaker.playing} : sp)}));
   return (
