@@ -76,16 +76,16 @@ class HomeCNTRDPanel extends HTMLElement {
   connectedCallback() {
     if (this._mount) return;
     // Custom elements default to display:inline with no intrinsic size.
-    // Force the host to fill the panel area HA gives us, otherwise the
-    // React tree (which uses height:100%) renders into a 0-pixel box.
+    // Force the host to fill the panel area HA gives us, but stay in
+    // normal flow (no position:absolute) so HA's frontend layout can
+    // place us correctly to the right of the sidebar.
     this.style.cssText = [
       'display:block',
-      'position:absolute',
-      'inset:0',
       'width:100%',
       'height:100%',
       'overflow:hidden',
       'background:#161310',
+      'box-sizing:border-box',
     ].join(';');
 
     this._mount = document.createElement('div');

@@ -10706,12 +10706,11 @@ class Jg extends HTMLElement {
   connectedCallback() {
     this._mount || (this.style.cssText = [
       "display:block",
-      "position:absolute",
-      "inset:0",
       "width:100%",
       "height:100%",
       "overflow:hidden",
-      "background:#161310"
+      "background:#161310",
+      "box-sizing:border-box"
     ].join(";"), this._mount = document.createElement("div"), this._mount.style.cssText = "width:100%;height:100%;display:block;background:#161310", this.appendChild(this._mount), this._mount.innerHTML = '<div style="width:100%;height:100%;display:grid;place-items:center;color:#e87f4a;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:28px;letter-spacing:.01em;">HomeCNTRD</div>', this._root = Sc(this._mount), this._render());
   }
   disconnectedCallback() {
