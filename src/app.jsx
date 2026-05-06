@@ -21,6 +21,54 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showTv": true
 }/*EDITMODE-END*/;
 
+// Catches render errors inside its subtree and shows them on-screen rather
+// than letting the page go white. Critical for debugging from a phone where
+// DevTools isn't available.
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('[boundary]', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          width:'100vw', height:'100vh', display:'grid', placeItems:'center',
+          background:'#161310', color:'#f1ead9',
+          fontFamily:'"Inter", system-ui, sans-serif',
+          padding:24, textAlign:'left', overflow:'auto',
+        }}>
+          <div style={{maxWidth:520, width:'100%'}}>
+            <div style={{
+              fontFamily:'"Newsreader", Georgia, serif', fontStyle:'italic',
+              fontSize:28, color:'#e87f4a', marginBottom:16, textAlign:'center',
+            }}>HomeCNTRD</div>
+            <div style={{
+              padding:16, fontSize:13, color:'#ec8b78',
+              background:'rgba(217,100,80,.08)', border:'.5px solid rgba(217,100,80,.4)',
+              borderRadius:8, lineHeight:1.5, whiteSpace:'pre-wrap', wordBreak:'break-word',
+            }}>
+              <div style={{fontWeight:600, marginBottom:8, color:'#f1ead9'}}>Render error</div>
+              {String(this.state.error?.message || this.state.error)}
+              {this.state.error?.stack && (
+                <details style={{marginTop:12, fontSize:11, color:'rgba(241,234,217,0.6)'}}>
+                  <summary style={{cursor:'pointer'}}>Stack</summary>
+                  <pre style={{fontSize:10, overflowX:'auto', marginTop:6}}>{this.state.error.stack}</pre>
+                </details>
+              )}
+            </div>
+            <button onClick={() => this.setState({ error: null })} style={{
+              marginTop:16, padding:'10px 16px', borderRadius:8, border:0,
+              background:'#e87f4a', color:'#fff', fontSize:13, cursor:'pointer',
+              fontFamily:'inherit',
+            }}>Try again</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function useNarrow() {
   const [narrow, setNarrow] = React.useState(() => window.innerWidth < 760);
   React.useEffect(() => {
@@ -36,13 +84,33 @@ function App() {
   const auth = window.useAuth();
   const narrow = useNarrow();
   const haConn = window.useHomeAssistantConnect(auth.user, auth.patchUser);
+  const [bootError, setBootError] = React.useState(null);
+
+  // Surface uncaught render errors on-screen so we can debug from a phone
+  // without DevTools. Listens for global error + unhandledrejection events.
+  React.useEffect(() => {
+    const onError = (e) => setBootError(e?.error?.message || e?.message || 'Unknown error');
+    const onRejection = (e) => setBootError(e?.reason?.message || String(e?.reason) || 'Unhandled promise rejection');
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, []);
 
   // (Re)initialize the HA WebSocket client whenever the user has a URL+token.
+  // Wrap in try/catch so a malformed URL or transient WS error doesn't take
+  // down the whole app.
   React.useEffect(() => {
-    if (auth.user?.ha_url && auth.user?.ha_token) {
-      setupHAClient({ url: auth.user.ha_url, token: auth.user.ha_token });
-    } else {
-      teardownHAClient();
+    try {
+      if (auth.user?.ha_url && auth.user?.ha_token) {
+        setupHAClient({ url: auth.user.ha_url, token: auth.user.ha_token });
+      } else {
+        teardownHAClient();
+      }
+    } catch (e) {
+      setBootError(`HA client setup failed: ${e.message}`);
     }
     return () => { /* keep the singleton on unmount; teardown happens on logout/reconnect */ };
   }, [auth.user?.ha_url, auth.user?.ha_token]);
@@ -54,7 +122,9 @@ function App() {
   };
 
   // Hydration splash — avoids a flash of <AuthScreen/> when a cached
-  // Supabase session is being resolved.
+  // Supabase session is being resolved. If anything has thrown by now,
+  // surface it directly under the wordmark so it's diagnosable from a
+  // phone without DevTools.
   if (auth.loading) {
     return (
       <div style={{
@@ -62,7 +132,23 @@ function App() {
         background:'#161310', color:'#e87f4a',
         fontFamily:'"Newsreader","Iowan Old Style",Georgia,serif',
         fontStyle:'italic', fontSize:28, letterSpacing:'.01em',
-      }}>HomeCNTRD</div>
+        padding:24, textAlign:'center',
+      }}>
+        <div>
+          <div>HomeCNTRD</div>
+          {bootError && (
+            <div style={{
+              marginTop:24, padding:12, maxWidth:420,
+              fontSize:12, fontFamily:'"Inter", system-ui, sans-serif',
+              fontStyle:'normal', color:'#ec8b78',
+              background:'rgba(217,100,80,.08)', border:'.5px solid rgba(217,100,80,.4)',
+              borderRadius:8, lineHeight:1.5,
+            }}>
+              {bootError}
+            </div>
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -94,16 +180,18 @@ function App() {
 
   return (
     <>
-      <div style={{ width:'100vw', height:'100vh' }}>
-        <window.HearthApp
-          dark={t.dark} density={t.density} accent={t.hearthAccent}
-          agentTone={t.agentTone} fontPair={t.fontPair}
-          bgImage={t.bgImage} visibleDevices={visibleDevices}
-          settings={t} setSetting={setTweak}
-          user={auth.user} patchUser={auth.patchUser} doLogout={auth.doLogout}
-          narrow={narrow}
-        />
-      </div>
+      <ErrorBoundary>
+        <div style={{ width:'100vw', height:'100vh' }}>
+          <window.HearthApp
+            dark={t.dark} density={t.density} accent={t.hearthAccent}
+            agentTone={t.agentTone} fontPair={t.fontPair}
+            bgImage={t.bgImage} visibleDevices={visibleDevices}
+            settings={t} setSetting={setTweak}
+            user={auth.user} patchUser={auth.patchUser} doLogout={auth.doLogout}
+            narrow={narrow}
+          />
+        </div>
+      </ErrorBoundary>
 
       <window.TweaksPanel>
         <window.TweakSection label="Mode" />

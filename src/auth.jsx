@@ -124,6 +124,15 @@ function useAuth() {
 
   React.useEffect(() => {
     let alive = true;
+    let safetyTimer = null;
+
+    // Safety net: never sit on the splash for more than 6 seconds. If the
+    // Supabase profile fetch hangs (network flake, slow DNS), drop to
+    // whatever we have (cached profile or null user) so the user can
+    // proceed.
+    safetyTimer = setTimeout(() => {
+      if (alive) setLoading(false);
+    }, 6000);
 
     async function hydrate(session) {
       if (!session?.user) {
@@ -133,9 +142,13 @@ function useAuth() {
       const authUser = session.user;
 
       // Show cached profile immediately so an offline boot has something
-      // to render.
+      // to render. Drop the splash too — we don't need to wait on the
+      // network refresh to render the app.
       const cached = await readCache(authUser.id);
-      if (alive && cached) setUser(profileToUser(cached, authUser.email));
+      if (alive && cached) {
+        setUser(profileToUser(cached, authUser.email));
+        setLoading(false);
+      }
 
       // Replay any patches captured while offline before reload.
       drainQueue();
@@ -170,7 +183,11 @@ function useAuth() {
 
     supabase.auth.getSession().then(({ data }) => hydrate(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => hydrate(session));
-    return () => { alive = false; sub?.subscription?.unsubscribe?.(); };
+    return () => {
+      alive = false;
+      clearTimeout(safetyTimer);
+      sub?.subscription?.unsubscribe?.();
+    };
   }, []);
 
   const doSignup = async ({ firstName, email, password }) => {
