@@ -1,4 +1,13 @@
 // ha-panel.jsx — Home Assistant custom panel entry.
+
+// Browser polyfill: some npm packages reference `process` even when they
+// claim to be browser-safe. Vite's `define` config replaces literal
+// `process.env.NODE_ENV` references at build time, but bare `process` reads
+// will still throw. This guarantees a benign object exists.
+if (typeof globalThis !== 'undefined' && typeof globalThis.process === 'undefined') {
+  globalThis.process = { env: { NODE_ENV: 'production' } };
+}
+
 //
 // Home Assistant loads this file as an ES module and instantiates the
 // <homecntrd-panel> custom element wherever the user navigates to the panel.

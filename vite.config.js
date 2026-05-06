@@ -9,12 +9,25 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react({ jsxRuntime: 'automatic' })],
+  // React's UMD/ESM build references process.env.NODE_ENV at runtime to pick
+  // dev vs prod assertions. In Vite's lib mode those references are NOT
+  // replaced by default (the assumption is downstream bundlers will do it).
+  // We're not bundled downstream — HA loads our file directly — so we have
+  // to inline the replacement ourselves. Without this, the browser hits a
+  // ReferenceError on `process` and the panel renders blank.
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    'process.env': JSON.stringify({ NODE_ENV: 'production' }),
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
     target: 'es2022',
     minify: 'esbuild',
-    sourcemap: true,
+    // Sourcemap off for the shipped bundle: the .map file ends up bigger
+    // than the bundle itself and HA's frontend logs a confusing 404 for it
+    // every page load. Local dev rebuilds can flip this back on.
+    sourcemap: false,
     lib: {
       entry: path.resolve(__dirname, 'src/ha-panel.jsx'),
       formats: ['es'],
