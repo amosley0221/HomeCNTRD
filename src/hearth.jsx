@@ -1,6 +1,11 @@
 // hearth.jsx — Shell: nav rail, page routing, agent. Building blocks live here too.
 
-const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibleDevices, settings, setSetting, user, patchUser, doLogout, narrow }) => {
+import HassContext from './lib/hass-context.js';
+import { askAgent } from './lib/ai.js';
+import { parseIntent } from './lib/intents.js';
+
+const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibleDevices, settings, setSetting, user, patchUser, doLogout, narrow, openBrowser }) => {
+  const hass = React.useContext(HassContext);
   const [state, setState] = window.useHomeState();
   const [page, setPage] = React.useState('home');           // home | music | cameras | calendar | car | garage | devices | settings
   const [room, setRoom] = React.useState('living');
@@ -8,7 +13,7 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
   const [unread, setUnread] = React.useState(0);
   const [thinking, setThinking] = React.useState(false);
   const [messages, setMessages] = React.useState([
-    { who: 'agent', text: "Evening, Frances. The house is settled — kitchen lights at 90, a couple lamps in the living room. Want me to start dinner mode?", t: '7:38 PM' }
+    { who: 'agent', text: `Hi ${user?.firstName || 'there'} — ask me anything about your home, or tell me to do something. Try "set the mood for dinner" or "open Esfand on Twitch".`, t: 'now' }
   ]);
   const [draft, setDraft] = React.useState('');
 
@@ -21,9 +26,37 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
     const userMsg = { who: 'user', text, t: 'now' };
     setMessages(m => [...m, userMsg]);
     setDraft('');
+
+    // Local intent parser first — catches "open Esfand on Twitch" /
+    // "watch X on YouTube" type commands without a round-trip to the LLM,
+    // and routes URL intents into the embedded browser overlay (handled
+    // by app.jsx via the openBrowser prop).
+    const intent = parseIntent(text);
+    if (intent?.type === 'open_url' && openBrowser) {
+      openBrowser(intent.url, intent.label);
+      setMessages(m => [...m, { who: 'agent', text: `Opening ${intent.label || intent.url}.`, t: 'now' }]);
+      if (!agentOpen) setUnread(u => u + 1);
+      return;
+    }
+    if (intent?.type === 'speech') {
+      setMessages(m => [...m, { who: 'agent', text: intent.text, t: 'now' }]);
+      if (!agentOpen) setUnread(u => u + 1);
+      return;
+    }
+
     setThinking(true);
-    const cannedReply = window.runAgent(text, state, setState);
-    const reply = await window.callClaude(text, [...messages, userMsg], agentTone, cannedReply);
+
+    // Try HA's configured conversation agent (real LLM if the user has
+    // one set up under Settings → Voice Assistants). Falls back to the
+    // prototype's regex parser when HA returns nothing.
+    let reply = null;
+    if (hass) {
+      const ai = await askAgent(hass, text);
+      reply = ai?.speech || null;
+    }
+    if (!reply) reply = window.runAgent(text, state, setState);
+    if (!reply) reply = "I'm here, but no conversation agent is configured yet — set one up in HA → Settings → Voice Assistants and I'll get smarter.";
+
     setThinking(false);
     setMessages(m => [...m, { who: 'agent', text: reply, t: 'now' }]);
     if (!agentOpen) setUnread(u => u + 1);
@@ -59,8 +92,9 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
         {narrow && <BottomNav ctx={ctx} />}
       </div>
       <window.NowPlayingBar ctx={ctx} />
-      {/* Old prototype chat bubble removed — replaced by the floating
-          AIDot mounted from app.jsx, which actually does voice + LLM. */}
+      <AgentBubble ctx={ctx} open={agentOpen} setOpen={setAgentOpen} unread={unread}
+        messages={messages} thinking={thinking} draft={draft} setDraft={setDraft}
+        send={send} openAgent={openAgent} agentTone={agentTone} />
     </div>
   );
 };

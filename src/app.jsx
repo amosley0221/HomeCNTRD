@@ -5,7 +5,6 @@
 // inside a view shows on-screen instead of going white.
 
 import React from 'react';
-import AIDot from './components/AIDot.jsx';
 import BrowserView from './components/BrowserView.jsx';
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -133,23 +132,17 @@ function App({ hass, narrow, panel }) {
           settings={t} setSetting={setTweak}
           user={userMerged} patchUser={patchUser} doLogout={doLogout}
           narrow={!!narrow}
+          openBrowser={(url, label) => setBrowser({ url, label })}
         />
       </div>
 
-      {/* Embedded browser overlay — opened by the AI when user says
-          "open Esfand on Twitch" / "watch X on YouTube". */}
+      {/* Embedded browser overlay — opened from a chat command like
+          "open Esfand on Twitch" / "watch X on YouTube". The chat
+          itself lives inside HearthApp via <AgentBubble/>. */}
       <BrowserView
         url={browser?.url}
         label={browser?.label}
         onClose={() => setBrowser(null)}
-      />
-
-      {/* Persistent tap-to-talk button. Visible on every view. */}
-      <AIDot
-        hass={hass}
-        onOpenUrl={(url, label) => setBrowser({ url, label })}
-        onCloseBrowser={() => setBrowser(null)}
-        onNavigate={() => setBrowser(null)}
       />
 
       <window.TweaksPanel>

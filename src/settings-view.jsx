@@ -5,6 +5,10 @@ const SettingsView = ({ ctx }) => {
   // settings live on parent App via setTweak; here we expose them through a context prop
   const settings = ctx.settings || {};
   const setSetting = ctx.setSetting || (() => {});
+  // State-based section selection — the original scrollIntoView path was
+  // unreliable inside the HA panel's nested scroll containers, so we just
+  // show one section at a time and switch on click.
+  const [activeSection, setActiveSection] = React.useState('appearance');
 
   const accents = [
     { id:'tangerine',  name:'Tangerine',  hex:'#e87f4a' },
@@ -42,20 +46,27 @@ const SettingsView = ({ ctx }) => {
             { id:'home',       icon:'home',     label:'Household' },
             { id:'notifications', icon:'bell',  label:'Notifications' },
             { id:'account',    icon:'user',     label:'Account' },
-          ].map(s => (
-            <button key={s.id} onClick={() => document.getElementById(`setting-${s.id}`)?.scrollIntoView({behavior:'smooth', block:'start'})} style={{
-              display:'flex', alignItems:'center', gap:10, padding:'8px 12px', margin:'2px 4px',
-              borderRadius:7, border:0, background:'transparent', color:p.fg2, fontFamily:fonts.body, fontSize:13, cursor:'pointer', width:'calc(100% - 8px)', textAlign:'left'
-            }}>
-              <window.Icon name={s.icon} size={14} stroke={1.5}/>
-              <span style={{flex:1}}>{s.label}</span>
-            </button>
-          ))}
+          ].map(s => {
+            const isActive = activeSection === s.id;
+            return (
+              <button key={s.id} onClick={() => setActiveSection(s.id)} style={{
+                display:'flex', alignItems:'center', gap:10, padding:'8px 12px', margin:'2px 4px',
+                borderRadius:7, border:0,
+                background: isActive ? p.warm : 'transparent',
+                color: isActive ? p.accent : p.fg2,
+                fontWeight: isActive ? 500 : 400,
+                fontFamily:fonts.body, fontSize:13, cursor:'pointer', width:'calc(100% - 8px)', textAlign:'left'
+              }}>
+                <window.Icon name={s.icon} size={14} stroke={1.5}/>
+                <span style={{flex:1}}>{s.label}</span>
+              </button>
+            );
+          })}
         </window.Card>
 
         <div style={{display:'flex', flexDirection:'column', gap:dens.gap}}>
           {/* APPEARANCE */}
-          <window.Card p={p} id="setting-appearance" style={{padding:22}}>
+          {activeSection==='appearance' && <window.Card p={p} id="setting-appearance" style={{padding:22}}>
             <SettingHeader p={p} fonts={fonts} title="Appearance" sub="How HomeCNTRD looks on this device"/>
             <SettingRow p={p} fonts={fonts} label="Theme" desc="Light, dark, or follow system">
               <div style={{display:'flex', gap:8}}>
@@ -119,10 +130,10 @@ const SettingsView = ({ ctx }) => {
                 ))}
               </div>
             </SettingRow>
-          </window.Card>
+          </window.Card>}
 
           {/* AGENT */}
-          <window.Card p={p} id="setting-agent" style={{padding:22}}>
+          {activeSection==='agent' && <window.Card p={p} id="setting-agent" style={{padding:22}}>
             <SettingHeader p={p} fonts={fonts} title="Agent" sub="How HomeCNTRD speaks to you"/>
             <SettingRow p={p} fonts={fonts} label="Personality" desc="Persona used when chatting and reading status">
               <div style={{display:'flex', flexDirection:'column', gap:8}}>
@@ -152,10 +163,10 @@ const SettingsView = ({ ctx }) => {
             <SettingRow p={p} fonts={fonts} label="Suggestions on home" desc="Show suggested commands when you open the agent" inline>
               <window.Toggle p={p} on={settings.suggestions !== false} onChange={(v) => setSetting('suggestions', v)}/>
             </SettingRow>
-          </window.Card>
+          </window.Card>}
 
           {/* DEVICES */}
-          <window.Card p={p} id="setting-devices" style={{padding:22}}>
+          {activeSection==='devices' && <window.Card p={p} id="setting-devices" style={{padding:22}}>
             <SettingHeader p={p} fonts={fonts} title="Devices on home screen" sub="Choose which categories appear on the dashboard"/>
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
               {[
@@ -177,10 +188,10 @@ const SettingsView = ({ ctx }) => {
                 </div>
               ))}
             </div>
-          </window.Card>
+          </window.Card>}
 
           {/* HOUSEHOLD */}
-          <window.Card p={p} id="setting-home" style={{padding:22}}>
+          {activeSection==='home' && <window.Card p={p} id="setting-home" style={{padding:22}}>
             <SettingHeader p={p} fonts={fonts} title="Household" sub="People & places"/>
             <SettingRow p={p} fonts={fonts} label="Members">
               <div style={{display:'flex', flexDirection:'column', gap:6}}>
@@ -207,10 +218,10 @@ const SettingsView = ({ ctx }) => {
             <SettingRow p={p} fonts={fonts} label="Time zone" inline>
               <span style={{fontSize:13, color:p.fg2}}>Pacific · GMT−8</span>
             </SettingRow>
-          </window.Card>
+          </window.Card>}
 
           {/* NOTIFICATIONS */}
-          <window.Card p={p} id="setting-notifications" style={{padding:22}}>
+          {activeSection==='notifications' && <window.Card p={p} id="setting-notifications" style={{padding:22}}>
             <SettingHeader p={p} fonts={fonts} title="Notifications" sub="What HomeCNTRD chimes for"/>
             {[
               { k:'notifMotion',  name:'Motion at the front door',     desc:'Ring chime + push' },
@@ -228,10 +239,10 @@ const SettingsView = ({ ctx }) => {
                 <window.Toggle p={p} on={settings[n.k] !== false} onChange={(v) => setSetting(n.k, v)}/>
               </div>
             ))}
-          </window.Card>
+          </window.Card>}
 
           {/* ACCOUNT */}
-          <window.Card p={p} id="setting-account" style={{padding:22}}>
+          {activeSection==='account' && <window.Card p={p} id="setting-account" style={{padding:22}}>
             <SettingHeader p={p} fonts={fonts} title="Account" sub="HomeCNTRD account · sign-in"/>
             <div style={{display:'flex', alignItems:'center', gap:14, padding:'14px 16px', borderRadius:11, background:p.surface, border:`.5px solid ${p.border}`}}>
               <div style={{width:46, height:46, borderRadius:'50%', background:p.warm, color:p.accent, display:'grid', placeItems:'center', fontFamily:fonts.display, fontSize:22, fontWeight:500, flex:'none'}}>{(ctx.user?.firstName || 'F')[0]}</div>
@@ -299,7 +310,7 @@ const SettingsView = ({ ctx }) => {
             <div style={{display:'flex', justifyContent:'space-between', padding:'12px 0', borderTop:`.5px solid ${p.border}`, fontSize:12}}>
               <span style={{color:p.fg2}}>Version</span><span style={{color:p.fg3, fontVariantNumeric:'tabular-nums'}}>2.1.4 (1842)</span>
             </div>
-          </window.Card>
+          </window.Card>}
         </div>
       </div>
       <div style={{height:60}}/>
