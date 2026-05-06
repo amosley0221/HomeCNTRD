@@ -12,7 +12,10 @@ const PATTERNS = [
   // "open <name> on twitch" / "watch <name> on twitch"
   {
     re: /^(?:open|watch|put on|play|start|launch)\s+(.+?)(?:'s)?\s+(?:stream\s+)?on\s+twitch\b.*$/i,
-    handler: (m) => ({ type: 'open_url', label: `Esfand on Twitch`, url: embeds.twitch(m[1].trim()) }),
+    handler: (m) => {
+      const ch = m[1].trim();
+      return { type: 'open_url', label: `${ch} on Twitch`, url: embeds.twitch(ch) };
+    },
   },
   {
     re: /^(?:open|watch|launch)\s+twitch(?:\s+(?:stream\s+)?(?:for|of)\s+)?\s*(.+)?$/i,

@@ -23,7 +23,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showCalendar": true,
   "showWeather": true,
   "showAlarms": true,
-  "showTv": true
+  "showTv": true,
+  "ttsAgent": true
 }/*EDITMODE-END*/;
 
 class ErrorBoundary extends React.Component {
@@ -172,6 +173,8 @@ function App({ hass, narrow, panel }) {
             { value:'playful', label:'Playful (Pip)'      },
           ]}
           onChange={v => setTweak('agentTone', v)} />
+        <window.TweakToggle label="Speak responses" value={t.ttsAgent !== false}
+          onChange={v => setTweak('ttsAgent', v)} />
 
         <window.TweakSection label="Home Assistant" />
         <window.TweakButton onClick={() => window.location.assign('/config/integrations')}>

@@ -3,6 +3,7 @@
 import HassContext from './lib/hass-context.js';
 import { askAgent } from './lib/ai.js';
 import { parseIntent } from './lib/intents.js';
+import { speak as speakText, cancelSpeak } from './lib/voice.js';
 
 const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibleDevices, settings, setSetting, user, patchUser, doLogout, narrow, openBrowser }) => {
   const hass = React.useContext(HassContext);
@@ -21,25 +22,37 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
   const fonts = FONT_PAIRS[fontPair] || FONT_PAIRS.editorial;
   const dens = DENSITY[density] || DENSITY.regular;
 
+  // Spoken-response toggle so users can mute Jarvis from the Tweaks panel.
+  const ttsEnabled = settings?.ttsAgent !== false;
+
+  const announce = (text) => {
+    if (!ttsEnabled || !text) return;
+    cancelSpeak();
+    speakText(text, { rate: 1.0, pitch: 1.0 });
+  };
+
   const send = async (text) => {
     if (!text.trim()) return;
     const userMsg = { who: 'user', text, t: 'now' };
     setMessages(m => [...m, userMsg]);
     setDraft('');
 
-    // Local intent parser first — catches "open Esfand on Twitch" /
-    // "watch X on YouTube" type commands without a round-trip to the LLM,
-    // and routes URL intents into the embedded browser overlay (handled
-    // by app.jsx via the openBrowser prop).
+    // Local intent parser first — catches "open <X> on Twitch" /
+    // "watch <X> on YouTube" type commands without a round-trip to the
+    // LLM, and routes URL intents into the embedded browser overlay
+    // (handled by app.jsx via the openBrowser prop).
     const intent = parseIntent(text);
     if (intent?.type === 'open_url' && openBrowser) {
       openBrowser(intent.url, intent.label);
-      setMessages(m => [...m, { who: 'agent', text: `Opening ${intent.label || intent.url}.`, t: 'now' }]);
+      const reply = `Opening ${intent.label || intent.url}.`;
+      setMessages(m => [...m, { who: 'agent', text: reply, t: 'now' }]);
+      announce(reply);
       if (!agentOpen) setUnread(u => u + 1);
       return;
     }
     if (intent?.type === 'speech') {
       setMessages(m => [...m, { who: 'agent', text: intent.text, t: 'now' }]);
+      announce(intent.text);
       if (!agentOpen) setUnread(u => u + 1);
       return;
     }
@@ -59,6 +72,7 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
 
     setThinking(false);
     setMessages(m => [...m, { who: 'agent', text: reply, t: 'now' }]);
+    announce(reply);
     if (!agentOpen) setUnread(u => u + 1);
   };
   const openAgent = () => { setAgentOpen(true); setUnread(0); };
