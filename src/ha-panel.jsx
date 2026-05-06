@@ -24,6 +24,7 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.process === 'undefine
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import HassContext from './lib/hass-context.js';
 
 // Import every prototype module for side-effects (each registers components
 // onto window). Order matches the original index.html script tag order.
@@ -51,9 +52,7 @@ import './app.jsx';
 // React instance.
 window.React = React;
 
-// Single shared context so anything in the React tree can read hass without
-// prop-drilling through the HearthApp tree.
-export const HassContext = React.createContext(null);
+// Re-export for any module that wants the context off window (debug only).
 window.HassContext = HassContext;
 
 class HomeCNTRDPanel extends HTMLElement {

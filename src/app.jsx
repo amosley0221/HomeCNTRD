@@ -92,9 +92,12 @@ function App({ hass, narrow, panel }) {
         cameraIndoorRecording: false, shareWithApple: false,
         shareWithGoogle: false, analytics: false, voiceTraining: false,
       },
+      // Pulled from HA's own config so the sidebar wordmark reads the
+      // user's actual location instead of the prototype's "Willowbrook".
+      location: hass?.config?.location_name || 'Home',
       createdAt: '',
     };
-  }, [hass?.user]);
+  }, [hass?.user, hass?.config?.location_name]);
 
   // patchUser is a no-op now (preferences would persist to HA's user
   // storage in a follow-up). For now, just update local state so toggles

@@ -59,9 +59,8 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
         {narrow && <BottomNav ctx={ctx} />}
       </div>
       <window.NowPlayingBar ctx={ctx} />
-      <AgentBubble ctx={ctx} open={agentOpen} setOpen={setAgentOpen} unread={unread}
-        messages={messages} thinking={thinking} draft={draft} setDraft={setDraft}
-        send={send} openAgent={openAgent} agentTone={agentTone} />
+      {/* Old prototype chat bubble removed — replaced by the floating
+          AIDot mounted from app.jsx, which actually does voice + LLM. */}
     </div>
   );
 };
@@ -133,7 +132,9 @@ const Sidebar = ({ ctx }) => {
     <aside style={{borderRight:`.5px solid ${p.border}`, background: p.surface, display:'flex', flexDirection:'column', minHeight:0}}>
       <div style={{padding:'20px 22px 16px', borderBottom:`.5px solid ${p.border}`}}>
         <div style={{fontFamily:fonts.display, fontSize:22, fontStyle:'italic', color:p.accent, lineHeight:1}}>HomeCNTRD</div>
-        <div style={{fontSize:11, color:p.fg3, marginTop:6, letterSpacing:'.05em'}}>WILLOWBROOK · Tuesday</div>
+        <div style={{fontSize:11, color:p.fg3, marginTop:6, letterSpacing:'.05em'}}>
+          {(user?.location || 'HOME').toUpperCase()} · {new Date().toLocaleDateString([], { weekday: 'long' })}
+        </div>
       </div>
       <div style={{padding:'16px 22px 4px'}}>
         <div style={{fontFamily:fonts.display, fontSize:22, lineHeight:1.15, color:p.fg, fontWeight:500}}>Good evening,<br/><em style={{fontStyle:'italic', color:p.accent, fontWeight:400}}>{user?.firstName || 'there'}.</em></div>

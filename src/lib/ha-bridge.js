@@ -16,13 +16,7 @@
 //   alarm_control_panel.*                → state.ring
 
 import React from 'react';
-
-// Re-export the context defined in ha-panel for convenience. The panel
-// initialises it before importing this module so the import won't be
-// circular at runtime.
-const HassContext = (typeof window !== 'undefined' && window.HassContext)
-  ? window.HassContext
-  : React.createContext(null);
+import HassContext from './hass-context.js';
 
 function useHass() { return React.useContext(HassContext); }
 
