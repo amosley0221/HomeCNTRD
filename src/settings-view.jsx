@@ -338,7 +338,22 @@ const DiagnosticsPanel = ({ ctx }) => {
   }, []);
   const reversed = [...entries].reverse();
   const formatTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const colorFor = (status) => status === 'ok' ? '#7ed3a3' : status === 'error' ? '#ec8b78' : status === 'pending' ? p.fg3 : p.fg2;
+  const colorFor = (status, kind) => {
+    if (kind === 'info') return '#7da9d6';
+    if (kind === 'skip') return '#d6b97d';
+    if (status === 'ok') return '#7ed3a3';
+    if (status === 'error') return '#ec8b78';
+    if (status === 'pending') return p.fg3;
+    return p.fg2;
+  };
+  const symbolFor = (entry) => {
+    if (entry.kind === 'info') return 'ⓘ';
+    if (entry.kind === 'skip') return '⊘';
+    if (entry.status === 'ok') return '✓';
+    if (entry.status === 'error') return '✗';
+    if (entry.status === 'pending') return '·';
+    return '!';
+  };
 
   return (
     <window.Card p={p} id="setting-diagnostics" style={{padding:22}}>
@@ -361,13 +376,15 @@ const DiagnosticsPanel = ({ ctx }) => {
             background:'rgba(241,234,217,.03)', border:`.5px solid ${p.border}`,
             display:'flex', flexDirection:'column', gap:4,
           }}>
-            <div style={{display:'flex', alignItems:'center', gap:8, color:p.fg}}>
+            <div style={{display:'flex', alignItems:'flex-start', gap:8, color:p.fg}}>
               <span style={{color:p.fg3, fontVariantNumeric:'tabular-nums'}}>{formatTime(e.ts)}</span>
-              <span style={{color: colorFor(e.status), fontWeight:600}}>
-                {e.status === 'ok' ? '✓' : e.status === 'error' ? '✗' : e.status === 'pending' ? '·' : '!'}
+              <span style={{color: colorFor(e.status, e.kind), fontWeight:600}}>
+                {symbolFor(e)}
               </span>
-              <span style={{color:p.fg, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
-                {e.kind === 'skip' ? `skipped: ${e.message}` : `${e.domain}.${e.service}`}
+              <span style={{color:p.fg, flex:1, wordBreak:'break-word'}}>
+                {e.kind === 'skip' || e.kind === 'info'
+                  ? e.message
+                  : `${e.domain}.${e.service}`}
               </span>
             </div>
             {e.data && (

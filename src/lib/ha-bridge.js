@@ -336,21 +336,27 @@ function diffAndDispatch(prev, next, hass) {
   }
 
   // Climate
-  if (next.thermostat?.id && prev.thermostat) {
-    // If the thermostat is OFF and the user just dragged the target dial,
-    // most integrations (Nest in particular) silently no-op the
-    // set_temperature call — the value reverts as soon as the optimistic
-    // overlay clears. Bumping HVAC into 'auto' first means the new target
-    // actually sticks and the system actually responds.
-    if (prev.thermostat.target !== next.thermostat.target) {
-      const wasOff = prev.thermostat.mode === 'off' || prev.thermostat.mode === 'unavailable';
-      if (wasOff) {
-        call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: 'auto' });
+  if (prev.thermostat && (
+      prev.thermostat.target !== next.thermostat.target ||
+      prev.thermostat.mode !== next.thermostat.mode)) {
+    if (!next.thermostat?.id) {
+      diagPush({ ts: Date.now(), kind: 'skip',
+        message: `thermostat change ignored — no climate.* entity in HA. Add a climate integration (Nest/Ecobee/etc.) and the dial will start firing set_temperature.` });
+    } else {
+      // If the thermostat is OFF and the user just dragged the target dial,
+      // most integrations (Nest in particular) silently no-op the
+      // set_temperature call. Bumping HVAC into 'auto' first means the new
+      // target actually sticks.
+      if (prev.thermostat.target !== next.thermostat.target) {
+        const wasOff = prev.thermostat.mode === 'off' || prev.thermostat.mode === 'unavailable';
+        if (wasOff) {
+          call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: 'auto' });
+        }
+        call('climate', 'set_temperature', { entity_id: next.thermostat.id, temperature: next.thermostat.target });
       }
-      call('climate', 'set_temperature', { entity_id: next.thermostat.id, temperature: next.thermostat.target });
-    }
-    if (prev.thermostat.mode !== next.thermostat.mode) {
-      call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: next.thermostat.mode });
+      if (prev.thermostat.mode !== next.thermostat.mode) {
+        call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: next.thermostat.mode });
+      }
     }
   }
 
@@ -368,10 +374,16 @@ function diffAndDispatch(prev, next, hass) {
   }
 
   // Ring / alarm_control_panel
-  if (next.ring?.id && prev.ring && prev.ring.mode !== next.ring.mode) {
-    const map = { home: 'alarm_arm_home', away: 'alarm_arm_away', disarmed: 'alarm_disarm' };
-    const svc = map[next.ring.mode];
-    if (svc) call('alarm_control_panel', svc, { entity_id: next.ring.id });
+  if (prev.ring && prev.ring.mode !== next.ring.mode) {
+    if (!next.ring?.id) {
+      diagPush({ ts: Date.now(), kind: 'skip',
+        message: `Ring mode change ignored — no alarm_control_panel.* entity in HA. Add a Ring (or other alarm) integration and the tile will start firing alarm_arm_home / alarm_arm_away / alarm_disarm.` });
+    } else {
+      const map = { home: 'alarm_arm_home', away: 'alarm_arm_away', disarmed: 'alarm_disarm' };
+      const svc = map[next.ring.mode];
+      if (svc) call('alarm_control_panel', svc, { entity_id: next.ring.id });
+      else diagPush({ ts: Date.now(), kind: 'skip', message: `Unknown ring mode: ${next.ring.mode}` });
+    }
   }
 }
 
@@ -384,6 +396,27 @@ function useHomeStateHA() {
   // Memoise the translation so views only re-render when an entity that
   // matters to us actually changes.
   const baseState = React.useMemo(() => translate(states), [states]);
+
+  // Once-per-mount entity inventory dropped into diagnostics so the user
+  // can see at a glance what HA actually exposes (and which integrations
+  // are missing). Helps explain why some tiles 'don't work' — usually
+  // because no entity of that domain exists.
+  const inventoryLogged = React.useRef(false);
+  React.useEffect(() => {
+    if (inventoryLogged.current || !states) return;
+    inventoryLogged.current = true;
+    const counts = {};
+    for (const id of Object.keys(states)) {
+      const d = id.split('.')[0];
+      counts[d] = (counts[d] || 0) + 1;
+    }
+    const summary = Object.entries(counts).sort().map(([k, v]) => `${k}=${v}`).join(' ');
+    diagPush({ ts: Date.now(), kind: 'info', message: `HA entity inventory: ${summary || 'none'}` });
+    if (!counts.climate) diagPush({ ts: Date.now(), kind: 'info', message: '↑ no climate.* — thermostat tile will be read-only' });
+    if (!counts.alarm_control_panel) diagPush({ ts: Date.now(), kind: 'info', message: '↑ no alarm_control_panel.* — Ring tile will be read-only' });
+    if (!counts.cover) diagPush({ ts: Date.now(), kind: 'info', message: '↑ no cover.* — garage tile will be read-only' });
+    if (!counts.vacuum) diagPush({ ts: Date.now(), kind: 'info', message: '↑ no vacuum.* — vacuum tile will be read-only' });
+  }, [states]);
 
   // Local optimistic overlay so taps feel instant. Cleared shortly after so
   // hass becomes the source of truth again.
