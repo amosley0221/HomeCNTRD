@@ -66,9 +66,27 @@ class HomeCNTRDPanel extends HTMLElement {
 
   connectedCallback() {
     if (this._mount) return;
+    // Custom elements default to display:inline with no intrinsic size.
+    // Force the host to fill the panel area HA gives us, otherwise the
+    // React tree (which uses height:100%) renders into a 0-pixel box.
+    this.style.cssText = [
+      'display:block',
+      'position:absolute',
+      'inset:0',
+      'width:100%',
+      'height:100%',
+      'overflow:hidden',
+      'background:#161310',
+    ].join(';');
+
     this._mount = document.createElement('div');
     this._mount.style.cssText = 'width:100%;height:100%;display:block;background:#161310';
     this.appendChild(this._mount);
+
+    // Visible fallback so the user sees *something* while React mounts.
+    // Replaced by the React tree on first _render().
+    this._mount.innerHTML = '<div style="width:100%;height:100%;display:grid;place-items:center;color:#e87f4a;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:28px;letter-spacing:.01em;">HomeCNTRD</div>';
+
     this._root = createRoot(this._mount);
     this._render();
   }
