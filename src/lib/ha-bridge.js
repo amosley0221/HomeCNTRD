@@ -248,22 +248,45 @@ function defaults(out) {
 
 // ── setState diff → hass.callService ────────────────────────────────────────
 
+// In-memory ring buffer of the last N service calls + their results.
+// Lets the in-app Diagnostics section show what HA is actually doing
+// without forcing the user to open browser DevTools (impractical on a phone).
+const DIAG_MAX = 50;
+if (typeof window !== 'undefined' && !window.__hcDiag) window.__hcDiag = [];
+function diagPush(entry) {
+  if (typeof window === 'undefined') return;
+  const list = window.__hcDiag;
+  list.push(entry);
+  while (list.length > DIAG_MAX) list.shift();
+}
+
 function diffAndDispatch(prev, next, hass) {
   if (!hass || typeof hass.callService !== 'function') {
     console.warn('[ha-bridge] hass not available — skipping dispatch');
+    diagPush({ ts: Date.now(), kind: 'skip', message: 'hass not available' });
     return;
   }
   const call = (domain, service, data) => {
+    const entry = { ts: Date.now(), kind: 'call', domain, service, data, status: 'pending' };
+    diagPush(entry);
     console.log(`[ha-bridge] → ${domain}.${service}`, data);
     try {
       const p = hass.callService(domain, service, data);
       if (p && typeof p.then === 'function') {
         p.then(
-          () => console.log(`[ha-bridge] ✓ ${domain}.${service}`),
-          (err) => console.warn(`[ha-bridge] ✗ ${domain}.${service} rejected:`, err?.message || err, err),
+          () => { entry.status = 'ok'; console.log(`[ha-bridge] ✓ ${domain}.${service}`); },
+          (err) => {
+            entry.status = 'error';
+            entry.error = err?.message || String(err);
+            console.warn(`[ha-bridge] ✗ ${domain}.${service} rejected:`, err?.message || err, err);
+          },
         );
+      } else {
+        entry.status = 'ok';
       }
     } catch (e) {
+      entry.status = 'error';
+      entry.error = e?.message || String(e);
       console.warn(`[ha-bridge] ✗ ${domain}.${service} threw:`, e);
     }
   };

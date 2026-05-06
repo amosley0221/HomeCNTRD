@@ -46,6 +46,7 @@ const SettingsView = ({ ctx }) => {
             { id:'home',       icon:'home',     label:'Household' },
             { id:'notifications', icon:'bell',  label:'Notifications' },
             { id:'account',    icon:'user',     label:'Account' },
+            { id:'diagnostics', icon:'grid',    label:'Diagnostics' },
           ].map(s => {
             const isActive = activeSection === s.id;
             return (
@@ -311,10 +312,78 @@ const SettingsView = ({ ctx }) => {
               <span style={{color:p.fg2}}>Version</span><span style={{color:p.fg3, fontVariantNumeric:'tabular-nums'}}>2.1.4 (1842)</span>
             </div>
           </window.Card>}
+
+          {/* DIAGNOSTICS */}
+          {activeSection==='diagnostics' && <DiagnosticsPanel ctx={ctx} />}
         </div>
       </div>
       <div style={{height:60}}/>
     </>
+  );
+};
+
+// Live view of recent HA service calls. Polls the bridge's window.__hcDiag
+// ring buffer once per second and renders the most recent entries newest-
+// first so the user can see whether their tap actually fired anything and
+// whether HA accepted it. Phone-friendly debug path that doesn't require
+// browser DevTools.
+const DiagnosticsPanel = ({ ctx }) => {
+  const { p, fonts } = ctx;
+  const [entries, setEntries] = React.useState(() => (typeof window !== 'undefined' ? [...(window.__hcDiag || [])] : []));
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      if (typeof window !== 'undefined') setEntries([...(window.__hcDiag || [])]);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  const reversed = [...entries].reverse();
+  const formatTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const colorFor = (status) => status === 'ok' ? '#7ed3a3' : status === 'error' ? '#ec8b78' : status === 'pending' ? p.fg3 : p.fg2;
+
+  return (
+    <window.Card p={p} id="setting-diagnostics" style={{padding:22}}>
+      <SettingHeader p={p} fonts={fonts} title="Diagnostics" sub="Recent commands HomeCNTRD has sent to Home Assistant"/>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0 14px'}}>
+        <div style={{fontSize:12, color:p.fg2, fontFamily:fonts.body}}>
+          {entries.length === 0
+            ? 'No commands sent yet. Try toggling a light, dragging the thermostat, or tapping a Ring mode.'
+            : `${entries.length} of last ${50} (newest first, refreshes every second).`}
+        </div>
+        <button onClick={() => { if (typeof window !== 'undefined') window.__hcDiag = []; setEntries([]); }}
+          style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>
+          Clear
+        </button>
+      </div>
+      <div style={{display:'flex', flexDirection:'column', gap:6, fontFamily:'"JetBrains Mono", ui-monospace, monospace', fontSize:11.5}}>
+        {reversed.map((e, i) => (
+          <div key={i} style={{
+            padding:'8px 10px', borderRadius:8,
+            background:'rgba(241,234,217,.03)', border:`.5px solid ${p.border}`,
+            display:'flex', flexDirection:'column', gap:4,
+          }}>
+            <div style={{display:'flex', alignItems:'center', gap:8, color:p.fg}}>
+              <span style={{color:p.fg3, fontVariantNumeric:'tabular-nums'}}>{formatTime(e.ts)}</span>
+              <span style={{color: colorFor(e.status), fontWeight:600}}>
+                {e.status === 'ok' ? '✓' : e.status === 'error' ? '✗' : e.status === 'pending' ? '·' : '!'}
+              </span>
+              <span style={{color:p.fg, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                {e.kind === 'skip' ? `skipped: ${e.message}` : `${e.domain}.${e.service}`}
+              </span>
+            </div>
+            {e.data && (
+              <div style={{color:p.fg3, paddingLeft:24, wordBreak:'break-all'}}>
+                {Object.entries(e.data).map(([k, v]) => (
+                  <span key={k} style={{marginRight:10}}>{k}={typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                ))}
+              </div>
+            )}
+            {e.error && (
+              <div style={{color:'#ec8b78', paddingLeft:24, wordBreak:'break-word'}}>error: {e.error}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </window.Card>
   );
 };
 
