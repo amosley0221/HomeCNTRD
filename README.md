@@ -7,10 +7,16 @@ offline-first sync.
 
 - **Vite + React 18** — production build via `vite build`
 - **Supabase** — email/password auth + Postgres profile per user
+- **Home Assistant** — real device control via HA's WebSocket + REST API
+  (lights, media players, locks, garage doors, vacuum, climate, scenes,
+  automations). Each user pastes their HA URL + a long-lived access token
+  during onboarding; values are stored on their profile and synced across
+  devices.
 - **IndexedDB cache + write queue** — every patch persists locally and replays
   to Supabase when the network returns
 - **vite-plugin-pwa / Workbox** — installable manifest + service worker that
-  precaches the app shell and runtime-caches Supabase responses
+  precaches the app shell and runtime-caches Supabase + Home Assistant API
+  responses
 
 ## One-time setup
 
@@ -18,11 +24,32 @@ offline-first sync.
 
 1. Sign up at https://supabase.com and create a new project.
 2. **Project Settings → API** — copy `Project URL` and `anon public` key.
-3. **SQL Editor** — paste and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
-   This creates the `profiles` table, RLS policies, and the auth-trigger that
-   inserts a profile row on signup.
+3. **SQL Editor** — paste and run, in order:
+   - [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) —
+     creates the `profiles` table, RLS policies, and the trigger that inserts
+     a profile row on signup.
+   - [`supabase/migrations/0002_ha.sql`](supabase/migrations/0002_ha.sql) —
+     adds `ha_url` + `ha_token` columns for the Home Assistant connection.
 4. **Authentication → Providers** — enable Email, decide whether to require
    email confirmation. (Off is fine for testing; on is recommended for prod.)
+
+### 1b. Stand up Home Assistant + Tailscale
+
+If you don't already run Home Assistant somewhere reachable over HTTPS,
+follow [`docs/HOME_ASSISTANT_SETUP.md`](docs/HOME_ASSISTANT_SETUP.md). The
+short version:
+
+1. Install Home Assistant OS in a VM (VirtualBox on Windows, KVM on Linux,
+   UTM on macOS) on a machine that's always on.
+2. Install the **Advanced SSH & Web Terminal** + **Tailscale** add-ons.
+3. Provision an HTTPS cert via `tailscale serve --bg --https=443
+   http://<ha-internal-ip>:8123` so HA is reachable at
+   `https://homeassistant.tail-XXXX.ts.net` over TLS.
+4. In HA → profile → **Security → Long-Lived Access Tokens** → **Create
+   Token**. Copy it (HA only shows it once).
+
+You'll paste the URL + token into HomeCNTRD's onboarding screen the first
+time you sign in.
 
 ### 2. Configure local env
 

@@ -13,7 +13,9 @@ import * as ReactDOMClient from 'react-dom/client';
 // safe that window.React isn't set until after these imports resolve.
 import './tweaks-panel.jsx';
 import './shared.jsx';
+import './lib/ha-bridge.js';   // overrides useHomeState below
 import './auth.jsx';
+import './onboarding.jsx';
 import './dnd-grid.jsx';
 import './hearth.jsx';
 import './home-view.jsx';
@@ -30,9 +32,13 @@ import './now-playing-bar.jsx';
 import './app.jsx';
 
 // Now that all modules have evaluated and registered onto window, install
-// React globals and mount.
+// React globals and replace the prototype's mock useHomeState with the
+// HA-backed one (defined in lib/ha-bridge.js as window.useHomeStateHA).
 window.React = React;
 window.ReactDOM = { ...ReactDOMClient };
+if (typeof window.useHomeStateHA === 'function') {
+  window.useHomeState = window.useHomeStateHA;
+}
 
 ReactDOMClient
   .createRoot(document.getElementById('root'))
