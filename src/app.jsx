@@ -1,11 +1,10 @@
-// app.jsx — Mounts the Hearth prototype with auth + shared Tweaks.
+// app.jsx — Mounts the Hearth UI inside the Home Assistant custom panel.
+// All auth, profile sync, and onboarding are handled by HA itself, so the
+// component tree is simple: render the existing HearthApp with whatever
+// settings the user has tweaked, plus a tiny ErrorBoundary so a crash
+// inside a view shows on-screen instead of going white.
 
-// React must be imported here (not just relied on via window.React) because
-// the ErrorBoundary class declaration's `extends React.Component` clause is
-// evaluated at module-load time, BEFORE main.jsx assigns window.React.
-// Vite dedupes; this is the same React instance window.React points to.
 import React from 'react';
-import { setupHAClient, teardownHAClient, getHAClient } from './lib/ha.js';
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": true,
@@ -26,9 +25,6 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showTv": true
 }/*EDITMODE-END*/;
 
-// Catches render errors inside its subtree and shows them on-screen rather
-// than letting the page go white. Critical for debugging from a phone where
-// DevTools isn't available.
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
@@ -37,7 +33,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.error) {
       return (
         <div style={{
-          width:'100vw', height:'100vh', display:'grid', placeItems:'center',
+          width:'100%', height:'100%', display:'grid', placeItems:'center',
           background:'#161310', color:'#f1ead9',
           fontFamily:'"Inter", system-ui, sans-serif',
           padding:24, textAlign:'left', overflow:'auto',
@@ -74,51 +70,40 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function useNarrow() {
-  const [narrow, setNarrow] = React.useState(() => window.innerWidth < 760);
-  React.useEffect(() => {
-    const onResize = () => setNarrow(window.innerWidth < 760);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return narrow;
-}
-
-function App() {
+function App({ hass, narrow, panel }) {
   const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
-  const auth = window.useAuth();
-  const narrow = useNarrow();
-  const haConn = window.useHomeAssistantConnect(auth.user, auth.patchUser);
-  const [bootError, setBootError] = React.useState(null);
 
-  // Surface uncaught render errors on-screen so we can debug from a phone
-  // without DevTools. Listens for global error + unhandledrejection events.
-  React.useEffect(() => {
-    const onError = (e) => setBootError(e?.error?.message || e?.message || 'Unknown error');
-    const onRejection = (e) => setBootError(e?.reason?.message || String(e?.reason) || 'Unhandled promise rejection');
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onRejection);
-    return () => {
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onRejection);
+  // Surface the user's HA display name into the same `user` prop the
+  // existing views expect. No Supabase identity; HA owns the user.
+  const user = React.useMemo(() => {
+    const haUser = hass?.user || {};
+    return {
+      firstName: (haUser.name || '').split(' ')[0] || 'there',
+      email: haUser.name || '',
+      plan: 'home-assistant',
+      layout: null,
+      integrations: null,
+      members: [],
+      sessions: [],
+      privacy: {
+        cameraIndoorRecording: false, shareWithApple: false,
+        shareWithGoogle: false, analytics: false, voiceTraining: false,
+      },
+      createdAt: '',
     };
-  }, []);
+  }, [hass?.user]);
 
-  // (Re)initialize the HA WebSocket client whenever the user has a URL+token.
-  // Wrap in try/catch so a malformed URL or transient WS error doesn't take
-  // down the whole app.
-  React.useEffect(() => {
-    try {
-      if (auth.user?.ha_url && auth.user?.ha_token) {
-        setupHAClient({ url: auth.user.ha_url, token: auth.user.ha_token });
-      } else {
-        teardownHAClient();
-      }
-    } catch (e) {
-      setBootError(`HA client setup failed: ${e.message}`);
-    }
-    return () => { /* keep the singleton on unmount; teardown happens on logout/reconnect */ };
-  }, [auth.user?.ha_url, auth.user?.ha_token]);
+  // patchUser is a no-op now (preferences would persist to HA's user
+  // storage in a follow-up). For now, just update local state so toggles
+  // in the UI don't throw.
+  const [localPatches, setLocalPatches] = React.useState({});
+  const patchUser = React.useCallback((patch) => {
+    setLocalPatches(prev => {
+      const merged = typeof patch === 'function' ? patch({ ...user, ...prev }) : { ...prev, ...patch };
+      return merged;
+    });
+  }, [user]);
+  const userMerged = { ...user, ...localPatches };
 
   const visibleDevices = {
     lights: t.showLights, music: t.showMusic, cameras: t.showCameras,
@@ -126,77 +111,24 @@ function App() {
     calendar: t.showCalendar, weather: t.showWeather, alarms: t.showAlarms, tv: t.showTv,
   };
 
-  // Hydration splash — avoids a flash of <AuthScreen/> when a cached
-  // Supabase session is being resolved. If anything has thrown by now,
-  // surface it directly under the wordmark so it's diagnosable from a
-  // phone without DevTools.
-  if (auth.loading) {
-    return (
-      <div style={{
-        width:'100vw', height:'100vh', display:'grid', placeItems:'center',
-        background:'#161310', color:'#e87f4a',
-        fontFamily:'"Newsreader","Iowan Old Style",Georgia,serif',
-        fontStyle:'italic', fontSize:28, letterSpacing:'.01em',
-        padding:24, textAlign:'center',
-      }}>
-        <div>
-          <div>HomeCNTRD</div>
-          {bootError && (
-            <div style={{
-              marginTop:24, padding:12, maxWidth:420,
-              fontSize:12, fontFamily:'"Inter", system-ui, sans-serif',
-              fontStyle:'normal', color:'#ec8b78',
-              background:'rgba(217,100,80,.08)', border:'.5px solid rgba(217,100,80,.4)',
-              borderRadius:8, lineHeight:1.5,
-            }}>
-              {bootError}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Auth gate
-  if (!auth.user) {
-    return (
-      <div style={{ width:'100vw', height:'100vh' }}>
-        <window.AuthScreen
-          onSignup={auth.doSignup} onLogin={auth.doLogin}
-          busy={auth.busy} err={auth.err} setErr={auth.setErr}
-        />
-      </div>
-    );
-  }
-
-  // HA connection gate — every user must connect their Home Assistant
-  // before the app can render anything meaningful.
-  if (!auth.user.ha_url || !auth.user.ha_token) {
-    return (
-      <div style={{ width:'100vw', height:'100vh' }}>
-        <window.ConnectHomeAssistant
-          defaultUrl={auth.user.ha_url} defaultToken={auth.user.ha_token}
-          busy={haConn.busy} err={haConn.err} setErr={haConn.setErr}
-          onConnect={haConn.onConnect}
-        />
-      </div>
-    );
-  }
+  const doLogout = () => {
+    // Inside HA's frontend we don't run our own auth. The "logout" affordance
+    // jumps to HA's logout flow.
+    if (typeof window !== 'undefined') window.location.assign('/?auth_callback=1');
+  };
 
   return (
-    <>
-      <ErrorBoundary>
-        <div style={{ width:'100vw', height:'100vh' }}>
-          <window.HearthApp
-            dark={t.dark} density={t.density} accent={t.hearthAccent}
-            agentTone={t.agentTone} fontPair={t.fontPair}
-            bgImage={t.bgImage} visibleDevices={visibleDevices}
-            settings={t} setSetting={setTweak}
-            user={auth.user} patchUser={auth.patchUser} doLogout={auth.doLogout}
-            narrow={narrow}
-          />
-        </div>
-      </ErrorBoundary>
+    <ErrorBoundary>
+      <div style={{ width:'100%', height:'100%' }}>
+        <window.HearthApp
+          dark={t.dark} density={t.density} accent={t.hearthAccent}
+          agentTone={t.agentTone} fontPair={t.fontPair}
+          bgImage={t.bgImage} visibleDevices={visibleDevices}
+          settings={t} setSetting={setTweak}
+          user={userMerged} patchUser={patchUser} doLogout={doLogout}
+          narrow={!!narrow}
+        />
+      </div>
 
       <window.TweaksPanel>
         <window.TweakSection label="Mode" />
@@ -227,14 +159,14 @@ function App() {
           onChange={v => setTweak('agentTone', v)} />
 
         <window.TweakSection label="Home Assistant" />
-        <window.TweakButton onClick={() => auth.patchUser(u => ({ ...u, ha_url: null, ha_token: null }))}>
-          Reconnect Home Assistant
+        <window.TweakButton onClick={() => window.location.assign('/config/integrations')}>
+          Manage devices in Home Assistant
         </window.TweakButton>
 
         <window.TweakSection label="Account" />
-        <window.TweakButton onClick={auth.doLogout}>Sign out · {auth.user.email}</window.TweakButton>
+        <window.TweakButton onClick={doLogout}>Sign out · {userMerged.email || 'HA user'}</window.TweakButton>
       </window.TweaksPanel>
-    </>
+    </ErrorBoundary>
   );
 }
 
@@ -242,5 +174,4 @@ const HEARTH_MAP = { tangerine:'#e87f4a', terracotta:'#c96442', ochre:'#b8843e',
 function hearthSwatch(name) { return HEARTH_MAP[name] || HEARTH_MAP.tangerine; }
 function hearthFromSwatch(hex) { return Object.entries(HEARTH_MAP).find(([,v]) => v === hex)?.[0] || 'tangerine'; }
 
-// Mount happens in main.jsx (after window.React / window.ReactDOM are set).
 window.App = App;

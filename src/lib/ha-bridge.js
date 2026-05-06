@@ -1,36 +1,35 @@
 // ha-bridge.js — Translates Home Assistant entities into the prototype's
-// existing state shape, and intercepts setState writes to dispatch HA
-// service calls. The point of this module is to avoid rewriting any view
-// file: the views still call useHomeState(), still receive `[state,
-// setState]` with the same fields, still call `setState(s => ({...s, lights:
-// s.lights.map(...)}))`. This module is the seam where mock data turns into
-// real device state + control.
+// existing state shape. Reads directly from the hass object that the HA
+// frontend passes our custom panel; calls hass.callService for writes.
 //
-// Entity → state mapping (v1):
+// Entity → state mapping:
 //   light.*                              → state.lights[]
-//   media_player.*                       → state.speakers[] (and a TV subset)
+//   media_player.*                       → state.speakers[] / state.tvs[]
 //   lock.*                               → state.locks[]
-//   cover.* (device_class: garage|door)  → state.garage.doors[]
-//   vacuum.*                             → state.vacuum (first vacuum wins)
-//   climate.*                            → state.thermostat (first wins)
-//   weather.*                            → state.weather (first wins)
+//   cover.* (device_class garage|door)   → state.garage.doors[]
+//   vacuum.*                             → state.vacuum
+//   climate.*                            → state.thermostat
+//   weather.*                            → state.weather
 //   camera.*                             → state.cameras[]
 //   scene.*                              → state.scenes[]
 //   automation.*                         → state.automations[]
-//   alarm_control_panel.*                → state.ring (first wins)
-//
-// Entity types we don't have HA equivalents for (alarms, dnd, tesla, calendar,
-// integrations) keep their prototype defaults so the views render. They can
-// be wired up in a follow-up.
+//   alarm_control_panel.*                → state.ring
 
-import { getHAClient } from './ha.js';
+import React from 'react';
+
+// Re-export the context defined in ha-panel for convenience. The panel
+// initialises it before importing this module so the import won't be
+// circular at runtime.
+const HassContext = (typeof window !== 'undefined' && window.HassContext)
+  ? window.HassContext
+  : React.createContext(null);
+
+function useHass() { return React.useContext(HassContext); }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const ROOMS = ['living', 'kitchen', 'bedroom', 'office', 'outdoor'];
-
-function inferRoom(name) {
-  const n = (name || '').toLowerCase();
+function inferRoom(name, areaName) {
+  const n = ((areaName || '') + ' ' + (name || '')).toLowerCase();
   if (/living|family\s*room|den/.test(n)) return 'living';
   if (/kitchen|dining/.test(n)) return 'kitchen';
   if (/bed|primary|guest\s*room|nursery/.test(n)) return 'bedroom';
@@ -48,40 +47,39 @@ function rgbToHex(rgb) {
   if (!Array.isArray(rgb) || rgb.length < 3) return '#ffe0b2';
   return '#' + rgb.slice(0, 3).map(v => Math.max(0, Math.min(255, v | 0)).toString(16).padStart(2, '0')).join('');
 }
+function friendlyTime(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+  catch { return '—'; }
+}
 
-// ── HA → prototype state translation ────────────────────────────────────────
+// ── Translation: hass.states (object) → prototype state shape ──────────────
 
-function translate(entities) {
+function translate(states) {
   const out = {
-    lights: [],
-    speakers: [],
-    tvs: [],
-    cameras: [],
-    locks: [],
-    scenes: [],
-    automations: [],
+    lights: [], speakers: [], tvs: [], cameras: [], locks: [],
+    scenes: [], automations: [], integrations: [],
     garage: { doors: [], history: [] },
-    vacuum: null,
-    thermostat: null,
-    weather: null,
-    ring: null,
-    integrations: [],
-    // The prototype expects a `tv` summary; first online TV wins.
+    vacuum: null, thermostat: null, weather: null, ring: null,
     tv: { on: false, source: '—', show: '' },
   };
+
+  if (!states) {
+    return { ...out, ...defaults() };
+  }
+
+  const entities = Object.values(states);
 
   for (const e of entities) {
     const id = e.entity_id;
     const domain = id.split('.')[0];
     const name = e.attributes?.friendly_name || id;
-    const room = inferRoom(name);
+    const room = inferRoom(name, e.attributes?.area_id);
 
     switch (domain) {
       case 'light':
         out.lights.push({
-          id,
-          room,
-          name,
+          id, room, name,
           on: isOn(e),
           brightness: brightnessPct(e.attributes),
           color: e.attributes?.rgb_color ? rgbToHex(e.attributes.rgb_color) : '#ffe0b2',
@@ -90,7 +88,7 @@ function translate(entities) {
 
       case 'media_player': {
         const dc = e.attributes?.device_class;
-        const isTv = dc === 'tv' || /\btv\b/i.test(name) || /apple\s*tv/i.test(name) || /chromecast/i.test(name);
+        const isTv = dc === 'tv' || /\btv\b/i.test(name) || /apple\s*tv/i.test(name) || /chromecast/i.test(name) || /webos/i.test(name);
         const playing = e.state === 'playing';
         const vol = typeof e.attributes?.volume_level === 'number'
           ? Math.round(e.attributes.volume_level * 100) : 30;
@@ -109,20 +107,15 @@ function translate(entities) {
             input: e.attributes?.source || '—',
           });
           if (out.tv.on === false && e.state !== 'off' && e.state !== 'unavailable') {
-            out.tv = {
-              on: true,
-              source: e.attributes?.app_name || name,
-              show: e.attributes?.media_title || '',
-            };
+            out.tv = { on: true, source: e.attributes?.app_name || name, show: e.attributes?.media_title || '' };
           }
         } else {
           out.speakers.push({
             id, room, name, type: 'sonos', playing, vol,
             group: e.attributes?.group_members?.[0] || null,
-            trackId: e.attributes?.media_title || null,
+            trackId: null,                  // prototype expected an ID into TRACKS; we don't have that
             progress: e.attributes?.media_position || 0,
             queue: [],
-            // Extra HA-only metadata used by the music view if present
             haMediaTitle: e.attributes?.media_title || null,
             haMediaArtist: e.attributes?.media_artist || null,
             haMediaAlbum: e.attributes?.media_album_name || null,
@@ -152,14 +145,10 @@ function translate(entities) {
         if (!out.vacuum) {
           out.vacuum = {
             id, name,
-            state: e.state, // docked | cleaning | returning | paused | error
+            state: e.state,
             battery: e.attributes?.battery_level ?? 100,
-            mode: 'auto',
-            currentRoom: null,
-            cleanedToday: 0,
-            bin: 'empty',
-            lastClean: '—',
-            schedule: '—',
+            mode: 'auto', currentRoom: null, cleanedToday: 0,
+            bin: 'empty', lastClean: '—', schedule: '—',
           };
         }
         break;
@@ -169,9 +158,7 @@ function translate(entities) {
           out.thermostat = {
             id,
             temp: e.attributes?.current_temperature ?? 70,
-            target: e.attributes?.temperature
-              ?? e.attributes?.target_temp_high
-              ?? 72,
+            target: e.attributes?.temperature ?? e.attributes?.target_temp_high ?? 72,
             mode: e.state || 'auto',
             humidity: e.attributes?.current_humidity ?? 42,
           };
@@ -185,8 +172,7 @@ function translate(entities) {
             summary: (e.state || 'Partly cloudy').replace(/-/g, ' '),
             high: Math.round(e.attributes?.forecast?.[0]?.temperature ?? 71),
             low: Math.round(e.attributes?.forecast?.[0]?.templow ?? 52),
-            hourly: (e.attributes?.forecast || []).slice(0, 12)
-              .map(f => Math.round(f.temperature || 65)),
+            hourly: (e.attributes?.forecast || []).slice(0, 12).map(f => Math.round(f.temperature || 65)),
           };
         }
         break;
@@ -195,17 +181,13 @@ function translate(entities) {
         out.cameras.push({
           id, name, room,
           online: e.state !== 'unavailable',
-          motion: false, // updated below from binary_sensor.* if present
+          motion: false,
           hue: 'oklch(60% 0.10 200)',
         });
         break;
 
       case 'scene':
-        out.scenes.push({
-          id, name,
-          icon: 'sparkle',
-          active: false,
-        });
+        out.scenes.push({ id, name, icon: 'sparkle', active: false });
         break;
 
       case 'automation':
@@ -233,7 +215,7 @@ function translate(entities) {
     }
   }
 
-  // Cross-link motion to cameras (binary_sensor.*_motion linked by friendly name).
+  // Cross-link motion to cameras via paired binary_sensor.*_motion entities.
   const motionMap = new Map();
   for (const e of entities) {
     if (e.entity_id.startsWith('binary_sensor.') && e.attributes?.device_class === 'motion') {
@@ -246,20 +228,18 @@ function translate(entities) {
     return { ...c, motion: motionMap.get(k) ?? c.motion };
   });
 
-  // Provide sensible defaults for prototype state we don't bridge yet so the
-  // existing views still render without crashing.
+  return { ...out, ...defaults(out) };
+}
+
+function defaults(out) {
   return {
-    ...out,
-    // When no entity exists, surface a reasonable default object so views
-    // that read `state.thermostat.target` etc. don't throw.
-    thermostat: out.thermostat || { id: null, temp: 70, target: 72, mode: 'off', humidity: 42 },
-    weather: out.weather || { temp: 64, summary: 'Unavailable', high: 71, low: 52, hourly: [] },
-    ring: out.ring || { id: null, mode: 'disarmed', lastChanged: '—', changedBy: '—' },
-    vacuum: out.vacuum || {
+    thermostat: out?.thermostat || { id: null, temp: 70, target: 72, mode: 'off', humidity: 42 },
+    weather: out?.weather || { temp: 64, summary: 'Unavailable', high: 71, low: 52, hourly: [] },
+    ring: out?.ring || { id: null, mode: 'disarmed', lastChanged: '—', changedBy: '—' },
+    vacuum: out?.vacuum || {
       id: null, name: 'No vacuum', state: 'docked', battery: 100, mode: 'auto',
       currentRoom: null, cleanedToday: 0, bin: 'empty', lastClean: '—', schedule: '—',
     },
-    // Prototype-only state we don't read from HA. Empty arrays / sane defaults.
     tesla: {
       name: 'No Tesla connected', locked: true, charging: false, chargePct: 0,
       chargeRate: 0, pluggedIn: false, range: 0, cabin: 65, target: 70,
@@ -272,151 +252,133 @@ function translate(entities) {
   };
 }
 
-function friendlyTime(iso) {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  } catch {
-    return '—';
-  }
-}
+// ── setState diff → hass.callService ────────────────────────────────────────
 
-// ── setState diff → HA service calls ────────────────────────────────────────
-
-function diffAndDispatch(prev, next) {
-  const ha = getHAClient();
-  if (!ha || !ha.isConnected()) return;
+function diffAndDispatch(prev, next, hass) {
+  if (!hass || typeof hass.callService !== 'function') return;
+  const call = (domain, service, data, target) => {
+    try { hass.callService(domain, service, data, target); }
+    catch (e) { console.warn(`[ha-bridge] ${domain}.${service} failed`, e); }
+  };
 
   // Lights
   for (const n of next.lights || []) {
     const p = prev.lights?.find(x => x.id === n.id);
     if (!p) continue;
     if (p.on !== n.on) {
-      ha.callService('light', n.on ? 'turn_on' : 'turn_off', {}, { entity_id: n.id }).catch(() => {});
+      call('light', n.on ? 'turn_on' : 'turn_off', { entity_id: n.id });
     } else if (n.on && p.brightness !== n.brightness) {
-      ha.callService('light', 'turn_on', { brightness_pct: n.brightness }, { entity_id: n.id }).catch(() => {});
+      call('light', 'turn_on', { entity_id: n.id, brightness_pct: n.brightness });
     }
   }
 
-  // Speakers / TVs (media_player)
+  // Speakers + TVs (media_player)
   const allMP = [...(next.speakers || []), ...(next.tvs || [])];
   const allMPPrev = [...(prev.speakers || []), ...(prev.tvs || [])];
   for (const n of allMP) {
     const p = allMPPrev.find(x => x.id === n.id);
     if (!p) continue;
-    if (p.playing !== n.playing) {
-      ha.callService('media_player', n.playing ? 'media_play' : 'media_pause', {}, { entity_id: n.id }).catch(() => {});
-    }
-    if (p.vol !== n.vol && typeof n.vol === 'number') {
-      ha.callService('media_player', 'volume_set', { volume_level: n.vol / 100 }, { entity_id: n.id }).catch(() => {});
-    }
-    if ('mute' in n && p.mute !== n.mute) {
-      ha.callService('media_player', 'volume_mute', { is_volume_muted: !!n.mute }, { entity_id: n.id }).catch(() => {});
-    }
-    if ('on' in n && p.on !== n.on) {
-      ha.callService('media_player', n.on ? 'turn_on' : 'turn_off', {}, { entity_id: n.id }).catch(() => {});
-    }
+    if (p.playing !== n.playing) call('media_player', n.playing ? 'media_play' : 'media_pause', { entity_id: n.id });
+    if (p.vol !== n.vol && typeof n.vol === 'number') call('media_player', 'volume_set', { entity_id: n.id, volume_level: n.vol / 100 });
+    if ('mute' in n && p.mute !== n.mute) call('media_player', 'volume_mute', { entity_id: n.id, is_volume_muted: !!n.mute });
+    if ('on' in n && p.on !== n.on) call('media_player', n.on ? 'turn_on' : 'turn_off', { entity_id: n.id });
   }
 
   // Locks
   for (const n of next.locks || []) {
     const p = prev.locks?.find(x => x.id === n.id);
     if (!p || p.locked === n.locked) continue;
-    ha.callService('lock', n.locked ? 'lock' : 'unlock', {}, { entity_id: n.id }).catch(() => {});
+    call('lock', n.locked ? 'lock' : 'unlock', { entity_id: n.id });
   }
 
   // Garage doors (cover)
   for (const n of next.garage?.doors || []) {
     const p = prev.garage?.doors?.find(x => x.id === n.id);
     if (!p || p.open === n.open) continue;
-    ha.callService('cover', n.open ? 'open_cover' : 'close_cover', {}, { entity_id: n.id }).catch(() => {});
+    call('cover', n.open ? 'open_cover' : 'close_cover', { entity_id: n.id });
   }
 
   // Vacuum
-  if (next.vacuum && prev.vacuum && next.vacuum.id) {
-    if (prev.vacuum.state !== next.vacuum.state) {
-      const map = { cleaning: 'start', paused: 'pause', returning: 'return_to_base', docked: 'return_to_base' };
-      const svc = map[next.vacuum.state];
-      if (svc) ha.callService('vacuum', svc, {}, { entity_id: next.vacuum.id }).catch(() => {});
-    }
+  if (next.vacuum?.id && prev.vacuum && prev.vacuum.state !== next.vacuum.state) {
+    const map = { cleaning: 'start', paused: 'pause', returning: 'return_to_base', docked: 'return_to_base' };
+    const svc = map[next.vacuum.state];
+    if (svc) call('vacuum', svc, { entity_id: next.vacuum.id });
   }
 
   // Climate
-  if (next.thermostat && prev.thermostat && next.thermostat.id) {
+  if (next.thermostat?.id && prev.thermostat) {
     if (prev.thermostat.target !== next.thermostat.target) {
-      ha.callService('climate', 'set_temperature', { temperature: next.thermostat.target }, { entity_id: next.thermostat.id }).catch(() => {});
+      call('climate', 'set_temperature', { entity_id: next.thermostat.id, temperature: next.thermostat.target });
     }
     if (prev.thermostat.mode !== next.thermostat.mode) {
-      ha.callService('climate', 'set_hvac_mode', { hvac_mode: next.thermostat.mode }, { entity_id: next.thermostat.id }).catch(() => {});
+      call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: next.thermostat.mode });
     }
   }
 
-  // Scenes — when one toggles to active, activate it via HA
+  // Scenes (only fire when transitioning to active)
   for (const n of next.scenes || []) {
     const p = prev.scenes?.find(x => x.id === n.id);
-    if (p && !p.active && n.active) {
-      ha.callService('scene', 'turn_on', {}, { entity_id: n.id }).catch(() => {});
-    }
+    if (p && !p.active && n.active) call('scene', 'turn_on', { entity_id: n.id });
   }
 
-  // Automations — toggle enabled
+  // Automations
   for (const n of next.automations || []) {
     const p = prev.automations?.find(x => x.id === n.id);
     if (!p || p.enabled === n.enabled) continue;
-    ha.callService('automation', n.enabled ? 'turn_on' : 'turn_off', {}, { entity_id: n.id }).catch(() => {});
+    call('automation', n.enabled ? 'turn_on' : 'turn_off', { entity_id: n.id });
   }
 
   // Ring / alarm_control_panel
-  if (next.ring && prev.ring && next.ring.id) {
-    const modeMap = { home: 'alarm_arm_home', away: 'alarm_arm_away', disarmed: 'alarm_disarm' };
-    if (prev.ring.mode !== next.ring.mode) {
-      const svc = modeMap[next.ring.mode];
-      if (svc) ha.callService('alarm_control_panel', svc, {}, { entity_id: next.ring.id }).catch(() => {});
-    }
+  if (next.ring?.id && prev.ring && prev.ring.mode !== next.ring.mode) {
+    const map = { home: 'alarm_arm_home', away: 'alarm_arm_away', disarmed: 'alarm_disarm' };
+    const svc = map[next.ring.mode];
+    if (svc) call('alarm_control_panel', svc, { entity_id: next.ring.id });
   }
 }
 
-// ── React hook ──────────────────────────────────────────────────────────────
+// ── Hook the prototype calls (same signature as the original useHomeState) ──
 
-export function useHomeStateHA() {
-  const [snapshot, setSnapshot] = React.useState(() => translate([]));
-  const [pristine, setPristine] = React.useState(true);
+function useHomeStateHA() {
+  const hass = useHass();
+  const states = hass?.states || null;
 
-  React.useEffect(() => {
-    const ha = getHAClient();
-    if (!ha) return;
-    const unsub = ha.onSnapshot(entities => {
-      setSnapshot(translate(entities));
-      setPristine(false);
-    });
-    // Seed with whatever we already cached.
-    if (ha.getAll().length) setSnapshot(translate(ha.getAll()));
-    return unsub;
-  }, []);
+  // Memoise the translation so views only re-render when an entity that
+  // matters to us actually changes.
+  const baseState = React.useMemo(() => translate(states), [states]);
 
-  // Local optimistic overlay so toggles feel instant. HA state_changed events
-  // overwrite it shortly after, so it converges on truth.
+  // Local optimistic overlay so taps feel instant. Cleared shortly after so
+  // hass becomes the source of truth again.
   const [overlay, setOverlay] = React.useState(null);
-  const merged = overlay || snapshot;
+  const merged = overlay || baseState;
+
+  const overlayTimer = React.useRef(null);
 
   const setState = React.useCallback((updater) => {
     setOverlay(prev => {
-      const base = prev || snapshot;
+      const base = prev || baseState;
       const next = typeof updater === 'function' ? updater(base) : { ...base, ...updater };
-      // Fire HA service calls for whatever changed.
-      diffAndDispatch(base, next);
+      diffAndDispatch(base, next, hass);
       return next;
     });
-    // Clear the overlay after a short window so HA's own state_changed events
-    // become the source of truth again.
-    clearTimeout(setState._t);
-    setState._t = setTimeout(() => setOverlay(null), 1500);
-  }, [snapshot]);
+    clearTimeout(overlayTimer.current);
+    overlayTimer.current = setTimeout(() => setOverlay(null), 1500);
+  }, [hass, baseState]);
 
-  return [merged, setState, { pristine }];
+  // When hass updates underneath us, drop the overlay so fresh truth wins.
+  React.useEffect(() => {
+    if (!overlay) return;
+    const t = setTimeout(() => setOverlay(null), 1500);
+    return () => clearTimeout(t);
+  }, [states]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return [merged, setState];
 }
 
 if (typeof window !== 'undefined') {
+  // The prototype calls window.useHomeState() inside view components. Override
+  // it with the HA-backed version. shared.jsx defines the original earlier in
+  // the import chain; this overrides it.
+  window.useHomeState = useHomeStateHA;
   window.useHomeStateHA = useHomeStateHA;
+  window.useHass = useHass;
 }
