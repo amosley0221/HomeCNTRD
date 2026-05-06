@@ -53,12 +53,82 @@ export function listenOnce({ lang = 'en-US', onPartial } = {}) {
   });
 }
 
+// Pick the highest-quality voice available, preferring British male voices
+// for the Jarvis aesthetic. Browsers ship a wide range of TTS voices, but
+// SpeechSynthesisUtterance.voice defaults to the OS's lowest-quality fallback
+// unless we explicitly pick something nicer.
+//
+// Quality tiers (rough heuristic from voice name):
+//   "Neural" / "Natural" / "Online" / "Premium" / "Enhanced"  →  best
+//   "Siri" / specific named voices on Apple platforms          →  great
+//   default OS voices                                          →  robotic
+let _cachedVoice = null;
+let _voicesReady = false;
+
+function loadVoices() {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return [];
+  const v = window.speechSynthesis.getVoices();
+  if (v && v.length) _voicesReady = true;
+  return v || [];
+}
+
+// Voices load asynchronously in some browsers. Subscribe to the change
+// event so the cache is ready by the time speak() is called.
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = () => { loadVoices(); };
+}
+
+function pickBestVoice(voices) {
+  if (!voices.length) return null;
+
+  // Score each English voice by name keywords. Higher is better.
+  const score = (v) => {
+    const n = (v.name || '').toLowerCase();
+    const lang = (v.lang || '').toLowerCase();
+    if (!lang.startsWith('en')) return -1;
+    let s = 0;
+    // British → bonus (Jarvis is British)
+    if (lang === 'en-gb' || /uk|british|england/.test(n)) s += 50;
+    // Specific high-quality voice names
+    if (/daniel|oliver|arthur|ryan|george|brian/.test(n)) s += 40;     // British male names
+    if (/aria|jenny|samantha|emma|libby|sonia/.test(n)) s += 25;       // Female premium
+    if (/siri/.test(n)) s += 35;
+    // Quality-tier keywords
+    if (/neural|natural|online/.test(n)) s += 30;
+    if (/premium|enhanced/.test(n)) s += 20;
+    if (/google/.test(n)) s += 10;
+    // Penalise default low-quality fallbacks
+    if (/^microsoft (david|mark|zira|hazel)$/.test(v.name)) s -= 30;
+    return s;
+  };
+
+  return voices
+    .filter(v => (v.lang || '').toLowerCase().startsWith('en'))
+    .sort((a, b) => score(b) - score(a))[0] || voices[0];
+}
+
+function getVoice() {
+  if (_cachedVoice) return _cachedVoice;
+  const voices = loadVoices();
+  _cachedVoice = pickBestVoice(voices);
+  return _cachedVoice;
+}
+
 export function speak(text, { rate = 1.0, pitch = 1.0, lang = 'en-US' } = {}) {
   if (!text || typeof window === 'undefined' || !window.speechSynthesis) return;
   // Cancel any in-flight utterance so responses don't queue up.
   try { window.speechSynthesis.cancel(); } catch {}
   const u = new SpeechSynthesisUtterance(text);
-  u.rate = rate; u.pitch = pitch; u.lang = lang;
+  u.rate = rate;
+  u.pitch = pitch;
+  u.lang = lang;
+  const voice = getVoice();
+  if (voice) {
+    u.voice = voice;
+    // Match voice's native lang so the engine picks the right phonemes.
+    if (voice.lang) u.lang = voice.lang;
+  }
   window.speechSynthesis.speak(u);
 }
 
