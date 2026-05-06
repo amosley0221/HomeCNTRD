@@ -58,7 +58,6 @@ panel_custom:
     module_url: /local/homecntrd.js
     require_admin: false
     embed_iframe: false
-    trust_external: false
 ```
 
 Then **Developer Tools → YAML → Check Configuration** (must be green)
