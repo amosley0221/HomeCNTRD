@@ -88,6 +88,17 @@ class HomeCNTRDPanel extends HTMLElement {
       'box-sizing:border-box',
     ].join(';');
 
+    // Tell HA to dock its sidebar in narrow / hidden mode so the HomeCNTRD
+    // shell isn't visually overlapped by HA's icon strip. This is the same
+    // trick the popular HACS Kiosk Mode plugin uses. Falls back gracefully
+    // if HA's internal events change.
+    try {
+      this.dispatchEvent(new CustomEvent('hass-dock-sidebar', {
+        detail: { dock: 'always_hidden' },
+        bubbles: true, composed: true,
+      }));
+    } catch {}
+
     this._mount = document.createElement('div');
     this._mount.style.cssText = 'width:100%;height:100%;display:block;background:#161310';
     this.appendChild(this._mount);

@@ -105,7 +105,7 @@ const DENSITY = {
 
 // ── SIDEBAR ──────────────────────────────────────────────────────────────
 const Sidebar = ({ ctx }) => {
-  const { p, fonts, page, setPage, room, setRoom, state } = ctx;
+  const { p, fonts, page, setPage, room, setRoom, state, user } = ctx;
   const Section = ({ children }) => (
     <div style={{padding:'10px 14px 4px', fontSize:10, letterSpacing:'.14em', textTransform:'uppercase', color:p.fg3, fontWeight:500}}>{children}</div>
   );
@@ -136,7 +136,7 @@ const Sidebar = ({ ctx }) => {
         <div style={{fontSize:11, color:p.fg3, marginTop:6, letterSpacing:'.05em'}}>WILLOWBROOK · Tuesday</div>
       </div>
       <div style={{padding:'16px 22px 4px'}}>
-        <div style={{fontFamily:fonts.display, fontSize:22, lineHeight:1.15, color:p.fg, fontWeight:500}}>Good evening,<br/><em style={{fontStyle:'italic', color:p.accent, fontWeight:400}}>Frances.</em></div>
+        <div style={{fontFamily:fonts.display, fontSize:22, lineHeight:1.15, color:p.fg, fontWeight:500}}>Good evening,<br/><em style={{fontStyle:'italic', color:p.accent, fontWeight:400}}>{user?.firstName || 'there'}.</em></div>
       </div>
 
       <div style={{flex:1, overflow:'auto', paddingBottom:14, marginTop:6}}>
