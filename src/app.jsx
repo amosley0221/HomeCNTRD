@@ -5,6 +5,8 @@
 // inside a view shows on-screen instead of going white.
 
 import React from 'react';
+import AIDot from './components/AIDot.jsx';
+import BrowserView from './components/BrowserView.jsx';
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": true,
@@ -22,7 +24,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showCalendar": true,
   "showWeather": true,
   "showAlarms": true,
-  "showTv": true
+  "showTv": true,
+  "aiAssistant": true
 }/*EDITMODE-END*/;
 
 class ErrorBoundary extends React.Component {
@@ -72,6 +75,7 @@ class ErrorBoundary extends React.Component {
 
 function App({ hass, narrow, panel }) {
   const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [browser, setBrowser] = React.useState(null); // { url, label } | null
 
   // Surface the user's HA display name into the same `user` prop the
   // existing views expect. No Supabase identity; HA owns the user.
@@ -130,6 +134,26 @@ function App({ hass, narrow, panel }) {
         />
       </div>
 
+      {/* Embedded browser overlay — shown when the AI (or a future tile)
+          opens a Twitch/YouTube/etc. URL. The AIDot stays on top so you
+          can say "go back" / "close" hands-free. */}
+      <BrowserView
+        url={browser?.url}
+        label={browser?.label}
+        onClose={() => setBrowser(null)}
+      />
+
+      {/* Persistent tap-to-talk button. Renders on every view, including
+          on top of the embedded browser. */}
+      {t.aiAssistant !== false && (
+        <AIDot
+          hass={hass}
+          onOpenUrl={(url, label) => setBrowser({ url, label })}
+          onCloseBrowser={() => setBrowser(null)}
+          onNavigate={() => setBrowser(null)}
+        />
+      )}
+
       <window.TweaksPanel>
         <window.TweakSection label="Mode" />
         <window.TweakToggle label="Dark mode" value={t.dark} onChange={v => setTweak('dark', v)} />
@@ -157,6 +181,8 @@ function App({ hass, narrow, panel }) {
             { value:'playful', label:'Playful (Pip)'      },
           ]}
           onChange={v => setTweak('agentTone', v)} />
+        <window.TweakToggle label="Tap-to-talk button" value={t.aiAssistant !== false}
+          onChange={v => setTweak('aiAssistant', v)} />
 
         <window.TweakSection label="Home Assistant" />
         <window.TweakButton onClick={() => window.location.assign('/config/integrations')}>
