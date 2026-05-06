@@ -418,28 +418,53 @@ function useHomeStateHA() {
     if (!counts.vacuum) diagPush({ ts: Date.now(), kind: 'info', message: '↑ no vacuum.* — vacuum tile will be read-only' });
   }, [states]);
 
-  // Local optimistic overlay so taps feel instant. Cleared shortly after so
-  // hass becomes the source of truth again.
+  // Local optimistic overlay so taps feel instant. Cleared shortly after
+  // the dispatch debounce + HA round-trip completes so hass becomes the
+  // source of truth again.
   const [overlay, setOverlay] = React.useState(null);
   const merged = overlay || baseState;
 
   const overlayTimer = React.useRef(null);
+  // Trailing-edge dispatch debounce. Without this, dragging the
+  // thermostat dial fires 5–10 climate.set_temperature calls in <1s,
+  // immediately tripping Nest SDM API rate limits (HTTP 429
+  // RESOURCE_EXHAUSTED). With debounce, only the *final* value after the
+  // user stops interacting is sent — one call instead of ten.
+  const dispatchTimer = React.useRef(null);
+  const dispatchPending = React.useRef(null);
 
   const setState = React.useCallback((updater) => {
     setOverlay(prev => {
       const base = prev || baseState;
       const next = typeof updater === 'function' ? updater(base) : { ...base, ...updater };
-      diffAndDispatch(base, next, hass);
+
+      // Capture the original `base` on the first change in a batch, but
+      // always overwrite the trailing `next` so we dispatch against the
+      // final state.
+      if (!dispatchPending.current) dispatchPending.current = { base, hass };
+      dispatchPending.current.next = next;
+
+      clearTimeout(dispatchTimer.current);
+      dispatchTimer.current = setTimeout(() => {
+        const p = dispatchPending.current;
+        if (p) diffAndDispatch(p.base, p.next, p.hass);
+        dispatchPending.current = null;
+        dispatchTimer.current = null;
+      }, 400);
+
       return next;
     });
+    // Hold the optimistic overlay long enough for the debounce + HA
+    // round-trip to land. Otherwise the dial visibly jumps back to the
+    // pre-drag value while waiting for HA's state_changed event.
     clearTimeout(overlayTimer.current);
-    overlayTimer.current = setTimeout(() => setOverlay(null), 1500);
+    overlayTimer.current = setTimeout(() => setOverlay(null), 3000);
   }, [hass, baseState]);
 
   // When hass updates underneath us, drop the overlay so fresh truth wins.
   React.useEffect(() => {
     if (!overlay) return;
-    const t = setTimeout(() => setOverlay(null), 1500);
+    const t = setTimeout(() => setOverlay(null), 3000);
     return () => clearTimeout(t);
   }, [states]); // eslint-disable-line react-hooks/exhaustive-deps
 
