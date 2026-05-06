@@ -55,10 +55,16 @@ panel_custom:
     url_path: homecntrd
     sidebar_title: HomeCNTRD
     sidebar_icon: mdi:home-roof
-    module_url: /local/homecntrd.js
+    module_url: /local/homecntrd.js?v=7
     require_admin: false
     embed_iframe: false
 ```
+
+**Cache-busting:** the `?v=N` suffix on `module_url` forces browsers /
+Companion apps to fetch a fresh JS bundle every time the number changes.
+Bump it any time you replace `/config/www/homecntrd.js` and the iOS / Android
+Companion app will pick up the new bundle without needing pull-to-refresh
+or a frontend cache reset. Latest released version: **`v=7`**.
 
 Then **Developer Tools → YAML → Check Configuration** (must be green)
 → **Restart**.

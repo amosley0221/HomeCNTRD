@@ -2,9 +2,12 @@
 // Tap → record speech → run intent → either drive UI (open URL, navigate)
 // or fall back to HA's conversation agent for free-text reply.
 //
-// States: idle | listening | thinking | speaking
-// While in any non-idle state we show a pulsing/spinning indicator.
-// After a reply we briefly show a speech bubble with the response text.
+// On platforms where browser SpeechRecognition isn't available (notably the
+// iOS Home Assistant Companion app's WKWebView, which blocks the API), the
+// dot opens a text-input bubble instead so users can still type commands.
+// Either path feeds the same intent → conversation-agent pipeline.
+//
+// States: idle | listening | thinking | typing | speaking
 
 import React from 'react';
 import { isVoiceSupported, listenOnce, speak, cancelSpeak } from '../lib/voice.js';
@@ -17,11 +20,17 @@ const FG = '#f1ead9';
 const BG = '#161310';
 
 export default function AIDot({ hass, onOpenUrl, onCloseBrowser, onNavigate }) {
-  const [state, setState] = React.useState('idle'); // idle | listening | thinking | speaking
+  const [state, setState] = React.useState('idle'); // idle | listening | thinking | typing
   const [bubble, setBubble] = React.useState(null); // { kind: 'user'|'agent'|'error', text }
   const [partial, setPartial] = React.useState('');
+  const [typedDraft, setTypedDraft] = React.useState('');
   const supported = isVoiceSupported();
   const bubbleTimer = React.useRef(null);
+  const textInputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (state === 'typing' && textInputRef.current) textInputRef.current.focus();
+  }, [state]);
 
   const showBubble = (b, ms = 5000) => {
     clearTimeout(bubbleTimer.current);
@@ -53,48 +62,73 @@ export default function AIDot({ hass, onOpenUrl, onCloseBrowser, onNavigate }) {
     }
   };
 
+  const processText = async (text) => {
+    if (!text || !text.trim()) { setState('idle'); return; }
+    const transcript = text.trim();
+    showBubble({ kind: 'user', text: transcript }, 4000);
+    setState('thinking');
+
+    const local = parseIntent(transcript);
+    console.log('[ai-dot] local intent:', local);
+    if (local && await handleIntent(local, transcript)) {
+      setState('idle');
+      return;
+    }
+
+    console.log('[ai-dot] falling back to HA conversation agent');
+    const ai = await askAgent(hass, transcript);
+    console.log('[ai-dot] agent reply:', ai);
+    setState('idle');
+    if (ai?.speech) {
+      showBubble({ kind: 'agent', text: ai.speech }, 7000);
+      speak(ai.speech);
+    } else {
+      showBubble({ kind: 'error', text: "No reply from HA's conversation agent. Set one up in HA → Settings → Voice Assistants." });
+    }
+  };
+
+  const submitTyped = (e) => {
+    e?.preventDefault?.();
+    const text = typedDraft;
+    setTypedDraft('');
+    processText(text);
+  };
+
   const onTap = async () => {
+    console.log('[ai-dot] tap, current state =', state, 'voice supported =', supported);
     if (state === 'listening') {
-      // Tap-to-cancel.
       setState('idle'); setPartial('');
+      return;
+    }
+    if (state === 'typing') {
+      setState('idle'); setTypedDraft('');
       return;
     }
     if (state === 'thinking') return;
     cancelSpeak();
+    // No browser speech recognition? (Common case: iOS Companion app's
+    // WKWebView blocks the API.) Fall through to a text input so the user
+    // can type their command instead.
     if (!supported) {
-      showBubble({ kind: 'error', text: 'Voice input not supported in this browser. Try Safari or Chrome.' });
+      console.log('[ai-dot] no SpeechRecognition — switching to text input');
+      setState('typing');
       return;
     }
     setState('listening');
     setPartial('');
     let transcript = null;
     try {
+      console.log('[ai-dot] starting recognition…');
       transcript = await listenOnce({ onPartial: setPartial });
+      console.log('[ai-dot] final transcript:', transcript);
     } catch (e) {
+      console.warn('[ai-dot] recognition error:', e);
       setState('idle'); setPartial('');
       showBubble({ kind: 'error', text: e.message || 'Could not capture audio' });
       return;
     }
     setPartial('');
-    showBubble({ kind: 'user', text: transcript }, 4000);
-    setState('thinking');
-
-    // 1) Try local intent first (instant for streaming-service commands).
-    const local = parseIntent(transcript);
-    if (local && await handleIntent(local, transcript)) {
-      setState('idle');
-      return;
-    }
-
-    // 2) Fall back to HA's conversation agent for everything else.
-    const ai = await askAgent(hass, transcript);
-    setState('idle');
-    if (ai?.speech) {
-      showBubble({ kind: 'agent', text: ai.speech }, 7000);
-      speak(ai.speech);
-    } else {
-      showBubble({ kind: 'error', text: "I didn't get a reply from the agent. Configure one under HA → Settings → Voice Assistants." });
-    }
+    processText(transcript);
   };
 
   // ── Styles ───────────────────────────────────────────────────────────────
@@ -123,13 +157,53 @@ export default function AIDot({ hass, onOpenUrl, onCloseBrowser, onNavigate }) {
 
   return (
     <>
-      <button onClick={onTap} aria-label="Tap to talk" style={dotStyle}>
+      <button onClick={onTap} aria-label={supported ? 'Tap to talk' : 'Tap to type a command'} style={dotStyle}>
         <span style={ringStyle} />
-        {state === 'idle' && <MicIcon />}
+        {state === 'idle' && (supported ? <MicIcon /> : <ChatIcon />)}
         {state === 'listening' && <MicIcon active />}
         {state === 'thinking' && <Spinner />}
-        {state === 'speaking' && <MicIcon />}
+        {state === 'typing' && <ChatIcon active />}
       </button>
+
+      {state === 'typing' && (
+        <form onSubmit={submitTyped} style={{
+          position: 'fixed',
+          right: 'calc(env(safe-area-inset-right, 0px) + 18px)',
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${SIZE + 14}px)`,
+          width: 'min(420px, calc(100vw - 36px))',
+          padding: '10px 12px',
+          background: 'rgba(31,27,22,.96)',
+          border: '.5px solid rgba(241,234,217,.18)',
+          borderRadius: 14,
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          zIndex: 99998,
+          boxShadow: '0 12px 32px rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <input
+            ref={textInputRef}
+            value={typedDraft}
+            onChange={e => setTypedDraft(e.target.value)}
+            placeholder='e.g. "open Esfand on Twitch"'
+            style={{
+              flex: 1, padding: '8px 10px', borderRadius: 8,
+              border: '.5px solid rgba(241,234,217,.18)',
+              background: 'rgba(241,234,217,.04)',
+              color: FG, fontSize: 14,
+              fontFamily: '"Inter", system-ui, sans-serif',
+              outline: 'none',
+            }}
+            autoCorrect="off" autoCapitalize="none"
+          />
+          <button type="submit" style={{
+            padding: '8px 14px', borderRadius: 8, border: 0,
+            background: ACCENT, color: '#fff',
+            fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}>Send</button>
+        </form>
+      )}
 
       {(bubble || partial) && (
         <div style={{
@@ -187,6 +261,14 @@ function MicIcon({ active }) {
       <rect x="9" y="3" width="6" height="12" rx="3" fill={active ? 'currentColor' : 'none'} />
       <path d="M5 11a7 7 0 0 0 14 0" />
       <path d="M12 18v3" />
+    </svg>
+  );
+}
+
+function ChatIcon({ active }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 5h16v11H8l-4 4z" fill={active ? 'currentColor' : 'none'} />
     </svg>
   );
 }

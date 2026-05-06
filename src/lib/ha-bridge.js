@@ -314,7 +314,16 @@ function diffAndDispatch(prev, next, hass) {
 
   // Climate
   if (next.thermostat?.id && prev.thermostat) {
+    // If the thermostat is OFF and the user just dragged the target dial,
+    // most integrations (Nest in particular) silently no-op the
+    // set_temperature call — the value reverts as soon as the optimistic
+    // overlay clears. Bumping HVAC into 'auto' first means the new target
+    // actually sticks and the system actually responds.
     if (prev.thermostat.target !== next.thermostat.target) {
+      const wasOff = prev.thermostat.mode === 'off' || prev.thermostat.mode === 'unavailable';
+      if (wasOff) {
+        call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: 'auto' });
+      }
       call('climate', 'set_temperature', { entity_id: next.thermostat.id, temperature: next.thermostat.target });
     }
     if (prev.thermostat.mode !== next.thermostat.mode) {
