@@ -1,166 +1,127 @@
 # HomeCNTRD
 
-Smart-home control surface — installable PWA with real Supabase auth and
-offline-first sync.
+A custom Home Assistant panel — a beautiful, opinionated dashboard for the
+home you've already wired up in HA. Drops in next to HA's default Lovelace
+sidebar, controls real devices through HA's existing integrations.
 
-## Stack
+## Architecture
 
-- **Vite + React 18** — production build via `vite build`
-- **Supabase** — email/password auth + Postgres profile per user
-- **Home Assistant** — real device control via HA's WebSocket + REST API
-  (lights, media players, locks, garage doors, vacuum, climate, scenes,
-  automations). Each user pastes their HA URL + a long-lived access token
-  during onboarding; values are stored on their profile and synced across
-  devices.
-- **IndexedDB cache + write queue** — every patch persists locally and replays
-  to Supabase when the network returns
-- **vite-plugin-pwa / Workbox** — installable manifest + service worker that
-  precaches the app shell and runtime-caches Supabase + Home Assistant API
-  responses
+- Single-file ES module (`dist/homecntrd.js`) loaded by Home Assistant via
+  `panel_custom`. No separate hosting, no auth, no CORS — HA serves the file
+  and passes us its live `hass` connection.
+- React 18 + Vite library build. The custom element `<homecntrd-panel>` is
+  registered by the bundle and HA mounts it at the panel route.
+- `src/lib/ha-bridge.js` translates `hass.states` into the prototype's
+  existing state shape and routes optimistic UI writes through
+  `hass.callService(...)`. Views are unchanged.
 
-## One-time setup
+## Install on your Home Assistant
 
-### 1. Create a Supabase project
+You need an HA instance you control (Home Assistant OS, Supervised, or
+Container) and access to the `/config/` folder.
 
-1. Sign up at https://supabase.com and create a new project.
-2. **Project Settings → API** — copy `Project URL` and `anon public` key.
-3. **SQL Editor** — paste and run, in order:
-   - [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) —
-     creates the `profiles` table, RLS policies, and the trigger that inserts
-     a profile row on signup.
-   - [`supabase/migrations/0002_ha.sql`](supabase/migrations/0002_ha.sql) —
-     adds `ha_url` + `ha_token` columns for the Home Assistant connection.
-4. **Authentication → Providers** — enable Email, decide whether to require
-   email confirmation. (Off is fine for testing; on is recommended for prod.)
-
-### 1b. Stand up Home Assistant + Tailscale
-
-If you don't already run Home Assistant somewhere reachable over HTTPS,
-follow [`docs/HOME_ASSISTANT_SETUP.md`](docs/HOME_ASSISTANT_SETUP.md). The
-short version:
-
-1. Install Home Assistant OS in a VM (VirtualBox on Windows, KVM on Linux,
-   UTM on macOS) on a machine that's always on.
-2. Install the **Advanced SSH & Web Terminal** + **Tailscale** add-ons.
-3. Provision an HTTPS cert via `tailscale serve --bg --https=443
-   http://<ha-internal-ip>:8123` so HA is reachable at
-   `https://homeassistant.tail-XXXX.ts.net` over TLS.
-4. In HA → profile → **Security → Long-Lived Access Tokens** → **Create
-   Token**. Copy it (HA only shows it once).
-
-You'll paste the URL + token into HomeCNTRD's onboarding screen the first
-time you sign in.
-
-### 2. Configure local env
+### 1. Build the bundle
 
 ```bash
-cp .env.example .env.local
-# edit .env.local with your Supabase URL + anon key
-```
-
-### 3. Run
-
-```bash
+git clone https://github.com/amosley0221/homecntrd.git
+cd homecntrd
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # outputs ./dist
-npm run preview  # serves ./dist locally
+npm run build
+# → dist/homecntrd.js (one file)
 ```
 
-## Deploy to Render
+### 2. Drop the bundle in HA's www folder
 
-The repo's `render.yaml` defines a Static Site Blueprint:
+`/config/www/` is HA's static-asset folder. Files under it are served at
+`/local/`. Two ways to copy `dist/homecntrd.js` over:
 
-1. Render dashboard → **New → Blueprint** → select this repo.
-2. Render will prompt for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` —
-   paste the values from Supabase Project Settings → API. They're build-time
-   variables (inlined into the JS bundle); the anon key is safe to ship
-   because Supabase RLS enforces access control at the row level.
-3. Push to the watched branch — Render builds (`npm ci && npm run build`) and
-   publishes `./dist`.
-
-## PWA / install on home screen
-
-Once deployed over HTTPS, the app advertises a manifest and service worker:
-
-- **iOS Safari**: open the site → Share → *Add to Home Screen*.
-- **Android Chrome**: address bar → install icon, or menu → *Install app*.
-- **Desktop Chrome/Edge**: address-bar install icon.
-
-After install:
-
-- App shell, fonts, and previously-fetched Supabase responses are cached, so
-  the app opens **without a network**.
-- Mutations (toggling devices, editing layout, household members, privacy
-  settings, etc.) are written to IndexedDB and queued; they replay against
-  Supabase when the device comes back online.
-
-## Project layout
-
-```
-.
-├── index.html                    # Vite entry HTML
-├── public/
-│   ├── favicon.svg
-│   └── icons/icon-{192,512,maskable}.png
-├── src/
-│   ├── main.jsx                  # Vite entry: sets window.React, mounts <App/>
-│   ├── lib/
-│   │   ├── supabase.js           # Supabase client
-│   │   └── sync.js               # IndexedDB cache + offline write queue
-│   ├── auth.jsx                  # Real Supabase auth + AuthScreen UI
-│   └── …                         # ported prototype views (window.X registry)
-├── supabase/migrations/
-│   └── 0001_init.sql             # profiles table + RLS + trigger
-├── render.yaml                   # Render Static Site blueprint
-├── vite.config.js                # Vite + vite-plugin-pwa configuration
-└── package.json
+**Via the Advanced SSH & Web Terminal add-on** (you already have this):
+```bash
+mkdir -p /config/www
+# from the box you built on, scp / cp the file in
+# or fetch directly from a GitHub release once we tag one
 ```
 
-## Data model
+**Via the Samba add-on:** install Samba in HA's add-on store, mount your
+HA's `\\<ha-ip>\config\www\` from your computer, drag-and-drop.
 
-A single `public.profiles` row per `auth.users` row, holding everything the
-prototype kept on the in-memory `user` object:
+### 3. Register the panel
 
-| column          | type        | notes                                                     |
-| --------------- | ----------- | --------------------------------------------------------- |
-| `id`            | uuid PK     | references `auth.users(id)`                               |
-| `first_name`    | text        | from signup                                               |
-| `plan`          | text        | `'free' \| 'plus-annual' \| …`                            |
-| `layout`        | jsonb       | home tile layout                                          |
-| `integrations`  | jsonb       | connected services                                        |
-| `members`       | jsonb       | household members and their permissions                   |
-| `sessions`      | jsonb       | trusted devices (advisory; distinct from Supabase tokens) |
-| `privacy`       | jsonb       | privacy toggles                                           |
-| `created_at`    | timestamptz |                                                           |
-| `updated_at`    | timestamptz | bumped by trigger on every update                         |
+Edit `/config/configuration.yaml` and add:
 
-RLS: `auth.uid() = id` for select/insert/update — a user can only ever read
-or write their own profile.
+```yaml
+panel_custom:
+  - name: homecntrd-panel
+    url_path: home
+    sidebar_title: HomeCNTRD
+    sidebar_icon: mdi:home-roof
+    module_url: /local/homecntrd.js
+    require_admin: false
+    embed_iframe: false
+    trust_external: false
+```
 
-## How auth + sync works
+Then **Developer Tools → YAML → Check Configuration** (must be green)
+→ **Restart**.
 
-1. **Boot** — `useAuth()` calls `supabase.auth.getSession()`. While the
-   session resolves, `App` renders a brief "HomeCNTRD" splash so there's no
-   flash of `<AuthScreen/>`.
-2. **Hydrate** — if there's a session, the cached profile from IndexedDB is
-   shown immediately, then a fresh fetch from `public.profiles` overrides
-   it. The current device is stamped into `sessions[]`.
-3. **Mutate** — every `patchUser(...)` call applies optimistically to React
-   state, mirrors to IndexedDB, and queues an upsert to Supabase. The view
-   code (which uses `patchUser` for layout, members, privacy, etc.) didn't
-   need to change.
-4. **Offline** — if `navigator.onLine === false`, the upsert is queued and
-   the app keeps running off the IndexedDB cache. On the next `online`
-   event, the queue drains last-write-wins.
+### 4. Open it
 
-## Notes
+After HA restarts, a **HomeCNTRD** entry appears in your sidebar. Click it.
+The first paint should show your real lights, media players, locks, etc.
 
-- The `sessions[]` list on the profile is *advisory* — these are the trusted
-  devices a user sees and can revoke from Settings. The actual Supabase auth
-  tokens live in localStorage under `homecntrd_supabase_auth` and are
-  managed by `@supabase/supabase-js`. Revoking a row in `sessions[]` does
-  not invalidate a real Supabase session; for that, use Supabase's
-  `signOut({ scope: 'global' })` (TODO if you want it).
-- The PWA icons in `public/icons/` are placeholder programmatic renders —
-  swap in real branded artwork before launch.
+## Use it from any device
+
+| Device | How |
+|---|---|
+| iPhone / iPad | **Home Assistant Companion App** (App Store, free). Sign in once. Sidebar → HomeCNTRD. |
+| Android | **Home Assistant Companion App** (Play Store, free). Sign in once. Sidebar → HomeCNTRD. |
+| Mac / PC | Any browser → your Tailscale HA URL → sidebar → HomeCNTRD. |
+
+You can set HomeCNTRD as your **default startup view** in HA so it opens
+first when you launch the Companion App. Profile → *Set this dashboard as
+default* (or in Companion App: Settings → Companion App → Default page).
+
+## Adding or removing devices
+
+We deep-link to HA's integrations page from HomeCNTRD's settings — adding a
+new Hue bulb, pairing an Apple TV, or signing into Sonos happens in HA's
+own UI. Daily control happens in HomeCNTRD.
+
+Tap **Tweaks → Home Assistant → Manage devices in Home Assistant** to jump
+to `/config/integrations`.
+
+## Updating the panel
+
+After we ship a new `homecntrd.js`:
+
+1. Pull / download the new bundle
+2. Replace `/config/www/homecntrd.js` on your HA box
+3. In your browser, hard-refresh HomeCNTRD (Ctrl+Shift+R / Cmd+Shift+R)
+
+We can later distribute via [HACS](https://hacs.xyz/) so you get an
+"update available" notification right in HA's UI; that's a follow-up.
+
+## Local dev
+
+`npm run dev` runs Vite in watch mode and rebuilds `dist/homecntrd.js` on
+every save. Symlink `/config/www/homecntrd.js` to `dist/homecntrd.js` (or
+mount the dist folder via Samba) and refresh HA to see changes.
+
+## What's bridged today
+
+| Domain | UI tile | Controls dispatched |
+|---|---|---|
+| `light.*` | Lights | `light.turn_on` / `turn_off` + `brightness_pct` |
+| `media_player.*` | Music + TVs (split by name/device_class) | `media_play`, `media_pause`, `volume_set`, `volume_mute`, `turn_on/off` |
+| `lock.*` | Locks | `lock` / `unlock` |
+| `cover.*` (garage / door) | Garage | `open_cover` / `close_cover` |
+| `vacuum.*` | Vacuum tile | `start`, `pause`, `return_to_base` |
+| `climate.*` | Thermostat | `set_temperature`, `set_hvac_mode` |
+| `weather.*` | Weather card | (read-only) |
+| `camera.*` | Cameras grid | (state + paired motion sensor) |
+| `scene.*` | Scenes | `scene.turn_on` |
+| `automation.*` | Automations | `automation.turn_on` / `turn_off` |
+| `alarm_control_panel.*` | Ring tile | `alarm_arm_home`, `alarm_arm_away`, `alarm_disarm` |
+
+Camera live streams, calendar events, and the LLM-backed assistant are
+follow-ups.
