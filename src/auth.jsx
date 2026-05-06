@@ -69,6 +69,8 @@ function profileToUser(profile, authEmail) {
       cameraIndoorRecording: false, shareWithApple: false,
       shareWithGoogle: false, analytics: true, voiceTraining: false,
     },
+    ha_url: profile.ha_url ?? null,
+    ha_token: profile.ha_token ?? null,
     createdAt: (profile.created_at || '').slice(0, 10),
   };
 }
@@ -81,6 +83,8 @@ function userToProfile(user) {
     members: user.members ?? [],
     sessions: user.sessions ?? [],
     privacy: user.privacy ?? {},
+    ha_url: user.ha_url ?? null,
+    ha_token: user.ha_token ?? null,
   };
 }
 

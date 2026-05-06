@@ -1,5 +1,7 @@
 // app.jsx — Mounts the Hearth prototype with auth + shared Tweaks.
 
+import { setupHAClient, teardownHAClient, getHAClient } from './lib/ha.js';
+
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": true,
   "density": "regular",
@@ -33,6 +35,17 @@ function App() {
   const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
   const auth = window.useAuth();
   const narrow = useNarrow();
+  const haConn = window.useHomeAssistantConnect(auth.user, auth.patchUser);
+
+  // (Re)initialize the HA WebSocket client whenever the user has a URL+token.
+  React.useEffect(() => {
+    if (auth.user?.ha_url && auth.user?.ha_token) {
+      setupHAClient({ url: auth.user.ha_url, token: auth.user.ha_token });
+    } else {
+      teardownHAClient();
+    }
+    return () => { /* keep the singleton on unmount; teardown happens on logout/reconnect */ };
+  }, [auth.user?.ha_url, auth.user?.ha_token]);
 
   const visibleDevices = {
     lights: t.showLights, music: t.showMusic, cameras: t.showCameras,
@@ -60,6 +73,20 @@ function App() {
         <window.AuthScreen
           onSignup={auth.doSignup} onLogin={auth.doLogin}
           busy={auth.busy} err={auth.err} setErr={auth.setErr}
+        />
+      </div>
+    );
+  }
+
+  // HA connection gate — every user must connect their Home Assistant
+  // before the app can render anything meaningful.
+  if (!auth.user.ha_url || !auth.user.ha_token) {
+    return (
+      <div style={{ width:'100vw', height:'100vh' }}>
+        <window.ConnectHomeAssistant
+          defaultUrl={auth.user.ha_url} defaultToken={auth.user.ha_token}
+          busy={haConn.busy} err={haConn.err} setErr={haConn.setErr}
+          onConnect={haConn.onConnect}
         />
       </div>
     );
@@ -105,6 +132,11 @@ function App() {
             { value:'playful', label:'Playful (Pip)'      },
           ]}
           onChange={v => setTweak('agentTone', v)} />
+
+        <window.TweakSection label="Home Assistant" />
+        <window.TweakButton onClick={() => auth.patchUser(u => ({ ...u, ha_url: null, ha_token: null }))}>
+          Reconnect Home Assistant
+        </window.TweakButton>
 
         <window.TweakSection label="Account" />
         <window.TweakButton onClick={auth.doLogout}>Sign out · {auth.user.email}</window.TweakButton>

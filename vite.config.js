@@ -60,6 +60,20 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          {
+            // Home Assistant REST (used during onboarding to validate
+            // URL+token before we open the WebSocket). Tailscale tailnet
+            // hostnames end in .ts.net; this also catches Nabu Casa /
+            // Cloudflare-fronted HA setups via the /api/ path.
+            urlPattern: ({ url }) => /\.ts\.net|\.nabu\.casa/.test(url.hostname) && url.pathname.startsWith('/api/'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'home-assistant-api',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
       devOptions: {
