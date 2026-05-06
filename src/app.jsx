@@ -1,5 +1,10 @@
 // app.jsx — Mounts the Hearth prototype with auth + shared Tweaks.
 
+// React must be imported here (not just relied on via window.React) because
+// the ErrorBoundary class declaration's `extends React.Component` clause is
+// evaluated at module-load time, BEFORE main.jsx assigns window.React.
+// Vite dedupes; this is the same React instance window.React points to.
+import React from 'react';
 import { setupHAClient, teardownHAClient, getHAClient } from './lib/ha.js';
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
