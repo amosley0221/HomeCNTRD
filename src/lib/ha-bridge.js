@@ -255,10 +255,23 @@ function defaults(out) {
 // ── setState diff → hass.callService ────────────────────────────────────────
 
 function diffAndDispatch(prev, next, hass) {
-  if (!hass || typeof hass.callService !== 'function') return;
-  const call = (domain, service, data, target) => {
-    try { hass.callService(domain, service, data, target); }
-    catch (e) { console.warn(`[ha-bridge] ${domain}.${service} failed`, e); }
+  if (!hass || typeof hass.callService !== 'function') {
+    console.warn('[ha-bridge] hass not available — skipping dispatch');
+    return;
+  }
+  const call = (domain, service, data) => {
+    console.log(`[ha-bridge] → ${domain}.${service}`, data);
+    try {
+      const p = hass.callService(domain, service, data);
+      if (p && typeof p.then === 'function') {
+        p.then(
+          () => console.log(`[ha-bridge] ✓ ${domain}.${service}`),
+          (err) => console.warn(`[ha-bridge] ✗ ${domain}.${service} rejected:`, err?.message || err, err),
+        );
+      }
+    } catch (e) {
+      console.warn(`[ha-bridge] ✗ ${domain}.${service} threw:`, e);
+    }
   };
 
   // Lights

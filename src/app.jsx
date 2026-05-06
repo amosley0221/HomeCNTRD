@@ -5,6 +5,8 @@
 // inside a view shows on-screen instead of going white.
 
 import React from 'react';
+import AIDot from './components/AIDot.jsx';
+import BrowserView from './components/BrowserView.jsx';
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "dark": true,
@@ -72,6 +74,7 @@ class ErrorBoundary extends React.Component {
 
 function App({ hass, narrow, panel }) {
   const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [browser, setBrowser] = React.useState(null); // { url, label } | null
 
   // Surface the user's HA display name into the same `user` prop the
   // existing views expect. No Supabase identity; HA owns the user.
@@ -129,6 +132,22 @@ function App({ hass, narrow, panel }) {
           narrow={!!narrow}
         />
       </div>
+
+      {/* Embedded browser overlay — opened by the AI when user says
+          "open Esfand on Twitch" / "watch X on YouTube". */}
+      <BrowserView
+        url={browser?.url}
+        label={browser?.label}
+        onClose={() => setBrowser(null)}
+      />
+
+      {/* Persistent tap-to-talk button. Visible on every view. */}
+      <AIDot
+        hass={hass}
+        onOpenUrl={(url, label) => setBrowser({ url, label })}
+        onCloseBrowser={() => setBrowser(null)}
+        onNavigate={() => setBrowser(null)}
+      />
 
       <window.TweaksPanel>
         <window.TweakSection label="Mode" />
