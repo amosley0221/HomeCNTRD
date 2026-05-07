@@ -4,6 +4,10 @@
 
 import HassContext from './lib/hass-context.js';
 import { fetchAllScores, LEAGUES as SPORT_LEAGUES } from './lib/sports.js';
+import {
+  TILE_REGISTRY, loadLayout, saveLayout, resetLayout,
+  moveTile, moveTileUp, moveTileDown, setTileSpan, setTileHidden,
+} from './lib/layout.js';
 
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const { p, fonts, state, user, narrow, setPage } = ctx;
@@ -117,6 +121,27 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
     return 'Good night';
   };
 
+  // Tile manager state. The layout describes order, span (1|2 cols),
+  // and visibility for the main column's tiles. Persisted to
+  // localStorage so it survives reloads.
+  const [layout, setLayout] = React.useState(() => loadLayout());
+  const [editMode, setEditMode] = React.useState(false);
+  const updateLayout = (next) => { setLayout(next); saveLayout(next); };
+  const exitEdit = () => setEditMode(false);
+  const doReset = () => { const next = resetLayout(); setLayout(next); };
+
+  const tileTheme = { accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow };
+  const renderTile = (id) => {
+    switch (id) {
+      case 'weather': return <WeatherCard weather={state.weather} hass={hass} {...tileTheme}/>;
+      case 'sports':  return <SportsCard {...tileTheme}/>;
+      case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
+      case 'todo':    return <TodoCard todos={state.todos} {...tileTheme}/>;
+      case 'notes':   return <NotesCard {...tileTheme}/>;
+      default: return null;
+    }
+  };
+
   return (
     <div style={{
       background: '#0d0b09', color: fg, fontFamily: body,
@@ -145,22 +170,44 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
           </div>
         </div>
 
-        {/* Hamburger — only shown on wide viewports where we've hidden the
-            inline sidebar. Tap to slide it in as a drawer. On narrow
-            viewports the bottom nav already covers this so we hide the
-            button. */}
-        {!narrow && onOpenMenu && (
-          <button onClick={onOpenMenu} aria-label="Open menu" style={{
-            width: 42, height: 42, borderRadius: 10, flex: 'none',
-            background: surface, border: `.5px solid ${border}`,
-            color: fg, cursor: 'pointer',
-            display:'grid', placeItems:'center',
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-              <path d="M3 6h18M3 12h18M3 18h18"/>
-            </svg>
+        <div style={{display:'flex', gap: 8, flex: 'none'}}>
+          {/* Edit-layout toggle. Visible everywhere (it's the only way to
+              rearrange tiles on a touch device, where there's no sidebar
+              menu to dig into). */}
+          <button
+            onClick={() => setEditMode(v => !v)}
+            aria-label={editMode ? 'Done editing' : 'Edit layout'}
+            style={{
+              height: 42, borderRadius: 10, flex: 'none',
+              padding: '0 14px',
+              background: editMode ? accent : surface,
+              border: `.5px solid ${editMode ? accent : border}`,
+              color: editMode ? '#fff' : fg,
+              cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+              fontWeight: 500, letterSpacing: '.04em', textTransform: 'uppercase',
+              display:'inline-flex', alignItems:'center', gap: 6,
+            }}
+          >
+            {editMode ? 'Done' : 'Edit'}
           </button>
-        )}
+
+          {/* Hamburger — only shown on wide viewports where we've hidden the
+              inline sidebar. Tap to slide it in as a drawer. On narrow
+              viewports the bottom nav already covers this so we hide the
+              button. */}
+          {!narrow && onOpenMenu && (
+            <button onClick={onOpenMenu} aria-label="Open menu" style={{
+              width: 42, height: 42, borderRadius: 10, flex: 'none',
+              background: surface, border: `.5px solid ${border}`,
+              color: fg, cursor: 'pointer',
+              display:'grid', placeItems:'center',
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M3 6h18M3 12h18M3 18h18"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{
@@ -168,22 +215,27 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
         gridTemplateColumns: narrow ? '1fr' : 'minmax(0,1fr) minmax(280px, 360px)',
         gap: narrow ? 14 : 22,
       }}>
-        {/* Left column */}
-        <div style={{display:'flex', flexDirection:'column', gap: narrow ? 14 : 18}}>
-          <WeatherCard
-            weather={state.weather} hass={hass}
-            accent={accent} fonts={fonts} surface={surface} surface2={surface2}
-            fg={fg} fg2={fg2} fg3={fg3} border={border} narrow={narrow}
+        {/* Left column — layout-driven tile grid */}
+        <div>
+          <TileGrid
+            layout={layout}
+            updateLayout={updateLayout}
+            editMode={editMode}
+            renderTile={renderTile}
+            theme={tileTheme}
           />
-
-          <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap: narrow ? 14 : 18, alignItems: 'start'}}>
-            <SportsCard accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
-            <NewsCard news={state.news} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
-          </div>
-
-          <TodoCard todos={state.todos} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
-
-          <NotesCard accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
+          {editMode && (
+            <EditFooter
+              onReset={doReset}
+              onDone={exitEdit}
+              accent={accent}
+              fonts={fonts}
+              surface={surface}
+              border={border}
+              fg={fg}
+              fg3={fg3}
+            />
+          )}
         </div>
 
         {/* Right column — calendar */}
@@ -199,6 +251,230 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
     </div>
   );
 };
+
+// ── Tile manager: grid + per-tile edit overlay ────────────────────────────
+
+const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme }) => {
+  const { narrow, accent, border, surface, fg, fg2, fg3, fonts } = theme;
+  const visible = layout.filter(t => !t.hidden);
+  const hidden = layout.filter(t => t.hidden);
+
+  // HTML5 drag is the simplest cross-browser reorder mechanism on desktop.
+  // Mobile native DnD is unreliable, so we also expose ↑/↓ buttons in the
+  // edit toolbar for touch reordering.
+  const [dragId, setDragId] = React.useState(null);
+
+  const onDragStart = (id, e) => {
+    setDragId(id);
+    try { e.dataTransfer.effectAllowed = 'move'; } catch {}
+    try { e.dataTransfer.setData('text/plain', id); } catch {}
+  };
+  const onDragOver = (e) => { e.preventDefault(); };
+  const onDrop = (targetId, e) => {
+    e.preventDefault();
+    const sourceId = dragId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+    if (sourceId && sourceId !== targetId) {
+      updateLayout(moveTile(layout, sourceId, targetId));
+    }
+    setDragId(null);
+  };
+  const onDragEnd = () => setDragId(null);
+
+  return (
+    <div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: narrow ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+        gap: narrow ? 14 : 18,
+        alignItems: 'start',
+      }}>
+        {visible.map((t, i) => (
+          <TileFrame
+            key={t.id}
+            tile={t}
+            index={i}
+            isFirst={i === 0}
+            isLast={i === visible.length - 1}
+            editMode={editMode}
+            isDragging={dragId === t.id}
+            narrow={narrow}
+            theme={theme}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            onDragEnd={onDragEnd}
+            onMoveUp={() => updateLayout(moveTileUp(layout, t.id))}
+            onMoveDown={() => updateLayout(moveTileDown(layout, t.id))}
+            onResize={(span) => updateLayout(setTileSpan(layout, t.id, span))}
+            onHide={() => updateLayout(setTileHidden(layout, t.id, true))}
+          >
+            {renderTile(t.id)}
+          </TileFrame>
+        ))}
+      </div>
+
+      {/* Hidden tiles tray — only shown in edit mode so the user can put
+          them back without digging into settings. */}
+      {editMode && hidden.length > 0 && (
+        <div style={{
+          marginTop: 22, padding: '14px 16px',
+          borderRadius: 12, border: `.5px dashed ${border}`,
+          background: 'rgba(241,234,217,0.02)',
+        }}>
+          <div style={{fontSize: 11, color: fg3, letterSpacing:'.06em', textTransform:'uppercase', marginBottom: 10}}>
+            Hidden tiles
+          </div>
+          <div style={{display:'flex', flexWrap:'wrap', gap: 8}}>
+            {hidden.map(t => (
+              <button
+                key={t.id}
+                onClick={() => updateLayout(setTileHidden(layout, t.id, false))}
+                style={{
+                  padding: '7px 12px', borderRadius: 8,
+                  background: surface, border: `.5px solid ${border}`,
+                  color: fg2, fontSize: 12, fontFamily: 'inherit',
+                  cursor: 'pointer', display:'inline-flex', alignItems:'center', gap: 6,
+                }}
+              >
+                <span style={{fontSize: 13}}>+</span>
+                {(TILE_REGISTRY[t.id]?.name) || t.id}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TileFrame = ({
+  tile, isFirst, isLast, editMode, isDragging, narrow, theme,
+  onDragStart, onDragOver, onDrop, onDragEnd,
+  onMoveUp, onMoveDown, onResize, onHide,
+  children,
+}) => {
+  const { accent, border, surface, fg, fg2, fg3 } = theme;
+  // On narrow viewports everything is single-column anyway, so colSpan is
+  // irrelevant — the tile fills the row regardless.
+  const span = narrow ? 1 : tile.colSpan;
+
+  return (
+    <div
+      draggable={editMode}
+      onDragStart={(e) => editMode && onDragStart(tile.id, e)}
+      onDragOver={editMode ? onDragOver : undefined}
+      onDrop={(e) => editMode && onDrop(tile.id, e)}
+      onDragEnd={editMode ? onDragEnd : undefined}
+      style={{
+        position: 'relative',
+        gridColumn: `span ${span}`,
+        opacity: isDragging ? 0.4 : 1,
+        transition: 'opacity 120ms ease',
+        // The dashed accent outline tells the user the tile is editable
+        // without obscuring the underlying card.
+        outline: editMode ? `2px dashed ${accent}66` : 'none',
+        outlineOffset: editMode ? 4 : 0,
+        borderRadius: 16,
+      }}
+    >
+      {editMode && (
+        <div style={{
+          position: 'absolute', top: -10, right: 8, zIndex: 5,
+          display: 'flex', gap: 4, padding: 4,
+          background: '#0d0b09e8', backdropFilter: 'blur(8px)',
+          borderRadius: 8, border: `.5px solid ${border}`,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+        }}>
+          <TileBtn onClick={onMoveUp} disabled={isFirst} title="Move up" border={border} fg={fg2}>↑</TileBtn>
+          <TileBtn onClick={onMoveDown} disabled={isLast} title="Move down" border={border} fg={fg2}>↓</TileBtn>
+          {!narrow && (
+            <>
+              <TileBtn
+                onClick={() => onResize(1)}
+                active={tile.colSpan === 1}
+                title="Half width"
+                border={border} fg={fg2} accent={accent}
+              >▭</TileBtn>
+              <TileBtn
+                onClick={() => onResize(2)}
+                active={tile.colSpan === 2}
+                title="Full width"
+                border={border} fg={fg2} accent={accent}
+              >▬</TileBtn>
+            </>
+          )}
+          <TileBtn onClick={onHide} title="Hide" border={border} fg={fg2}>×</TileBtn>
+        </div>
+      )}
+
+      {editMode && (
+        <div style={{
+          position: 'absolute', top: -10, left: 8, zIndex: 5,
+          padding: '5px 8px',
+          background: '#0d0b09e8', backdropFilter: 'blur(8px)',
+          borderRadius: 8, border: `.5px solid ${border}`,
+          color: fg3, cursor: 'grab',
+          fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase',
+          display:'inline-flex', alignItems:'center', gap: 5,
+        }}>
+          <svg width="10" height="14" viewBox="0 0 6 10" fill="currentColor">
+            <circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/>
+            <circle cx="1.5" cy="5"   r="1"/><circle cx="4.5" cy="5"   r="1"/>
+            <circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/>
+          </svg>
+          Drag
+        </div>
+      )}
+
+      {children}
+    </div>
+  );
+};
+
+const TileBtn = ({ children, onClick, disabled, active, title, border, fg, accent }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    aria-label={title}
+    style={{
+      width: 26, height: 26, borderRadius: 6,
+      background: active ? accent : 'transparent',
+      border: active ? `.5px solid ${accent}` : `.5px solid ${border}`,
+      color: active ? '#fff' : fg,
+      fontSize: 12, fontFamily: 'inherit',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.35 : 1,
+      display:'inline-flex', alignItems:'center', justifyContent:'center',
+      lineHeight: 1, padding: 0,
+    }}
+  >{children}</button>
+);
+
+const EditFooter = ({ onReset, onDone, accent, fonts, surface, border, fg, fg3 }) => (
+  <div style={{
+    marginTop: 18, padding: '12px 14px',
+    background: surface, border: `.5px solid ${border}`, borderRadius: 12,
+    display:'flex', alignItems:'center', justifyContent:'space-between', gap: 10,
+  }}>
+    <div style={{fontSize: 12, color: fg3, lineHeight: 1.5}}>
+      Drag tiles to reorder, use <strong style={{color: fg}}>▭/▬</strong> to resize, and <strong style={{color: fg}}>×</strong> to hide. Layout saves automatically.
+    </div>
+    <div style={{display:'flex', gap: 8, flex: 'none'}}>
+      <button onClick={onReset} style={{
+        padding: '8px 14px', borderRadius: 8,
+        background: 'transparent', border: `.5px solid ${border}`,
+        color: fg3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+      }}>Reset</button>
+      <button onClick={onDone} style={{
+        padding: '8px 14px', borderRadius: 8,
+        background: accent, border: `.5px solid ${accent}`,
+        color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+        fontWeight: 500,
+      }}>Done</button>
+    </div>
+  </div>
+);
 
 // ── Section: Weather ──────────────────────────────────────────────────────
 const CONDITION_ICON = {
