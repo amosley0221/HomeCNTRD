@@ -72,16 +72,11 @@ const MusicView = ({ ctx }) => {
   const speakers = React.useMemo(() => {
     if (!state.speakers?.length || !platformsLoaded) return [];
     let pool = state.speakers.filter(s => ALLOWED_PLATFORMS.has(platforms[s.id]));
-    // Graceful fallback if registry came back without our entities (rare):
-    // accept anything with the GROUPING bit set so Sonos still works.
     if (pool.length === 0) {
       pool = state.speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
     }
     const hasMA = pool.some(s => MA_PLATFORMS.has(platforms[s.id]));
     if (hasMA) pool = pool.filter(s => MA_PLATFORMS.has(platforms[s.id]));
-
-    // Final dedupe by friendly name in case MA exposes two entities with
-    // the same name (e.g. one stale).
     const groups = new Map();
     for (const s of pool) {
       const key = (s.name || s.id).toLowerCase().trim();
@@ -97,6 +92,28 @@ const MusicView = ({ ctx }) => {
     };
     return Array.from(groups.values()).map(pickBest);
   }, [state.speakers, platforms, platformsLoaded]);
+
+  // Active speaker selection. Hooks must be unconditional, so these
+  // sit above the loading / empty-state early returns even though they
+  // depend on `speakers`.
+  const [activeId, setActiveId] = React.useState(null);
+  React.useEffect(() => {
+    if (!speakers.length) return;
+    if (!activeId || !speakers.find(s => s.id === activeId)) {
+      setActiveId(speakers[0].id);
+    }
+  }, [speakers, activeId]);
+
+  // Infinity mode — when on, all play_media calls go through the
+  // music_assistant.play_media service with radio_mode: true so MA
+  // continues with similar tracks after the queue ends.
+  const [infinity, setInfinityRaw] = React.useState(() => {
+    try { return localStorage.getItem(INFINITY_KEY) === '1'; } catch { return false; }
+  });
+  const setInfinity = (v) => {
+    setInfinityRaw(v);
+    try { localStorage.setItem(INFINITY_KEY, v ? '1' : '0'); } catch {}
+  };
 
   if (!platformsLoaded) {
     return (
@@ -114,25 +131,9 @@ const MusicView = ({ ctx }) => {
     );
   }
 
-  const [activeId, setActiveId] = React.useState(speakers[0].id);
-  React.useEffect(() => {
-    if (!speakers.find(s => s.id === activeId)) setActiveId(speakers[0].id);
-  }, [speakers, activeId]);
-
   const active = speakers.find(s => s.id === activeId) || speakers[0];
   const playingCount = speakers.filter(s => s.playing).length;
   const isMA = MA_PLATFORMS.has(platforms[active?.id]);
-
-  // Infinity mode — when on, all play_media calls go through the
-  // music_assistant.play_media service with radio_mode: true so MA
-  // continues with similar tracks after the queue ends.
-  const [infinity, setInfinityRaw] = React.useState(() => {
-    try { return localStorage.getItem(INFINITY_KEY) === '1'; } catch { return false; }
-  });
-  const setInfinity = (v) => {
-    setInfinityRaw(v);
-    try { localStorage.setItem(INFINITY_KEY, v ? '1' : '0'); } catch {}
-  };
 
   return (
     <>
@@ -177,31 +178,27 @@ const MusicView = ({ ctx }) => {
 // ── Now-playing hero with seek slider ─────────────────────────────────────
 const NowPlayingCard = ({ ctx, hassRef, speaker }) => {
   const { p, fonts, narrow } = ctx;
-  if (!speaker) return null;
 
-  const title = speaker.haMediaTitle;
-  const artist = speaker.haMediaArtist;
-  const album = speaker.haMediaAlbum;
-  const art = speaker.haEntityPicture;
-  const isPlaying = speaker.playing;
-  const isIdle = !title;
-  const dur = speaker.duration || 0;
-
-  // Local position interpolation. HA only pushes media_position
-  // updates every few seconds; we tick locally so the slider moves
-  // smoothly. Reset whenever the upstream value changes.
-  const [tickPos, setTickPos] = React.useState(speaker.progress || 0);
+  // All hooks must run unconditionally on every render, so they sit
+  // above the `if (!speaker)` short-circuit even though some of them
+  // read off the speaker prop (we guard inside each effect).
+  const [tickPos, setTickPos] = React.useState(0);
   const [seeking, setSeeking] = React.useState(false);
   const [seekValue, setSeekValue] = React.useState(0);
-  const lastSeenRef = React.useRef({ pos: speaker.progress || 0, at: Date.now(), key: '' });
+  const lastSeenRef = React.useRef({ pos: 0, at: Date.now(), key: '' });
+
+  const title = speaker?.haMediaTitle;
+  const dur = speaker?.duration || 0;
+  const isPlaying = !!speaker?.playing;
 
   React.useEffect(() => {
+    if (!speaker) return;
     const key = `${speaker.id}|${title}|${speaker.progress}`;
     if (key !== lastSeenRef.current.key) {
       lastSeenRef.current = { pos: speaker.progress || 0, at: Date.now(), key };
       if (!seeking) setTickPos(speaker.progress || 0);
     }
-  }, [speaker.id, title, speaker.progress, seeking]);
+  }, [speaker?.id, title, speaker?.progress, seeking, speaker]);
 
   React.useEffect(() => {
     if (!isPlaying || seeking) return;
@@ -210,7 +207,14 @@ const NowPlayingCard = ({ ctx, hassRef, speaker }) => {
       setTickPos(Math.min(dur || 0, lastSeenRef.current.pos + dt));
     }, 500);
     return () => clearInterval(i);
-  }, [isPlaying, seeking, speaker.id, dur]);
+  }, [isPlaying, seeking, speaker?.id, dur]);
+
+  if (!speaker) return null;
+
+  const artist = speaker.haMediaArtist;
+  const album = speaker.haMediaAlbum;
+  const art = speaker.haEntityPicture;
+  const isIdle = !title;
 
   const call = (service, data) => {
     const hass = hassRef.current;
