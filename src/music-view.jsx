@@ -275,6 +275,15 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
   const [items, setItems] = React.useState(null);
   const [error, setError] = React.useState(null);
 
+  // Search query + debounced results. When non-empty, search results
+  // replace the browse grid. media_player/search_media is the standard
+  // HA 2024.10+ command that delegates to whatever provider backs the
+  // speaker — Music Assistant for MA-managed players, returning hits
+  // from the full Apple Music / Spotify / etc. catalog.
+  const [query, setQuery] = React.useState('');
+  const [results, setResults] = React.useState(null);
+  const [searchError, setSearchError] = React.useState(null);
+
   const head = path[path.length - 1] || null;
 
   React.useEffect(() => {
@@ -303,16 +312,46 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
     return () => { alive = false; };
   }, [hass, speakerId, head?.contentId, head?.contentType]);
 
+  // Debounced full-catalog search via media_player/search_media. Empty
+  // query clears the result panel and falls back to browse.
+  React.useEffect(() => {
+    if (!hass?.connection || !speakerId || !query.trim()) {
+      setResults(null);
+      setSearchError(null);
+      return;
+    }
+    let alive = true;
+    setSearchError(null);
+    const t = setTimeout(async () => {
+      try {
+        const resp = await hass.connection.sendMessagePromise({
+          type: 'media_player/search_media',
+          entity_id: speakerId,
+          search_query: query.trim(),
+        });
+        if (!alive) return;
+        const arr = (resp?.result || resp?.results || []).filter(isMusicItem);
+        setResults(arr);
+      } catch (e) {
+        if (alive) {
+          setResults([]);
+          setSearchError(e?.message || String(e));
+        }
+      }
+    }, 350);
+    return () => { alive = false; clearTimeout(t); };
+  }, [hass, speakerId, query]);
+
   const onItemClick = async (item) => {
     if (item.can_expand) {
+      // From search results, drilling in flips us into browse mode at
+      // the chosen node so the breadcrumb makes sense.
+      if (results !== null) { setQuery(''); setResults(null); }
       setPath(p => [...p, { contentId: item.media_content_id, contentType: item.media_content_type, title: item.title }]);
       return;
     }
     if (item.can_play && hass?.callService) {
       try {
-        // enqueue: 'play' tells Sonos to clear the queue and start
-        // playing right away. Without it Sonos loads the track but
-        // leaves it paused — which was the "play does nothing" bug.
         await hass.callService('media_player', 'play_media', {
           entity_id: speakerId,
           media_content_id: item.media_content_id,
@@ -325,62 +364,108 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
     }
   };
 
+  const showingSearch = results !== null;
+  const visible = showingSearch ? results : items;
+
   return (
     <window.Card p={p} style={{padding: 0}}>
-      <div style={{padding: '14px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
-        <button
-          onClick={() => setPath([])}
-          disabled={!path.length}
+      {/* Search bar — sits above the breadcrumb and takes precedence
+          over the browse view whenever it has text. */}
+      <div style={{padding: '12px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8}}>
+        <span style={{fontSize: 14, color: p.fg3}}>🔍</span>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search songs, artists, albums…"
           style={{
-            padding: '6px 10px', borderRadius: 6,
-            background: 'transparent', border: `.5px solid ${p.border2}`,
-            color: path.length ? p.fg : p.fg3,
-            cursor: path.length ? 'pointer' : 'default',
-            fontFamily: 'inherit', fontSize: 11,
+            flex: 1, minWidth: 0,
+            border: 0, outline: 'none', background: 'transparent',
+            color: p.fg, fontSize: 13, fontFamily: fonts.body, padding: '4px 0',
           }}
-        >Browse</button>
-        {path.map((node, i) => (
-          <React.Fragment key={node.contentId}>
-            <span style={{color: p.fg3, fontSize: 11}}>›</span>
-            <button
-              onClick={() => setPath(prev => prev.slice(0, i + 1))}
-              style={{
-                padding: '6px 10px', borderRadius: 6,
-                background: 'transparent', border: 'none',
-                color: i === path.length - 1 ? p.fg : p.fg2,
-                cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-                fontWeight: i === path.length - 1 ? 500 : 400,
-                overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180, whiteSpace: 'nowrap',
-              }}
-            >{node.title}</button>
-          </React.Fragment>
-        ))}
+        />
+        {query && (
+          <button
+            onClick={() => { setQuery(''); setResults(null); }}
+            style={{
+              padding: '4px 8px', borderRadius: 6,
+              background: 'transparent', border: `.5px solid ${p.border2}`,
+              color: p.fg3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+            }}
+          >Clear</button>
+        )}
       </div>
 
-      {error && (
+      {/* Browse breadcrumb row — hidden while searching to keep the
+          panel focused on results. */}
+      {!showingSearch && (
+        <div style={{padding: '12px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
+          <button
+            onClick={() => setPath([])}
+            disabled={!path.length}
+            style={{
+              padding: '6px 10px', borderRadius: 6,
+              background: 'transparent', border: `.5px solid ${p.border2}`,
+              color: path.length ? p.fg : p.fg3,
+              cursor: path.length ? 'pointer' : 'default',
+              fontFamily: 'inherit', fontSize: 11,
+            }}
+          >Browse</button>
+          {path.map((node, i) => (
+            <React.Fragment key={node.contentId}>
+              <span style={{color: p.fg3, fontSize: 11}}>›</span>
+              <button
+                onClick={() => setPath(prev => prev.slice(0, i + 1))}
+                style={{
+                  padding: '6px 10px', borderRadius: 6,
+                  background: 'transparent', border: 'none',
+                  color: i === path.length - 1 ? p.fg : p.fg2,
+                  cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                  fontWeight: i === path.length - 1 ? 500 : 400,
+                  overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180, whiteSpace: 'nowrap',
+                }}
+              >{node.title}</button>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
+      {/* Loading / error / empty states */}
+      {showingSearch && results === null && (
+        <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>Searching…</div>
+      )}
+      {showingSearch && searchError && results?.length === 0 && (
+        <div style={{padding: '14px 18px', fontSize: 12, color: '#e0a89a'}}>
+          Search failed: {searchError}. Make sure Music Assistant is set up — non-MA speakers don't expose a search API.
+        </div>
+      )}
+      {showingSearch && results !== null && results.length === 0 && !searchError && (
+        <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>No results for "{query}"</div>
+      )}
+      {!showingSearch && error && (
         <div style={{padding: '14px 18px', fontSize: 12, color: '#e0a89a'}}>{error}</div>
       )}
-      {items === null && !error && (
+      {!showingSearch && items === null && !error && (
         <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>
       )}
-      {items !== null && !items.length && !error && (
+      {!showingSearch && items !== null && !items.length && !error && (
         <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, lineHeight: 1.6}}>
           {path.length === 0 ? (
             <>
               <div style={{color: p.fg2, marginBottom: 6}}>Nothing music-related at the top level yet.</div>
-              <div>Open <strong style={{color: p.fg}}>Sonos</strong> → <strong style={{color: p.fg}}>Music Library</strong> / <strong style={{color: p.fg}}>Favorites</strong> to see your Apple Music tracks (anything you've favorited in the Sonos app appears here), link <strong style={{color: p.fg}}>Spotify</strong> in HA, or install <strong style={{color: p.fg}}>Music Assistant</strong> via HACS for a unified Apple Music / Spotify / Tidal library.</div>
+              <div>Open <strong style={{color: p.fg}}>Music Assistant</strong> from the sidebar and add Apple Music / Spotify / Tidal — they'll appear here once linked. You can also <strong style={{color: p.fg}}>search</strong> the full catalog using the box above.</div>
             </>
           ) : 'Nothing here.'}
         </div>
       )}
-      {items?.length > 0 && (
+
+      {visible?.length > 0 && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
           gap: 12,
           padding: '14px 18px',
         }}>
-          {items.map((item) => (
+          {visible.map((item) => (
             <button
               key={item.media_content_id || item.title}
               onClick={() => onItemClick(item)}
