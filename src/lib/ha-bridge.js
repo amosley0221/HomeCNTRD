@@ -90,6 +90,11 @@ function translate(states) {
         break;
 
       case 'media_player': {
+        // Skip the Tesla cabin media_player exposed by Tessie. It's
+        // already represented under state.tesla and listing it here
+        // (with cars under "speakers") confuses the music page —
+        // grouping fails because Tesla's entity doesn't support join.
+        if (teslaPrefix && id === `media_player.${teslaPrefix}_media_player`) break;
         const dc = e.attributes?.device_class;
         const isTv = dc === 'tv' || /\btv\b/i.test(name) || /apple\s*tv/i.test(name) || /chromecast/i.test(name) || /webos/i.test(name);
         const playing = e.state === 'playing';
@@ -118,7 +123,12 @@ function translate(states) {
             group: e.attributes?.group_members?.[0] || null,
             trackId: null,                  // prototype expected an ID into TRACKS; we don't have that
             progress: e.attributes?.media_position || 0,
+            duration: e.attributes?.media_duration || 0,
             queue: [],
+            // supported_features bitmask — used by the music page to
+            // gate group/ungroup actions (only speakers with the
+            // GROUPING feature flag = 524288 should participate).
+            supportedFeatures: e.attributes?.supported_features || 0,
             haMediaTitle: e.attributes?.media_title || null,
             haMediaArtist: e.attributes?.media_artist || null,
             haMediaAlbum: e.attributes?.media_album_name || null,

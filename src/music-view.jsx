@@ -9,6 +9,7 @@
 //   - Browse what HA has libraries for (Sonos's library, Spotify if
 //     integrated, local media, radio) via media_player/browse_media,
 //     and cast any of it to a chosen speaker via play_media.
+//   - Show the upcoming queue for Sonos speakers (sonos.get_queue).
 //
 // What this can't do without extra integrations:
 //   - Browse the Apple Music library directly. HA doesn't have an
@@ -17,6 +18,12 @@
 //     browser shows whatever Sonos / Spotify / local media exposes.
 
 import HassContext from './lib/hass-context.js';
+
+// MediaPlayerEntityFeature.GROUPING bit. Only speakers that advertise
+// this feature can be part of a join/unjoin call — Tesla, AppleTV,
+// Chromecast, etc. don't. Everything else still gets play/pause and
+// volume.
+const GROUPING_FEATURE = 524288;
 
 const MusicView = ({ ctx }) => {
   const { p, fonts, dens, state, narrow } = ctx;
@@ -53,9 +60,10 @@ const MusicView = ({ ctx }) => {
         alignItems: 'start',
         minWidth: 0,
       }}>
-        {/* Main column: Now playing + browser */}
+        {/* Main column: Now playing + queue + browser */}
         <div style={{display:'flex', flexDirection:'column', gap:dens.gap, minWidth: 0}}>
           <NowPlayingCard ctx={ctx} hass={hass} speaker={active} />
+          <QueueCard ctx={ctx} hass={hass} speaker={active} />
           <BrowserCard ctx={ctx} hass={hass} speakerId={active?.id} />
         </div>
 
@@ -164,18 +172,107 @@ const CtrlBtn = ({ p, fonts, primary, icon, onClick, label }) => (
   </button>
 );
 
+// ── Up-next queue ─────────────────────────────────────────────────────────
+//
+// Sonos exposes a `sonos.get_queue` service with response support. We
+// poll it whenever the speaker's current track changes (cheap — single
+// WS call) and show the next ~5 tracks. Non-Sonos speakers don't have
+// this service, so we silently hide the card for them.
+const QueueCard = ({ ctx, hass, speaker }) => {
+  const { p, fonts } = ctx;
+  const [queue, setQueue] = React.useState(null);
+  const [unsupported, setUnsupported] = React.useState(false);
+
+  const titleKey = speaker?.haMediaTitle || '';
+  const speakerId = speaker?.id;
+
+  React.useEffect(() => {
+    if (!hass?.connection || !speakerId) { setQueue(null); return; }
+    let alive = true;
+    const fetchQueue = async () => {
+      try {
+        const resp = await hass.connection.sendMessagePromise({
+          type: 'call_service',
+          domain: 'sonos',
+          service: 'get_queue',
+          service_data: { entity_id: speakerId },
+          return_response: true,
+        });
+        if (!alive) return;
+        const arr = resp?.response?.[speakerId];
+        setQueue(Array.isArray(arr) ? arr : []);
+        setUnsupported(false);
+      } catch (e) {
+        if (alive) { setQueue([]); setUnsupported(true); }
+      }
+    };
+    fetchQueue();
+    return () => { alive = false; };
+  }, [hass, speakerId, titleKey]);
+
+  if (unsupported || !queue || queue.length === 0) return null;
+
+  // Find the currently-playing track to skip past it in the list.
+  const currentTitle = (speaker.haMediaTitle || '').toLowerCase();
+  const currentIdx = queue.findIndex(q => (q.title || '').toLowerCase() === currentTitle);
+  const upcoming = (currentIdx >= 0 ? queue.slice(currentIdx + 1) : queue).slice(0, 5);
+  if (!upcoming.length) return null;
+
+  return (
+    <window.Card p={p} style={{padding: 0}}>
+      <div style={{padding: '12px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>
+        <div style={{fontFamily: fonts.display, fontSize: 14, color: p.fg, fontWeight: 500}}>Up next</div>
+        <div style={{fontSize: 11, color: p.fg3}}>{upcoming.length} track{upcoming.length === 1 ? '' : 's'}</div>
+      </div>
+      <div>
+        {upcoming.map((tr, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 18px',
+            borderBottom: i < upcoming.length - 1 ? `.5px solid ${p.border}` : 'none',
+            minWidth: 0,
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 5, flex: 'none',
+              background: tr.thumbnail
+                ? `center / cover no-repeat url("${tr.thumbnail}"), oklch(20% 0.05 25)`
+                : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`,
+            }}/>
+            <div style={{flex: 1, minWidth: 0}}>
+              <div style={{fontSize: 13, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{tr.title || 'Untitled'}</div>
+              <div style={{fontSize: 11, color: p.fg3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                {[tr.artist, tr.album].filter(Boolean).join(' · ')}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </window.Card>
+  );
+};
+
 // ── HA Media Browser ──────────────────────────────────────────────────────
 //
-// Asks HA what playable content the active speaker can browse — Sonos
-// exposes its libraries + favorites here, Spotify the user's playlists,
-// local media the file tree, etc. Each click drills further; clicking a
-// playable leaf casts to the speaker via play_media.
+// Filters out non-music sources (TTS, Camera, Image, AI generated images,
+// Nest snapshots, etc.) so the browser only surfaces content the user
+// can actually cast to a speaker.
+const REJECT_CLASSES = new Set(['image', 'video', 'game', 'movie']);
+const ROOT_REJECT_RE = /^(image|camera|text-to-speech|tts|ai\s+generated|image\s+upload|nest)/i;
+function isMusicItem(item) {
+  if (!item) return false;
+  const cls = (item.media_class || '').toLowerCase();
+  if (REJECT_CLASSES.has(cls)) return false;
+  const title = (item.title || '').toLowerCase();
+  const cid = (item.media_content_id || '').toLowerCase();
+  if (ROOT_REJECT_RE.test(title)) return false;
+  if (/^media-source:\/\/(image|camera|tts|nest)/i.test(cid)) return false;
+  return true;
+}
+
 const BrowserCard = ({ ctx, hass, speakerId }) => {
   const { p, fonts } = ctx;
-  // path is a stack of { contentId, contentType, title } nodes the user
-  // has drilled into. Empty = root browse on the speaker.
   const [path, setPath] = React.useState([]);
-  const [items, setItems] = React.useState(null); // null = loading
+  const [items, setItems] = React.useState(null);
   const [error, setError] = React.useState(null);
 
   const head = path[path.length - 1] || null;
@@ -195,7 +292,9 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
           msg.media_content_type = head.contentType;
         }
         const resp = await hass.connection.sendMessagePromise(msg);
-        if (alive) setItems(resp?.children || []);
+        if (!alive) return;
+        const filtered = (resp?.children || []).filter(isMusicItem);
+        setItems(filtered);
       } catch (e) {
         if (alive) setError(e?.message || String(e));
       }
@@ -211,10 +310,14 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
     }
     if (item.can_play && hass?.callService) {
       try {
+        // enqueue: 'play' tells Sonos to clear the queue and start
+        // playing right away. Without it Sonos loads the track but
+        // leaves it paused — which was the "play does nothing" bug.
         await hass.callService('media_player', 'play_media', {
           entity_id: speakerId,
           media_content_id: item.media_content_id,
           media_content_type: item.media_content_type,
+          enqueue: 'play',
         });
       } catch (e) {
         setError(e?.message || String(e));
@@ -224,7 +327,7 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
 
   return (
     <window.Card p={p} style={{padding: 0}}>
-      <div style={{padding: '14px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8}}>
+      <div style={{padding: '14px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
         <button
           onClick={() => setPath([])}
           disabled={!path.length}
@@ -261,8 +364,13 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
         <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>
       )}
       {items !== null && !items.length && !error && (
-        <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, lineHeight: 1.5}}>
-          Nothing here yet. Add Apple Music to your Sonos sources in the Sonos app, link Spotify in HA, or drop files into <code style={{color: p.fg2}}>/config/media</code> to browse them here.
+        <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, lineHeight: 1.6}}>
+          {path.length === 0 ? (
+            <>
+              <div style={{color: p.fg2, marginBottom: 6}}>Nothing music-related at the top level yet.</div>
+              <div>Open <strong style={{color: p.fg}}>Sonos</strong> → <strong style={{color: p.fg}}>Music Library</strong> / <strong style={{color: p.fg}}>Favorites</strong> to see your Apple Music tracks (anything you've favorited in the Sonos app appears here), link <strong style={{color: p.fg}}>Spotify</strong> in HA, or install <strong style={{color: p.fg}}>Music Assistant</strong> via HACS for a unified Apple Music / Spotify / Tidal library.</div>
+            </>
+          ) : 'Nothing here.'}
         </div>
       )}
       {items?.length > 0 && (
@@ -324,6 +432,11 @@ const BrowserCard = ({ ctx, hass, speakerId }) => {
 // ── Speakers panel ────────────────────────────────────────────────────────
 const SpeakersPanel = ({ ctx, hass, speakers, activeId, setActiveId }) => {
   const { p, fonts } = ctx;
+  // Only Sonos / AirPlay / etc. speakers that advertise the GROUPING
+  // feature can be join/unjoin'd. Filter once so the top-row buttons
+  // never try to join non-groupable entities — that's what was raising
+  // the "does not support action media_player.unjoin" toast.
+  const groupable = speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
 
   const call = (entityId, service, data) => {
     if (!hass?.callService) return;
@@ -332,27 +445,27 @@ const SpeakersPanel = ({ ctx, hass, speakers, activeId, setActiveId }) => {
   };
 
   const groupAll = () => {
-    if (!speakers.length || !hass?.callService) return;
-    // The active speaker becomes the group leader; everyone else joins.
-    const leader = activeId;
-    const followers = speakers.filter(s => s.id !== leader).map(s => s.id);
+    if (!groupable.length || !hass?.callService) return;
+    const leaderEntity = groupable.find(s => s.id === activeId) || groupable[0];
+    const followers = groupable.filter(s => s.id !== leaderEntity.id).map(s => s.id);
     if (!followers.length) return;
     try {
       hass.callService('media_player', 'join', {
-        entity_id: leader,
+        entity_id: leaderEntity.id,
         group_members: followers,
       });
     } catch {}
   };
 
   const ungroupAll = () => {
-    if (!hass?.callService) return;
-    try { hass.callService('media_player', 'unjoin', { entity_id: speakers.map(s => s.id) }); } catch {}
+    if (!groupable.length || !hass?.callService) return;
+    try { hass.callService('media_player', 'unjoin', { entity_id: groupable.map(s => s.id) }); } catch {}
   };
 
   const pauseAll = () => {
-    if (!hass?.callService) return;
-    try { hass.callService('media_player', 'media_pause', { entity_id: speakers.filter(s => s.playing).map(s => s.id) }); } catch {}
+    const playing = speakers.filter(s => s.playing).map(s => s.id);
+    if (!playing.length || !hass?.callService) return;
+    try { hass.callService('media_player', 'media_pause', { entity_id: playing }); } catch {}
   };
 
   return (
@@ -421,18 +534,22 @@ const SpeakersPanel = ({ ctx, hass, speakers, activeId, setActiveId }) => {
 
       <div style={{padding: '12px 14px', borderTop: `.5px solid ${p.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8}}>
         <button onClick={pauseAll} style={smallActionBtn(p, fonts)}>Pause all</button>
-        <button onClick={groupAll} style={smallActionBtn(p, fonts, true)}>Group all</button>
-        <button onClick={ungroupAll} style={{...smallActionBtn(p, fonts), gridColumn: '1 / -1'}}>Ungroup</button>
+        <button onClick={groupAll} disabled={groupable.length < 2}
+          style={smallActionBtn(p, fonts, true, groupable.length < 2)}>Group all</button>
+        <button onClick={ungroupAll} disabled={!groupable.length}
+          style={{...smallActionBtn(p, fonts, false, !groupable.length), gridColumn: '1 / -1'}}>Ungroup</button>
       </div>
     </window.Card>
   );
 };
 
-const smallActionBtn = (p, fonts, primary) => ({
+const smallActionBtn = (p, fonts, primary, disabled) => ({
   padding: '7px 10px', borderRadius: 7,
   border: `.5px solid ${primary ? p.accent : p.border2}`,
   background: primary ? p.accentSoft : 'transparent',
-  color: primary ? p.accent : p.fg, fontSize: 11, cursor: 'pointer',
+  color: primary ? p.accent : p.fg, fontSize: 11,
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.4 : 1,
   fontFamily: fonts.body,
 });
 
