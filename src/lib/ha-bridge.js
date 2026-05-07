@@ -327,13 +327,32 @@ function translate(states) {
 }
 
 function detectTeslaPrefix(states) {
+  // The pair we need to be certain it's a car: battery level + battery
+  // range at the same prefix. The lock can have varying suffixes between
+  // Tessie versions (lock.<prefix>, lock.<prefix>_doors, lock.<prefix>_lock)
+  // so we don't gate detection on it.
   for (const id of Object.keys(states)) {
     const m = id.match(/^sensor\.(.+)_battery_range$/);
     if (!m) continue;
     const prefix = m[1];
-    if (states[`lock.${prefix}`] && states[`sensor.${prefix}_battery_level`]) {
-      return prefix;
-    }
+    if (states[`sensor.${prefix}_battery_level`]) return prefix;
+  }
+  return null;
+}
+
+// Tessie's lock entity varies across integration versions. Check the
+// common shapes in priority order so the rest of the app can target
+// whatever Tessie picked.
+function detectTeslaLockId(states, prefix) {
+  const candidates = [
+    `lock.${prefix}`,
+    `lock.${prefix}_doors`,
+    `lock.${prefix}_lock`,
+  ];
+  for (const id of candidates) if (states[id]) return id;
+  // Fallback: any lock entity whose id contains the prefix.
+  for (const id of Object.keys(states)) {
+    if (id.startsWith('lock.') && id.includes(prefix)) return id;
   }
   return null;
 }
@@ -346,7 +365,8 @@ function buildTesla(states, prefix) {
     const n = Number(x.state);
     return Number.isFinite(n) ? n : null;
   };
-  const lockEntity = s(`lock.${prefix}`);
+  const lockId = detectTeslaLockId(states, prefix);
+  const lockEntity = lockId ? s(lockId) : null;
   const battEntity = s(`sensor.${prefix}_battery_level`);
   const rangeEntity = s(`sensor.${prefix}_battery_range`);
   const climateEntity = s(`climate.${prefix}_climate`);
@@ -359,6 +379,7 @@ function buildTesla(states, prefix) {
 
   return {
     id: prefix,
+    lockEntityId: lockId,
     name: carName,
     locked: lockEntity?.state === 'locked',
     chargePct: Math.round(numState(`sensor.${prefix}_battery_level`) ?? 0),
@@ -561,7 +582,7 @@ function diffAndDispatch(prev, next, hass) {
   // matching HA entity. The id field is the entity prefix (e.g. "tone").
   if (next.tesla?.id && prev.tesla?.id === next.tesla.id) {
     const t = next.tesla, pt = prev.tesla;
-    const lockId = `lock.${t.id}`;
+    const lockId = t.lockEntityId || `lock.${t.id}`;
     const climateId = `climate.${t.id}_climate`;
     const frunkId = `cover.${t.id}_frunk`;
     const trunkId = `cover.${t.id}_trunk`;
