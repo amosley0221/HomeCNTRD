@@ -12,14 +12,23 @@ import Hls from 'hls.js';
 const CameraStream = ({ entityId, hass, style }) => {
   const videoRef = React.useRef(null);
   const [error, setError] = React.useState(null);
+  // hass updates on every HA state push (multiple times/sec). Keep a
+  // ref so the streaming effect can read fresh values without being
+  // triggered into a tear-down/setup cycle by the hass prop churn.
+  const hassRef = React.useRef(hass);
+  React.useEffect(() => { hassRef.current = hass; }, [hass]);
 
+  // Only restart the stream when the entity changes or the WS
+  // connection itself swaps (reconnect). hass.connection is stable
+  // across normal state updates, unlike hass.
+  const conn = hass?.connection;
   React.useEffect(() => {
     setError(null);
     const video = videoRef.current;
-    if (!video || !hass?.connection || !entityId) return;
-    const cleanup = startCameraStream(entityId, hass, video, setError);
+    if (!video || !conn || !entityId) return;
+    const cleanup = startCameraStream(entityId, hassRef, video, setError);
     return () => { try { cleanup && cleanup(); } catch {} };
-  }, [entityId, hass]);
+  }, [entityId, conn]);
 
   if (error) {
     return React.createElement('div', {
@@ -43,7 +52,7 @@ function camDiag(entityId, msg) {
   while (window.__hcDiag.length > 50) window.__hcDiag.shift();
 }
 
-function startCameraStream(entityId, hass, video, setError) {
+function startCameraStream(entityId, hassRef, video, setError) {
   let alive = true;
   let cleanup = null;
 
@@ -55,8 +64,14 @@ function startCameraStream(entityId, hass, video, setError) {
     for (const method of [trySubscribeWebRTC, tryLegacyWebRTC, tryHLS]) {
       if (!alive) return;
       try {
-        const result = await method(entityId, hass, video);
-        if (alive && result) {
+        const result = await method(entityId, hassRef.current, video);
+        if (!alive) {
+          // Effect was torn down mid-await; clean up the freshly opened
+          // resource so we don't leak peer connections / Hls instances.
+          if (result?.cleanup) try { result.cleanup(); } catch {}
+          return;
+        }
+        if (result) {
           camDiag(entityId, `streaming via ${result.kind}`);
           cleanup = result.cleanup;
           return;
@@ -69,7 +84,7 @@ function startCameraStream(entityId, hass, video, setError) {
     }
     if (alive) {
       setError(errors.length
-        ? errors[errors.length - 1] // surface the last (HLS) error since it's typically the most descriptive
+        ? errors[errors.length - 1]
         : 'No supported stream method');
     }
   };

@@ -31374,19 +31374,23 @@ class vt {
 }
 vt.defaultConfig = void 0;
 const Nk = ({ entityId: n, hass: e, style: t }) => {
-  const i = React.useRef(null), [r, s] = React.useState(null);
+  const i = React.useRef(null), [r, s] = React.useState(null), o = React.useRef(e);
+  React.useEffect(() => {
+    o.current = e;
+  }, [e]);
+  const a = e?.connection;
   return React.useEffect(() => {
     s(null);
-    const o = i.current;
-    if (!o || !e?.connection || !n) return;
-    const a = $k(n, e, o, s);
+    const d = i.current;
+    if (!d || !a || !n) return;
+    const l = $k(n, o, d, s);
     return () => {
       try {
-        a && a();
+        l && l();
       } catch {
       }
     };
-  }, [n, e]), r ? React.createElement("div", {
+  }, [n, a]), r ? React.createElement("div", {
     style: { ...t, display: "grid", placeItems: "center", color: "rgba(255,255,255,0.6)", fontSize: 11, padding: 8, textAlign: "center" }
   }, `Live stream unavailable: ${r}`) : React.createElement("video", {
     ref: i,
@@ -31407,8 +31411,15 @@ function $k(n, e, t, i) {
     for (const d of [fy, gy, py]) {
       if (!r) return;
       try {
-        const l = await d(n, e, t);
-        if (r && l) {
+        const l = await d(n, e.current, t);
+        if (!r) {
+          if (l?.cleanup) try {
+            l.cleanup();
+          } catch {
+          }
+          return;
+        }
+        if (l) {
           lg(n, `streaming via ${l.kind}`), s = l.cleanup;
           return;
         }
