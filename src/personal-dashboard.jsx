@@ -31,24 +31,46 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
     if (!hass || !calendarIds) { setFetchedEvents([]); return; }
     let alive = true;
     const ids = calendarIds.split(',').filter(Boolean);
+    const diag = (entry) => {
+      if (typeof window === 'undefined') return;
+      if (!window.__hcDiag) window.__hcDiag = [];
+      window.__hcDiag.push(entry);
+      while (window.__hcDiag.length > 50) window.__hcDiag.shift();
+    };
     const fetchAll = async () => {
       const start = new Date(); start.setHours(0, 0, 0, 0);
       const end = new Date(start); end.setDate(end.getDate() + 14);
       const startISO = start.toISOString();
       const endISO = end.toISOString();
       const allEvents = [];
+      let totalCount = 0;
       await Promise.all(ids.map(async (id) => {
         try {
           const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
           const events = await hass.callApi('GET', path);
-          if (!Array.isArray(events)) return;
+          if (!Array.isArray(events)) {
+            diag({ ts: Date.now(), kind: 'info', message: `calendar ${id}: response not an array (${typeof events})` });
+            return;
+          }
+          totalCount += events.length;
+          diag({ ts: Date.now(), kind: 'info', message: `calendar ${id}: fetched ${events.length} event(s) over 14 days` });
           for (const ev of events) {
-            // Different HA versions return either ISO strings or
-            // { date | dateTime } objects. Normalise.
+            // HA returns events as either ISO strings or { date | dateTime } objects.
+            // - { dateTime: "2026-05-07T10:00:00-04:00" } → timed
+            // - { date: "2026-05-07" } → all-day
+            // - "2026-05-07 10:00:00" → timed (some integrations skip the T)
+            // - "2026-05-07"            → all-day
             const startVal = (ev.start && (ev.start.dateTime || ev.start.date)) || ev.start;
             const endVal = (ev.end && (ev.end.dateTime || ev.end.date)) || ev.end;
             if (!startVal) continue;
-            const isAllDay = typeof startVal === 'string' && !startVal.includes('T');
+            let isAllDay;
+            if (ev.start && typeof ev.start === 'object') {
+              isAllDay = !ev.start.dateTime && !!ev.start.date;
+            } else if (typeof startVal === 'string') {
+              isAllDay = !/\d{2}:\d{2}/.test(startVal);
+            } else {
+              isAllDay = false;
+            }
             const startDate = new Date(startVal);
             const endDate = endVal ? new Date(endVal) : null;
             allEvents.push({
@@ -62,11 +84,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             });
           }
         } catch (e) {
-          console.warn(`[dashboard] could not fetch events for ${id}:`, e.message);
+          diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: fetch failed — ${e?.message || e}` });
+          console.warn(`[dashboard] could not fetch events for ${id}:`, e?.message || e);
         }
       }));
       if (alive) {
         allEvents.sort((a, b) => a.sortKey - b.sortKey);
+        diag({ ts: Date.now(), kind: 'info', message: `calendar: ${allEvents.length} total events parsed from ${ids.length} calendar(s); raw=${totalCount}` });
         setFetchedEvents(allEvents);
       }
     };
@@ -234,76 +258,69 @@ const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2,
     return <EmptyCard title="Weather" hint="Add a Weather integration in HA → Devices & Services. Pirate Weather and Met.no are both free." surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} fonts={fonts} accent={accent}/>;
   }
 
+  // Skip "today" from the forecast since the headline already shows it.
+  // Different integrations sometimes lead with tomorrow already — detect by
+  // comparing to today's local date.
+  const todayKey = ymd(new Date());
+  const upcoming = daily
+    .map(f => ({ ...f, _date: new Date(f.datetime || f.date || Date.now()) }))
+    .filter(f => ymd(f._date) !== todayKey)
+    .slice(0, 3);
+
   return (
     <div style={{
       padding: narrow ? '20px 18px' : '24px 28px',
       borderRadius: 16, background: surface, border: `.5px solid ${border}`,
-      display: 'flex', flexDirection: 'column', gap: narrow ? 18 : 22,
     }}>
-      {/* Top: current conditions + condition icon */}
-      <div style={{display:'flex', alignItems:'center', gap: narrow ? 14 : 24}}>
-        <div style={{flex: 1, minWidth: 0}}>
-          <div style={{fontSize:11, color:fg3, letterSpacing:'.06em', textTransform:'uppercase', marginBottom: 6}}>Weather</div>
-          <div style={{display: 'flex', alignItems: 'baseline', gap: 12}}>
-            <div style={{fontFamily: fonts.display, fontSize: narrow ? 56 : 72, lineHeight: 1, color: fg, fontWeight: 400, fontVariantNumeric: 'tabular-nums'}}>
-              {weather.temp}°
-            </div>
-            <div style={{fontSize: narrow ? 36 : 46, lineHeight: 1}}>{conditionIcon(weather.condition)}</div>
+      <div style={{fontSize:11, color:fg3, letterSpacing:'.06em', textTransform:'uppercase', marginBottom: narrow ? 12 : 16}}>Weather</div>
+
+      <div style={{
+        display:'flex', alignItems:'center',
+        gap: narrow ? 14 : 28,
+        flexWrap: narrow ? 'wrap' : 'nowrap',
+      }}>
+        {/* Current conditions */}
+        <div style={{display:'flex', alignItems:'center', gap: narrow ? 12 : 18, flex: 'none'}}>
+          <div style={{fontFamily: fonts.display, fontSize: narrow ? 52 : 64, lineHeight: 1, color: fg, fontWeight: 400, fontVariantNumeric: 'tabular-nums'}}>
+            {weather.temp}°
           </div>
-          <div style={{fontSize: 13, color: fg2, marginTop: 6}}>{conditionLabel(weather.condition)}</div>
-          <div style={{fontSize: 11.5, color: fg3, marginTop: 2, fontVariantNumeric: 'tabular-nums'}}>
-            High {weather.high}° · Low {weather.low}°
+          <div style={{display:'flex', flexDirection:'column', gap: 2}}>
+            <div style={{fontSize: narrow ? 32 : 40, lineHeight: 1}}>{conditionIcon(weather.condition)}</div>
+            <div style={{fontSize: 12, color: fg2, marginTop: 4}}>{conditionLabel(weather.condition)}</div>
+            <div style={{fontSize: 11, color: fg3, fontVariantNumeric: 'tabular-nums'}}>
+              H {weather.high}° · L {weather.low}°
+            </div>
           </div>
         </div>
 
-        {weather.hourly?.length > 0 && (
-          <div style={{display:'flex', alignItems:'flex-end', gap: 3, height: 70, flex: 'none'}}>
-            {weather.hourly.slice(0, narrow ? 6 : 10).map((t, i) => {
-              const min = Math.min(...weather.hourly);
-              const max = Math.max(...weather.hourly);
-              const h = max === min ? 36 : ((t - min) / (max - min)) * 44 + 14;
+        {/* 3-day forecast — inline, no boxes */}
+        {upcoming.length > 0 && (
+          <div style={{
+            flex: 1, minWidth: 0,
+            display: 'grid',
+            gridTemplateColumns: `repeat(${upcoming.length}, 1fr)`,
+            gap: narrow ? 8 : 14,
+          }}>
+            {upcoming.map((f, i) => {
+              const dayLabel = f._date.toLocaleDateString([], { weekday: 'short' });
+              const high = Math.round(f.temperature ?? f.temp ?? 0);
+              const low = Math.round(f.templow ?? f.temp_low ?? f.temp_min ?? 0);
               return (
-                <div key={i} style={{display:'flex', flexDirection:'column', alignItems:'center', gap: 3}}>
-                  <div style={{fontSize: 9, color: fg3, fontVariantNumeric:'tabular-nums'}}>{Math.round(t)}°</div>
-                  <div style={{width: 5, height: h, background: i === 0 ? accent : `${accent}55`, borderRadius: 3}}/>
+                <div key={i} style={{
+                  display:'flex', flexDirection:'column', alignItems:'center', gap: 4,
+                  textAlign:'center',
+                }}>
+                  <div style={{fontSize: 10, color: fg3, letterSpacing:'.06em', textTransform:'uppercase', fontWeight: 500}}>{dayLabel}</div>
+                  <div style={{fontSize: narrow ? 26 : 30, lineHeight: 1}}>{conditionIcon(f.condition)}</div>
+                  <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500, fontVariantNumeric:'tabular-nums'}}>
+                    {high}° <span style={{color: fg3, fontWeight: 400}}>/ {low}°</span>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
-
-      {/* 3-day forecast row (skip the first entry since it's "today") */}
-      {daily.length > 1 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${Math.min(daily.length, 4)}, 1fr)`,
-          gap: 8,
-          paddingTop: 14, borderTop: `.5px solid ${border}`,
-        }}>
-          {daily.slice(0, 4).map((f, i) => {
-            const d = new Date(f.datetime || f.date || Date.now());
-            const isToday = i === 0;
-            const dayLabel = isToday ? 'Today' : d.toLocaleDateString([], { weekday: 'short' });
-            const high = Math.round(f.temperature ?? f.temp ?? 0);
-            const low = Math.round(f.templow ?? f.temp_low ?? f.temp_min ?? 0);
-            return (
-              <div key={i} style={{
-                padding: '10px 8px', borderRadius: 10,
-                background: isToday ? `${accent}11` : surface2,
-                border: isToday ? `.5px solid ${accent}55` : `.5px solid ${border}`,
-                display:'flex', flexDirection:'column', alignItems:'center', gap: 4,
-                textAlign:'center',
-              }}>
-                <div style={{fontSize: 10, color: fg3, letterSpacing:'.06em', textTransform:'uppercase', fontWeight: 500}}>{dayLabel}</div>
-                <div style={{fontSize: 28, lineHeight: 1}}>{conditionIcon(f.condition)}</div>
-                <div style={{fontFamily: fonts.display, fontSize: 16, color: fg, fontWeight: 500, fontVariantNumeric:'tabular-nums'}}>{high}°</div>
-                <div style={{fontSize: 11, color: fg3, fontVariantNumeric:'tabular-nums'}}>Low {low}°</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 };

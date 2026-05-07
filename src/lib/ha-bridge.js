@@ -232,9 +232,12 @@ function translate(states) {
           const startStr = e.attributes.start_time || e.attributes.start;
           const start = new Date(startStr);
           // Prefer the explicit all_day attribute when HA provides it;
-          // fall back to "no T in the ISO string" detection otherwise.
+          // otherwise look for an actual time component in the string.
+          // Some HA integrations return "YYYY-MM-DD HH:MM:SS" (space, not T)
+          // — checking for "T" alone misclassifies those as all-day.
+          const hasTime = typeof startStr === 'string' && /\d{2}:\d{2}/.test(startStr);
           const isAllDay = e.attributes.all_day === true ||
-            (typeof startStr === 'string' && !startStr.includes('T'));
+            (typeof startStr === 'string' && !hasTime);
           out.calendarEvents.push({
             id: `${id}-next`,
             title: e.attributes.message,
