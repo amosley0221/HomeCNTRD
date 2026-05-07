@@ -45,20 +45,11 @@ const PersonalDashboard = ({ ctx }) => {
       minHeight: '100%', padding: narrow ? '20px 16px' : '32px 36px',
     }}>
       {/* Header */}
-      <div style={{display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:14, marginBottom: narrow ? 24 : 36}}>
-        <div>
-          <div style={{fontSize: 11, color: fg3, letterSpacing:'.12em', textTransform:'uppercase', marginBottom: 6}}>{dayName} · {dateStr}</div>
-          <div style={{fontFamily: display, fontSize: narrow ? 30 : 40, lineHeight: 1.05, color: fg, fontWeight: 500}}>
-            {greet()}, <em style={{fontStyle:'italic', color: accent, fontWeight: 400}}>{user?.firstName || 'there'}.</em>
-          </div>
+      <div style={{marginBottom: narrow ? 24 : 36}}>
+        <div style={{fontSize: 11, color: fg3, letterSpacing:'.12em', textTransform:'uppercase', marginBottom: 6}}>{dayName} · {dateStr}</div>
+        <div style={{fontFamily: display, fontSize: narrow ? 30 : 40, lineHeight: 1.05, color: fg, fontWeight: 500}}>
+          {greet()}, <em style={{fontStyle:'italic', color: accent, fontWeight: 400}}>{user?.firstName || 'there'}.</em>
         </div>
-        <button onClick={() => setPage('dashboard')} style={{
-          padding:'9px 14px', borderRadius:9, border:`.5px solid ${border}`,
-          background: 'transparent', color: fg2, fontSize: 12, cursor: 'pointer', fontFamily: body,
-          display:'inline-flex', alignItems:'center', gap: 8,
-        }}>
-          <window.Icon name="home" size={13}/> Open the home dashboard →
-        </button>
       </div>
 
       <div style={{

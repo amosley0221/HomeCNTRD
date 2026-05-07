@@ -225,7 +225,9 @@ const Sidebar = ({ ctx }) => {
 // ── MOBILE NAV ──────────────────────────────────────────────────────────
 const MobileHeader = ({ ctx }) => {
   const { p, fonts, user, room, setRoom, page } = ctx;
-  if (page !== 'home') return null;
+  // Only render on the rooms-based Dashboard. The new Home (personal
+  // dashboard) has its own header inside <PersonalDashboard/>.
+  if (page !== 'dashboard') return null;
   return (
     <div style={{padding:'4px 2px 8px'}}>
       <div style={{fontFamily:fonts.display, fontSize:22, fontStyle:'italic', color:p.accent, lineHeight:1}}>HomeCNTRD</div>
@@ -251,11 +253,11 @@ const MobileHeader = ({ ctx }) => {
 const BottomNav = ({ ctx }) => {
   const { p, fonts, page, setPage } = ctx;
   const items = [
-    { id:'home',    icon:'home',  label:'Home' },
-    { id:'music',   icon:'music', label:'Music' },
-    { id:'cameras', icon:'cam',   label:'Cams' },
-    { id:'devices', icon:'grid',  label:'Devices' },
-    { id:'settings',icon:'settings', label:'Settings' },
+    { id:'home',      icon:'home',     label:'Home' },
+    { id:'dashboard', icon:'grid',     label:'Dashboard' },
+    { id:'music',     icon:'music',    label:'Music' },
+    { id:'cameras',   icon:'cam',      label:'Cams' },
+    { id:'settings',  icon:'settings', label:'Settings' },
   ];
   return (
     <nav style={{
@@ -363,12 +365,18 @@ const DndBanner = ({ ctx }) => {
 
 // ── AGENT BUBBLE ────────────────────────────────────────────────────────
 const AgentBubble = ({ ctx, open, setOpen, unread, messages, thinking, draft, setDraft, send, openAgent, agentTone }) => {
-  const { p, fonts } = ctx;
+  const { p, fonts, narrow } = ctx;
   const inputRef = React.useRef(null);
   const scrollRef = React.useRef(null);
   const [browser, setBrowser] = React.useState(null); // { url, title }
   React.useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
   React.useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, thinking]);
+
+  // On narrow viewports the BottomNav owns ~64px at the bottom. Lift the
+  // floating button (and the expanded chat panel) above it so the dot
+  // doesn't overlap the nav and so the chat doesn't run off the screen.
+  const dotBottom = narrow ? 84 : 24;
+  const panelBottom = narrow ? 152 : 92;
 
   const suggestions = [
     'Find me a chocolate chip cookie recipe',
@@ -382,7 +390,7 @@ const AgentBubble = ({ ctx, open, setOpen, unread, messages, thinking, draft, se
   return (
     <>
       <button onClick={() => open ? setOpen(false) : openAgent()} style={{
-        position:'absolute', right:24, bottom:24, width:56, height:56, borderRadius:'50%',
+        position:'absolute', right:24, bottom:dotBottom, width:56, height:56, borderRadius:'50%',
         background: open ? p.surface2 : p.accent, color: open ? p.fg : '#fff',
         border:`.5px solid ${p.border}`, cursor:'pointer', display:'grid', placeItems:'center',
         boxShadow: open ? '0 4px 16px rgba(0,0,0,.15)' : `0 8px 28px ${p.accent}66, 0 1px 0 rgba(255,255,255,.3) inset`,
@@ -393,7 +401,7 @@ const AgentBubble = ({ ctx, open, setOpen, unread, messages, thinking, draft, se
       </button>
       {open && (
         <div style={{
-          position:'absolute', right:24, bottom:92, width:380, maxHeight:'min(560px, calc(100% - 120px))',
+          position:'absolute', right:24, bottom:panelBottom, width:380, maxHeight:'min(560px, calc(100% - 180px))',
           background: p.surface2, border:`.5px solid ${p.border}`, borderRadius:18,
           boxShadow:'0 24px 64px rgba(0,0,0,.18), 0 1px 0 rgba(255,255,255,.4) inset',
           display:'flex', flexDirection:'column', zIndex:50, overflow:'hidden',

@@ -7656,7 +7656,7 @@ const dl = {
   ] });
 }, ph = ({ ctx: e }) => {
   const { p: t, fonts: n, user: i, room: o, setRoom: l, page: s } = e;
-  return s !== "home" ? null : /* @__PURE__ */ r.jsxs("div", { style: { padding: "4px 2px 8px" }, children: [
+  return s !== "dashboard" ? null : /* @__PURE__ */ r.jsxs("div", { style: { padding: "4px 2px 8px" }, children: [
     /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 22, fontStyle: "italic", color: t.accent, lineHeight: 1 }, children: "HomeCNTRD" }),
     /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: n.display, fontSize: 24, color: t.fg, fontWeight: 500, marginTop: 6 }, children: [
       "Evening, ",
@@ -7688,9 +7688,9 @@ const dl = {
 }, hh = ({ ctx: e }) => {
   const { p: t, fonts: n, page: i, setPage: o } = e, l = [
     { id: "home", icon: "home", label: "Home" },
+    { id: "dashboard", icon: "grid", label: "Dashboard" },
     { id: "music", icon: "music", label: "Music" },
     { id: "cameras", icon: "cam", label: "Cams" },
-    { id: "devices", icon: "grid", label: "Devices" },
     { id: "settings", icon: "settings", label: "Settings" }
   ];
   return /* @__PURE__ */ r.jsx("nav", { style: {
@@ -7826,24 +7826,24 @@ const dl = {
     }, children: "End now" })
   ] });
 }, kh = ({ ctx: e, open: t, setOpen: n, unread: i, messages: o, thinking: l, draft: s, setDraft: a, send: d, openAgent: c, agentTone: f }) => {
-  const { p: u, fonts: h } = e, v = React.useRef(null), w = React.useRef(null), [p, k] = React.useState(null);
+  const { p: u, fonts: h, narrow: v } = e, w = React.useRef(null), p = React.useRef(null), [k, g] = React.useState(null);
   React.useEffect(() => {
-    t && v.current && v.current.focus();
+    t && w.current && w.current.focus();
   }, [t]), React.useEffect(() => {
-    w.current && (w.current.scrollTop = w.current.scrollHeight);
+    p.current && (p.current.scrollTop = p.current.scrollHeight);
   }, [o, l]);
-  const g = [
+  const m = v ? 84 : 24, y = v ? 152 : 92, x = [
     "Find me a chocolate chip cookie recipe",
     "Set up movie night",
     "Lock the house",
     "Precondition the Tesla",
     "Best Italian recipes for tonight"
-  ], m = { jarvis: "Jarvis", terse: "CTRL", playful: "Pip" }[f] || "Jarvis";
+  ], j = { jarvis: "Jarvis", terse: "CTRL", playful: "Pip" }[f] || "Jarvis";
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsxs("button", { onClick: () => t ? n(!1) : c(), style: {
       position: "absolute",
       right: 24,
-      bottom: 24,
+      bottom: m,
       width: 56,
       height: 56,
       borderRadius: "50%",
@@ -7862,9 +7862,9 @@ const dl = {
     t && /* @__PURE__ */ r.jsxs("div", { style: {
       position: "absolute",
       right: 24,
-      bottom: 92,
+      bottom: y,
       width: 380,
-      maxHeight: "min(560px, calc(100% - 120px))",
+      maxHeight: "min(560px, calc(100% - 180px))",
       background: u.surface2,
       border: `.5px solid ${u.border}`,
       borderRadius: 18,
@@ -7877,7 +7877,7 @@ const dl = {
       /* @__PURE__ */ r.jsxs("div", { style: { padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `.5px solid ${u.border}` }, children: [
         /* @__PURE__ */ r.jsx("div", { style: { width: 32, height: 32, borderRadius: "50%", background: `radial-gradient(circle at 30% 30%, ${u.accent}, oklch(40% 0.1 25))`, display: "grid", placeItems: "center", color: "#fff" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "sparkle", size: 14 }) }),
         /* @__PURE__ */ r.jsxs("div", { style: { flex: 1 }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { fontFamily: h.display, fontSize: 15, color: u.fg, fontWeight: 500 }, children: m }),
+          /* @__PURE__ */ r.jsx("div", { style: { fontFamily: h.display, fontSize: 15, color: u.fg, fontWeight: 500 }, children: j }),
           /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: u.fg3 }, children: [
             /* @__PURE__ */ r.jsx("span", { style: { color: "oklch(60% 0.13 145)" }, children: "●" }),
             " Listening · everything online"
@@ -7885,15 +7885,15 @@ const dl = {
         ] }),
         /* @__PURE__ */ r.jsx("button", { onClick: () => n(!1), style: { border: 0, background: "transparent", color: u.fg3, cursor: "pointer", padding: 6, fontSize: 18 }, children: "×" })
       ] }),
-      /* @__PURE__ */ r.jsxs("div", { ref: w, style: { flex: 1, overflow: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }, children: [
-        o.map((y, x) => /* @__PURE__ */ r.jsx(jh, { m: y, p: u, fonts: h, onOpen: (j, b) => k({ url: j, title: b }) }, x)),
+      /* @__PURE__ */ r.jsxs("div", { ref: p, style: { flex: 1, overflow: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }, children: [
+        o.map((b, S) => /* @__PURE__ */ r.jsx(jh, { m: b, p: u, fonts: h, onOpen: (C, M) => g({ url: C, title: M }) }, S)),
         l && /* @__PURE__ */ r.jsx(Sh, { p: u, fonts: h })
       ] }),
-      o.length <= 1 && /* @__PURE__ */ r.jsx("div", { style: { padding: "0 16px 8px", display: "flex", flexWrap: "wrap", gap: 6 }, children: g.map((y) => /* @__PURE__ */ r.jsx("button", { onClick: () => d(y), style: { padding: "5px 10px", borderRadius: 999, border: `.5px solid ${u.border2}`, background: "transparent", color: u.fg2, fontSize: 11, cursor: "pointer", fontFamily: h.body }, children: y }, y)) }),
-      /* @__PURE__ */ r.jsxs("form", { onSubmit: (y) => {
-        y.preventDefault(), d(s);
+      o.length <= 1 && /* @__PURE__ */ r.jsx("div", { style: { padding: "0 16px 8px", display: "flex", flexWrap: "wrap", gap: 6 }, children: x.map((b) => /* @__PURE__ */ r.jsx("button", { onClick: () => d(b), style: { padding: "5px 10px", borderRadius: 999, border: `.5px solid ${u.border2}`, background: "transparent", color: u.fg2, fontSize: 11, cursor: "pointer", fontFamily: h.body }, children: b }, b)) }),
+      /* @__PURE__ */ r.jsxs("form", { onSubmit: (b) => {
+        b.preventDefault(), d(s);
       }, style: { padding: 12, borderTop: `.5px solid ${u.border}`, display: "flex", alignItems: "center", gap: 8 }, children: [
-        /* @__PURE__ */ r.jsx("input", { ref: v, value: s, onChange: (y) => a(y.target.value), placeholder: `Ask ${m} anything…`, style: {
+        /* @__PURE__ */ r.jsx("input", { ref: w, value: s, onChange: (b) => a(b.target.value), placeholder: `Ask ${j} anything…`, style: {
           flex: 1,
           padding: "10px 12px",
           borderRadius: 10,
@@ -7908,7 +7908,7 @@ const dl = {
         /* @__PURE__ */ r.jsx("button", { type: "submit", style: { width: 36, height: 36, borderRadius: 9, background: u.accent, border: 0, color: "#fff", cursor: "pointer", display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "send", size: 15 }) })
       ] })
     ] }),
-    p && /* @__PURE__ */ r.jsx(bh, { p: u, fonts: h, url: p.url, title: p.title, onClose: () => k(null) })
+    k && /* @__PURE__ */ r.jsx(bh, { p: u, fonts: h, url: k.url, title: k.title, onClose: () => g(null) })
   ] });
 }, jh = ({ m: e, p: t, fonts: n, onOpen: i }) => {
   const o = e.who === "user", l = (e.text || "").split(`
@@ -7985,37 +7985,19 @@ const Ch = ({ ctx: e }) => {
     minHeight: "100%",
     padding: l ? "20px 16px" : "32px 36px"
   }, children: [
-    /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 14, marginBottom: l ? 24 : 36 }, children: [
-      /* @__PURE__ */ r.jsxs("div", { children: [
-        /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: h, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 6 }, children: [
-          g,
-          " · ",
-          m
-        ] }),
-        /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: w, fontSize: l ? 30 : 40, lineHeight: 1.05, color: f, fontWeight: 500 }, children: [
-          y(),
-          ", ",
-          /* @__PURE__ */ r.jsxs("em", { style: { fontStyle: "italic", color: a, fontWeight: 400 }, children: [
-            o?.firstName || "there",
-            "."
-          ] })
-        ] })
+    /* @__PURE__ */ r.jsxs("div", { style: { marginBottom: l ? 24 : 36 }, children: [
+      /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: h, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 6 }, children: [
+        g,
+        " · ",
+        m
       ] }),
-      /* @__PURE__ */ r.jsxs("button", { onClick: () => s("dashboard"), style: {
-        padding: "9px 14px",
-        borderRadius: 9,
-        border: `.5px solid ${v}`,
-        background: "transparent",
-        color: u,
-        fontSize: 12,
-        cursor: "pointer",
-        fontFamily: p,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8
-      }, children: [
-        /* @__PURE__ */ r.jsx(window.Icon, { name: "home", size: 13 }),
-        " Open the home dashboard →"
+      /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: w, fontSize: l ? 30 : 40, lineHeight: 1.05, color: f, fontWeight: 500 }, children: [
+        y(),
+        ", ",
+        /* @__PURE__ */ r.jsxs("em", { style: { fontStyle: "italic", color: a, fontWeight: 400 }, children: [
+          o?.firstName || "there",
+          "."
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ r.jsxs("div", { style: {
