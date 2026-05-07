@@ -223,17 +223,23 @@ function translate(states) {
       case 'calendar':
         // Each calendar entity reports its NEXT event in attributes. We
         // collect them all into calendarEvents so the right-column list
-        // can show several at once.
+        // can show several at once. PersonalDashboard ALSO fetches a
+        // multi-day list via the REST API for richer display.
         out.calendar.push({ id, name });
-        if (e.attributes?.message && e.attributes?.start_time) {
-          const start = new Date(e.attributes.start_time);
-          const isAllDay = !e.attributes.start_time.includes('T');
+        if (e.attributes?.message && (e.attributes?.start_time || e.attributes?.start)) {
+          const startStr = e.attributes.start_time || e.attributes.start;
+          const start = new Date(startStr);
+          // Prefer the explicit all_day attribute when HA provides it;
+          // fall back to "no T in the ISO string" detection otherwise.
+          const isAllDay = e.attributes.all_day === true ||
+            (typeof startStr === 'string' && !startStr.includes('T'));
           out.calendarEvents.push({
             id: `${id}-next`,
             title: e.attributes.message,
             where: e.attributes.location || '',
             kind: /birthday|bday/i.test(e.attributes.message) ? 'birthday' : 'event',
-            start: e.attributes.start_time,
+            start: startStr,
+            isAllDay,
             day: start.getDate(),
             monthShort: start.toLocaleDateString([], { month: 'short' }).toUpperCase(),
             timeStr: isAllDay ? 'All day' : start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),

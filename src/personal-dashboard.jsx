@@ -1,21 +1,12 @@
 // personal-dashboard.jsx — the new Home page.
 //
 // Black background, tangerine accents, two-column layout (main + calendar).
-// Sections:
-//   - Greeting + date
-//   - Weather (large card, big temp + forecast)
-//   - To-do lists (read from HA todo.* entities)
-//   - Sports scores (read from sensor.* entities matching team patterns)
-//   - Breaking news (read from sensor.feedreader_* entities)
-//   - Notes (local-storage backed, multi-device sync via HA later)
-//   - Calendar (right side: month grid + upcoming events list)
-//
-// Each section reads whatever the user's HA exposes; sections without
-// backing entities show an empty state with a one-line hint pointing at
-// the integration to install.
+
+import HassContext from './lib/hass-context.js';
 
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const { p, fonts, state, user, narrow, setPage } = ctx;
+  const hass = React.useContext(HassContext);
   const accent = p.accent;
   const surface = '#1a1612';
   const surface2 = '#221d18';
@@ -29,6 +20,68 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const today = new Date();
   const dayName = today.toLocaleDateString([], { weekday: 'long' });
   const dateStr = today.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Fetch a 14-day window of events directly from HA's REST API. The
+  // single-event preview that arrives in `state.calendar*` only contains
+  // each calendar's next event — for the full upcoming list we ask each
+  // calendar entity for its events in [now, now + 14d].
+  const [fetchedEvents, setFetchedEvents] = React.useState([]);
+  const calendarIds = (state.calendar || []).map(c => c.id).join(',');
+  React.useEffect(() => {
+    if (!hass || !calendarIds) { setFetchedEvents([]); return; }
+    let alive = true;
+    const ids = calendarIds.split(',').filter(Boolean);
+    const fetchAll = async () => {
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      const end = new Date(start); end.setDate(end.getDate() + 14);
+      const startISO = start.toISOString();
+      const endISO = end.toISOString();
+      const allEvents = [];
+      await Promise.all(ids.map(async (id) => {
+        try {
+          const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
+          const events = await hass.callApi('GET', path);
+          if (!Array.isArray(events)) return;
+          for (const ev of events) {
+            // Different HA versions return either ISO strings or
+            // { date | dateTime } objects. Normalise.
+            const startVal = (ev.start && (ev.start.dateTime || ev.start.date)) || ev.start;
+            const endVal = (ev.end && (ev.end.dateTime || ev.end.date)) || ev.end;
+            if (!startVal) continue;
+            const isAllDay = typeof startVal === 'string' && !startVal.includes('T');
+            const startDate = new Date(startVal);
+            const endDate = endVal ? new Date(endVal) : null;
+            allEvents.push({
+              id: `${id}-${startVal}-${ev.summary || ''}`,
+              title: ev.summary || '(untitled)',
+              where: ev.location || '',
+              kind: /birthday|bday/i.test(ev.summary || '') ? 'birthday' : 'event',
+              start: startDate, end: endDate,
+              isAllDay,
+              sortKey: startDate.getTime(),
+            });
+          }
+        } catch (e) {
+          console.warn(`[dashboard] could not fetch events for ${id}:`, e.message);
+        }
+      }));
+      if (alive) {
+        allEvents.sort((a, b) => a.sortKey - b.sortKey);
+        setFetchedEvents(allEvents);
+      }
+    };
+    fetchAll();
+    const t = setInterval(fetchAll, 5 * 60 * 1000); // refresh every 5 min
+    return () => { alive = false; clearInterval(t); };
+  }, [hass, calendarIds]);
+
+  // Use fetched events when we have them; otherwise fall back to the
+  // single-event preview from state.
+  const allEvents = fetchedEvents.length > 0 ? fetchedEvents : (state.calendarEvents || []).map(e => ({
+    ...e,
+    start: e.start ? new Date(e.start) : null,
+    end: null,
+  }));
 
   const greet = () => {
     const h = today.getHours();
@@ -106,7 +159,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
 
         {/* Right column — calendar */}
         <CalendarColumn
-          calendar={state.calendar} events={state.calendarEvents}
+          calendar={state.calendar} events={allEvents}
           accent={accent} fonts={fonts} surface={surface} surface2={surface2}
           fg={fg} fg2={fg2} fg3={fg3} border={border}
         />
@@ -264,72 +317,170 @@ const NotesCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
 // ── Right column: Calendar + upcoming events ──────────────────────────────
 const CalendarColumn = ({ calendar, events, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
   const today = new Date();
-  const month = today.getMonth();
-  const year = today.getFullYear();
-  const monthName = today.toLocaleDateString([], { month: 'long', year: 'numeric' });
+  const todayKey = ymd(today);
+  const [viewMonth, setViewMonth] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedKey, setSelectedKey] = React.useState(null); // YYYY-MM-DD
+
+  const month = viewMonth.getMonth();
+  const year = viewMonth.getFullYear();
+  const monthName = viewMonth.toLocaleDateString([], { month: 'long', year: 'numeric' });
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
+  // Build a Set of YYYY-MM-DD keys that have events, so the grid can
+  // dot the right day cells.
+  const eventDays = React.useMemo(() => {
+    const set = new Set();
+    for (const e of events || []) {
+      if (!e?.start) continue;
+      set.add(ymd(e.start instanceof Date ? e.start : new Date(e.start)));
+    }
+    return set;
+  }, [events]);
+
+  // What to show in the Upcoming list:
+  //   - If a day is selected, only events on that day
+  //   - Otherwise, the next 3 days of events (today + 2)
+  const visibleEvents = React.useMemo(() => {
+    if (!events?.length) return [];
+    if (selectedKey) {
+      return events.filter(e => e.start && ymd(e.start instanceof Date ? e.start : new Date(e.start)) === selectedKey);
+    }
+    const cutoff = new Date(today); cutoff.setHours(0, 0, 0, 0); cutoff.setDate(cutoff.getDate() + 3);
+    return events.filter(e => {
+      if (!e.start) return false;
+      const d = e.start instanceof Date ? e.start : new Date(e.start);
+      return d.getTime() >= today.getTime() - 60 * 60 * 1000 && d.getTime() < cutoff.getTime();
+    });
+  }, [events, selectedKey, todayKey]);
+
+  const goPrev = () => setViewMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const goNext = () => setViewMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  const goToday = () => { setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedKey(null); };
+
   return (
     <div style={{display:'flex', flexDirection:'column', gap: 14}}>
       {/* Calendar grid */}
       <Card surface={surface} border={border}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12}}>
-          <div style={{fontFamily: fonts.display, fontSize: 16, color: fg, fontWeight: 500}}>{monthName}</div>
-          <window.Icon name="cal" size={14} style={{color: accent}}/>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12, gap: 6}}>
+          <div style={{fontFamily: fonts.display, fontSize: 16, color: fg, fontWeight: 500, flex: 1}}>{monthName}</div>
+          <button onClick={goPrev} aria-label="Previous month" style={navBtn(fg2, border)}>‹</button>
+          <button onClick={goToday} aria-label="Today" style={{...navBtn(fg2, border), padding: '0 10px', width: 'auto', fontSize: 11}}>Today</button>
+          <button onClick={goNext} aria-label="Next month" style={navBtn(fg2, border)}>›</button>
         </div>
         <div style={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, fontFamily: fonts.body, fontSize: 11}}>
           {['S','M','T','W','T','F','S'].map((d, i) => (
             <div key={i} style={{textAlign:'center', padding: 4, color: fg3, fontWeight: 500}}>{d}</div>
           ))}
-          {cells.map((d, i) => (
-            <div key={i} style={{
-              textAlign: 'center', padding: '6px 0', borderRadius: 6,
-              fontSize: 12, fontVariantNumeric: 'tabular-nums',
-              color: d ? (d === today.getDate() ? '#fff' : fg2) : 'transparent',
-              background: d === today.getDate() ? accent : 'transparent',
-              fontWeight: d === today.getDate() ? 600 : 400,
-            }}>
-              {d || ''}
-            </div>
-          ))}
+          {cells.map((d, i) => {
+            if (!d) return <div key={i} />;
+            const cellDate = new Date(year, month, d);
+            const cellKey = ymd(cellDate);
+            const isToday = cellKey === todayKey;
+            const isSelected = cellKey === selectedKey;
+            const hasEvents = eventDays.has(cellKey);
+            return (
+              <button
+                key={i}
+                onClick={() => setSelectedKey(prev => prev === cellKey ? null : cellKey)}
+                style={{
+                  position: 'relative', textAlign: 'center', padding: '8px 0', borderRadius: 6,
+                  fontSize: 12, fontVariantNumeric: 'tabular-nums',
+                  color: isToday ? '#fff' : (isSelected ? accent : fg2),
+                  background: isToday ? accent : (isSelected ? `${accent}22` : 'transparent'),
+                  border: 0, cursor: 'pointer', fontFamily: fonts.body,
+                  fontWeight: isToday || isSelected ? 600 : 400,
+                  outline: isSelected && !isToday ? `1px solid ${accent}66` : 'none',
+                }}
+              >
+                {d}
+                {hasEvents && (
+                  <span style={{
+                    position: 'absolute', left: '50%', bottom: 3, transform: 'translateX(-50%)',
+                    width: 4, height: 4, borderRadius: '50%',
+                    background: isToday ? '#fff' : accent,
+                  }} />
+                )}
+              </button>
+            );
+          })}
         </div>
       </Card>
 
       {/* Upcoming events */}
       <Card surface={surface} border={border}>
-        <CardHeader title="Upcoming" right={null} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
-        {(events && events.length > 0) ? (
+        <CardHeader
+          title={selectedKey
+            ? new Date(selectedKey + 'T00:00:00').toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+            : 'Next 3 days'}
+          right={selectedKey
+            ? <button onClick={() => setSelectedKey(null)} style={linkBtn(fg3)}>Clear</button>
+            : <span style={{fontSize: 11, color: fg3}}>{visibleEvents.length} event{visibleEvents.length === 1 ? '' : 's'}</span>}
+          fonts={fonts} fg={fg} fg3={fg3} accent={accent}
+        />
+        {visibleEvents.length > 0 ? (
           <div style={{display:'flex', flexDirection:'column', gap: 10}}>
-            {events.slice(0, 8).map((e, i) => (
-              <div key={i} style={{display:'flex', gap: 10, padding: '6px 0', borderBottom: i < events.length - 1 ? `.5px solid ${border}` : 'none'}}>
-                <div style={{
-                  width: 38, flex: 'none', textAlign: 'center', padding: '4px 0',
-                  background: surface2, borderRadius: 6, border: `.5px solid ${border}`,
-                }}>
-                  <div style={{fontSize: 9, color: fg3, letterSpacing: '.06em', textTransform: 'uppercase'}}>{e.monthShort}</div>
-                  <div style={{fontFamily: fonts.display, fontSize: 16, color: fg, fontWeight: 500, lineHeight: 1}}>{e.day}</div>
+            {visibleEvents.map((e, i) => {
+              const start = e.start instanceof Date ? e.start : new Date(e.start);
+              const end = e.end ? (e.end instanceof Date ? e.end : new Date(e.end)) : null;
+              const day = start.getDate();
+              const monthShort = start.toLocaleDateString([], { month: 'short' }).toUpperCase();
+              const timeStr = e.isAllDay
+                ? 'All day'
+                : start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) +
+                  (end ? ` – ${end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : '');
+              return (
+                <div key={e.id || i} style={{display:'flex', gap: 10, padding: '6px 0', borderBottom: i < visibleEvents.length - 1 ? `.5px solid ${border}` : 'none'}}>
+                  <div style={{
+                    width: 38, flex: 'none', textAlign: 'center', padding: '4px 0',
+                    background: surface2, borderRadius: 6, border: `.5px solid ${border}`,
+                  }}>
+                    <div style={{fontSize: 9, color: fg3, letterSpacing: '.06em', textTransform: 'uppercase'}}>{monthShort}</div>
+                    <div style={{fontFamily: fonts.display, fontSize: 16, color: fg, fontWeight: 500, lineHeight: 1}}>{day}</div>
+                  </div>
+                  <div style={{flex: 1, minWidth: 0}}>
+                    <div style={{fontSize: 13, color: fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{e.title}</div>
+                    <div style={{fontSize: 11, color: fg3, marginTop: 2}}>{timeStr}{e.where ? ` · ${e.where}` : ''}</div>
+                  </div>
+                  {e.kind === 'birthday' && <span style={{fontSize: 12}}>🎂</span>}
                 </div>
-                <div style={{flex: 1, minWidth: 0}}>
-                  <div style={{fontSize: 13, color: fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{e.title}</div>
-                  <div style={{fontSize: 11, color: fg3, marginTop: 2}}>{e.timeStr}{e.where ? ` · ${e.where}` : ''}</div>
-                </div>
-                {e.kind === 'birthday' && <span style={{fontSize: 12}}>🎂</span>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : !calendar?.length ? (
-          <EmptyMessage hint="Add Outlook (Microsoft 365), Google Calendar, or CalDAV in HA to see events here." fg={fg2} fg3={fg3} border={border} accent={accent} surface={surface2}/>
+          <EmptyMessage hint="Add Outlook, Google Calendar, or Remote iCalendar in HA to see events here." fg={fg2} fg3={fg3} border={border} accent={accent} surface={surface2}/>
         ) : (
-          <div style={{padding: '20px 0', textAlign: 'center', color: fg3, fontSize: 12}}>No upcoming events.</div>
+          <div style={{padding: '20px 0', textAlign: 'center', color: fg3, fontSize: 12}}>
+            {selectedKey ? 'Nothing scheduled this day.' : 'Nothing scheduled in the next 3 days.'}
+          </div>
         )}
       </Card>
     </div>
   );
 };
+
+// Local YYYY-MM-DD key — avoids ISO timezone shifts.
+function ymd(d) {
+  if (!d) return '';
+  const x = d instanceof Date ? d : new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+}
+
+const navBtn = (fg2, border) => ({
+  width: 26, height: 26, borderRadius: 6,
+  background: 'transparent', border: `.5px solid ${border}`,
+  color: fg2, cursor: 'pointer',
+  display:'inline-flex', alignItems:'center', justifyContent:'center',
+  fontSize: 14, fontFamily: 'inherit',
+});
+const linkBtn = (fg3) => ({
+  background: 'transparent', border: 0, color: fg3,
+  fontSize: 11, cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+  textDecoration: 'underline', textUnderlineOffset: 2,
+});
 
 // ── Shared: Card wrapper, header, empty state ─────────────────────────────
 const Card = ({ surface, border, children, style }) => (
