@@ -42,7 +42,21 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   return (
     <div style={{
       background: '#0d0b09', color: fg, fontFamily: body,
-      minHeight: '100%', padding: narrow ? '20px 16px' : '32px 36px',
+      minHeight: '100%',
+      // Safe-area aware so the status bar / home indicator don't clip
+      // the rounded card corners on iPad / iOS Companion.
+      paddingTop: `calc(env(safe-area-inset-top, 0px) + ${narrow ? 20 : 32}px)`,
+      paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${narrow ? 24 : 40}px)`,
+      paddingLeft: 0, paddingRight: 0,
+      overflowX: 'hidden',
+    }}>
+    <div style={{
+      // Constrain the content so tiles don't sprawl edge-to-edge on
+      // wide viewports — they should sit inside a comfortable column
+      // with the page background visible on both sides.
+      maxWidth: 1280, margin: '0 auto',
+      paddingLeft: narrow ? 16 : 36,
+      paddingRight: narrow ? 16 : 36,
     }}>
       {/* Header */}
       <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap: 14, marginBottom: narrow ? 24 : 36}}>
@@ -99,6 +113,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       </div>
 
       <div style={{height: 80}}/>
+    </div>
     </div>
   );
 };

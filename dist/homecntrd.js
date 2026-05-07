@@ -8005,12 +8005,26 @@ const Th = ({ ctx: e, onOpenMenu: t }) => {
     const j = g.getHours();
     return j < 5 ? "Working late" : j < 12 ? "Good morning" : j < 17 ? "Good afternoon" : j < 21 ? "Good evening" : "Good night";
   };
-  return /* @__PURE__ */ r.jsxs("div", { style: {
+  return /* @__PURE__ */ r.jsx("div", { style: {
     background: "#0d0b09",
     color: u,
     fontFamily: k,
     minHeight: "100%",
-    padding: s ? "20px 16px" : "32px 36px"
+    // Safe-area aware so the status bar / home indicator don't clip
+    // the rounded card corners on iPad / iOS Companion.
+    paddingTop: `calc(env(safe-area-inset-top, 0px) + ${s ? 20 : 32}px)`,
+    paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${s ? 24 : 40}px)`,
+    paddingLeft: 0,
+    paddingRight: 0,
+    overflowX: "hidden"
+  }, children: /* @__PURE__ */ r.jsxs("div", { style: {
+    // Constrain the content so tiles don't sprawl edge-to-edge on
+    // wide viewports — they should sit inside a comfortable column
+    // with the page background visible on both sides.
+    maxWidth: 1280,
+    margin: "0 auto",
+    paddingLeft: s ? 16 : 36,
+    paddingRight: s ? 16 : 36
   }, children: [
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: s ? 24 : 36 }, children: [
       /* @__PURE__ */ r.jsxs("div", { children: [
@@ -8072,7 +8086,7 @@ const Th = ({ ctx: e, onOpenMenu: t }) => {
       )
     ] }),
     /* @__PURE__ */ r.jsx("div", { style: { height: 80 } })
-  ] });
+  ] }) });
 }, Rh = ({ weather: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, border: a, narrow: d }) => !e || e.summary === "Unavailable" ? /* @__PURE__ */ r.jsx(Hi, { title: "Weather", hint: "Add a Weather integration in HA → Devices & Services. Pirate Weather and Met.no are both free.", surface: i, fg: o, fg2: l, fg3: s, border: a, fonts: n, accent: t }) : /* @__PURE__ */ r.jsxs("div", { style: {
   padding: d ? "20px 18px" : "28px 28px",
   borderRadius: 16,
