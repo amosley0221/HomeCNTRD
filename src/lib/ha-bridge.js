@@ -56,6 +56,7 @@ function translate(states) {
     garage: { doors: [], history: [] },
     vacuum: null, thermostat: null, weather: null, ring: null,
     tv: { on: false, source: '—', show: '' },
+    todos: [], sports: [], news: [], calendar: [], calendarEvents: [],
   };
 
   if (!states) {
@@ -206,8 +207,89 @@ function translate(states) {
           };
         }
         break;
+
+      case 'todo': {
+        // HA exposes a todo list's open-item count as the entity state.
+        // The actual items list is fetched via a separate WS call; for the
+        // dashboard tile we just show the list name + count.
+        const count = parseInt(e.state, 10);
+        out.todos.push({
+          id, name,
+          count: Number.isFinite(count) ? count : 0,
+        });
+        break;
+      }
+
+      case 'calendar':
+        // Each calendar entity reports its NEXT event in attributes. We
+        // collect them all into calendarEvents so the right-column list
+        // can show several at once.
+        out.calendar.push({ id, name });
+        if (e.attributes?.message && e.attributes?.start_time) {
+          const start = new Date(e.attributes.start_time);
+          const isAllDay = !e.attributes.start_time.includes('T');
+          out.calendarEvents.push({
+            id: `${id}-next`,
+            title: e.attributes.message,
+            where: e.attributes.location || '',
+            kind: /birthday|bday/i.test(e.attributes.message) ? 'birthday' : 'event',
+            start: e.attributes.start_time,
+            day: start.getDate(),
+            monthShort: start.toLocaleDateString([], { month: 'short' }).toUpperCase(),
+            timeStr: isAllDay ? 'All day' : start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+            sortKey: start.getTime(),
+          });
+        }
+        break;
+
+      case 'sensor': {
+        // Sports — TeamTracker exposes team_state etc.; ESPN integrations
+        // similar. Heuristic: friendly_name has team-vs-team OR attributes
+        // contain opponent + team_score.
+        const a = e.attributes || {};
+        if (a.team_homeaway && a.team_score !== undefined) {
+          // ESPN-style attributes
+          out.sports.push({
+            id, team: a.team_name || name, opponent: a.opponent_name || 'Opponent',
+            teamScore: a.team_score, oppScore: a.opponent_score,
+            state: e.state, live: e.state === 'IN' || e.state === 'in_progress',
+          });
+        } else if (a.team_abbr && a.opponent_abbr) {
+          // TeamTracker-style attributes
+          const live = /^(IN|HALF|END)$/.test(e.state);
+          out.sports.push({
+            id, team: a.team_abbr, opponent: a.opponent_abbr,
+            teamScore: a.team_score, oppScore: a.opponent_score,
+            state: live ? `${a.clock || ''} Q${a.quarter || ''}`.trim() : (e.state || ''),
+            live,
+          });
+        }
+        break;
+      }
+
+      case 'event': {
+        // HA's feedreader integration creates event.feedreader entities
+        // when an RSS update fires. The integration also exposes recent
+        // entries via attributes.
+        if (id.startsWith('event.feedreader') || /feedreader|rss/i.test(name)) {
+          const entries = Array.isArray(e.attributes?.entries) ? e.attributes.entries : [];
+          for (const entry of entries.slice(0, 5)) {
+            out.news.push({
+              id: `${id}-${entry.id || entry.link || entry.title}`,
+              title: entry.title || 'Untitled',
+              url: entry.link || '#',
+              source: e.attributes?.feed_title || name,
+              timeAgo: friendlyTime(entry.published || entry.updated || e.last_changed),
+            });
+          }
+        }
+        break;
+      }
     }
   }
+
+  // Sort upcoming events soonest-first.
+  out.calendarEvents.sort((a, b) => (a.sortKey || 0) - (b.sortKey || 0));
 
   // Cross-link motion to cameras via paired binary_sensor.*_motion entities.
   const motionMap = new Map();

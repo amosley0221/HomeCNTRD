@@ -33,6 +33,7 @@ import './shared.jsx';
 import './lib/ha-bridge.js';
 import './dnd-grid.jsx';
 import './hearth.jsx';
+import './personal-dashboard.jsx';
 import './home-view.jsx';
 import './music-view.jsx';
 import './cameras-view.jsx';

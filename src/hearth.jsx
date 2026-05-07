@@ -93,7 +93,8 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
         {!narrow && <Sidebar ctx={ctx} />}
         <main style={{overflow:'auto', padding: narrow ? '16px 14px 14px' : dens.pad, display:'flex', flexDirection:'column', gap: dens.gap, paddingBottom: narrow ? 80 : undefined}}>
           {narrow && <MobileHeader ctx={ctx} />}
-          {page === 'home'     && <window.HomeView ctx={ctx} />}
+          {page === 'home'     && <window.PersonalDashboard ctx={ctx} />}
+          {page === 'dashboard' && <window.HomeView ctx={ctx} />}
           {page === 'music'    && <window.MusicView ctx={ctx} />}
           {page === 'cameras'  && <window.CamerasView ctx={ctx} />}
           {page === 'calendar' && <window.CalendarView ctx={ctx} />}
@@ -190,8 +191,9 @@ const Sidebar = ({ ctx }) => {
 
       <div style={{flex:1, overflow:'auto', paddingBottom:14, marginTop:6}}>
         <Section>View</Section>
-        <Item active={page==='home'}     onClick={() => setPage('home')}     icon="home"   label="Home"     />
-        <Item active={page==='music'}    onClick={() => setPage('music')}    icon="music"  label="Music"    count={playingNow ? `${playingNow} playing` : ''} />
+        <Item active={page==='home'}      onClick={() => setPage('home')}      icon="home"   label="Home"     />
+        <Item active={page==='dashboard'} onClick={() => setPage('dashboard')} icon="grid"   label="Dashboard" />
+        <Item active={page==='music'}     onClick={() => setPage('music')}     icon="music"  label="Music"    count={playingNow ? `${playingNow} playing` : ''} />
         <Item active={page==='cameras'}  onClick={() => setPage('cameras')}  icon="cam"    label="Cameras"  count={`${camsLive}/${state.cameras.length}`} />
         <Item active={page==='calendar'} onClick={() => setPage('calendar')} icon="cal"    label="Calendar" count={todayLeft} />
         <Item active={page==='car'}      onClick={() => setPage('car')}      icon="car"    label="Car"      count={`${state.tesla.chargePct}%`} />
@@ -199,7 +201,7 @@ const Sidebar = ({ ctx }) => {
         <Item active={page==='devices'}  onClick={() => setPage('devices')}  icon="grid"   label="Devices"  count={state.integrations.filter(i=>i.status==='connected').length} />
         <Item active={page==='automations'} onClick={() => setPage('automations')} icon="sparkle" label="Automations" count={state.automations.filter(a=>a.enabled).length} />
 
-        {page==='home' && <>
+        {page==='dashboard' && <>
           <Section>Rooms</Section>
           {window.ROOMS.map(r => {
             const rl = state.lights.filter(l => l.room === r.id && l.on).length;
