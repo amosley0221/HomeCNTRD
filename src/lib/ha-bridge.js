@@ -315,7 +315,85 @@ function translate(states) {
     return { ...c, motion: motionMap.get(k) ?? c.motion };
   });
 
+  // Tesla via Tessie. We auto-detect the entity prefix by finding a
+  // battery_range sensor that pairs with a lock at the same prefix —
+  // that combination uniquely identifies a Tessie-managed Tesla.
+  const teslaPrefix = detectTeslaPrefix(states);
+  if (teslaPrefix) {
+    out.tesla = buildTesla(states, teslaPrefix);
+  }
+
   return { ...out, ...defaults(out) };
+}
+
+function detectTeslaPrefix(states) {
+  for (const id of Object.keys(states)) {
+    const m = id.match(/^sensor\.(.+)_battery_range$/);
+    if (!m) continue;
+    const prefix = m[1];
+    if (states[`lock.${prefix}`] && states[`sensor.${prefix}_battery_level`]) {
+      return prefix;
+    }
+  }
+  return null;
+}
+
+function buildTesla(states, prefix) {
+  const s = (id) => states[id];
+  const numState = (id) => {
+    const x = s(id);
+    if (!x || x.state === 'unknown' || x.state === 'unavailable') return null;
+    const n = Number(x.state);
+    return Number.isFinite(n) ? n : null;
+  };
+  const lockEntity = s(`lock.${prefix}`);
+  const battEntity = s(`sensor.${prefix}_battery_level`);
+  const rangeEntity = s(`sensor.${prefix}_battery_range`);
+  const climateEntity = s(`climate.${prefix}_climate`);
+  const insideEntity = s(`sensor.${prefix}_inside_temperature`);
+  const odoEntity = s(`sensor.${prefix}_odometer`);
+  const tracker = s(`device_tracker.${prefix}_location`);
+  const carName = battEntity?.attributes?.friendly_name?.replace(/ Battery level$/i, '')
+    || rangeEntity?.attributes?.friendly_name?.replace(/ Battery range$/i, '')
+    || 'Tesla';
+
+  return {
+    id: prefix,
+    name: carName,
+    locked: lockEntity?.state === 'locked',
+    chargePct: Math.round(numState(`sensor.${prefix}_battery_level`) ?? 0),
+    range: Math.round(numState(`sensor.${prefix}_battery_range`) ?? 0),
+    rangeUnit: rangeEntity?.attributes?.unit_of_measurement || 'mi',
+    charging: s(`sensor.${prefix}_charging`)?.state === 'Charging',
+    chargeRate: Math.round(numState(`sensor.${prefix}_charge_rate_mph`) ?? numState(`sensor.${prefix}_charging_speed`) ?? 0),
+    pluggedIn: s(`binary_sensor.${prefix}_charge_cable`)?.state === 'on',
+    cabin: Math.round(numState(`sensor.${prefix}_inside_temperature`) ?? 0),
+    outside: Math.round(numState(`sensor.${prefix}_outside_temperature`) ?? 0),
+    tempUnit: insideEntity?.attributes?.unit_of_measurement || '°F',
+    target: Math.round(climateEntity?.attributes?.temperature ?? 70),
+    targetMin: climateEntity?.attributes?.min_temp ?? 60,
+    targetMax: climateEntity?.attributes?.max_temp ?? 82,
+    climateOn: !!climateEntity && !['off','unavailable','unknown'].includes(climateEntity.state),
+    climateMode: climateEntity?.state || 'off',
+    sentry: s(`switch.${prefix}_sentry_mode`)?.state === 'on',
+    valet: s(`switch.${prefix}_valet_mode`)?.state === 'on',
+    defrost: s(`switch.${prefix}_defrost`)?.state === 'on',
+    location: tracker?.attributes?.friendly_name || (typeof tracker?.state === 'string' && !/^[\d.\-,]+$/.test(tracker.state) ? tracker.state : '—'),
+    odometer: Math.round(numState(`sensor.${prefix}_odometer`) ?? 0),
+    odometerUnit: odoEntity?.attributes?.unit_of_measurement || 'mi',
+    frunk: s(`cover.${prefix}_frunk`)?.state === 'open',
+    trunk: s(`cover.${prefix}_trunk`)?.state === 'open',
+    chargePortOpen: s(`cover.${prefix}_charge_port_door`)?.state === 'open',
+    sunroof: 0,
+    software: s(`update.${prefix}_software_update`)?.attributes?.installed_version
+      || s(`sensor.${prefix}_software_version`)?.state || '—',
+    chargeLimit: Math.round(numState(`number.${prefix}_charge_limit`) ?? 80),
+    chargingAmps: numState(`number.${prefix}_charging_amps`)
+      ?? numState(`sensor.${prefix}_charger_actual_current`) ?? null,
+    voltage: numState(`sensor.${prefix}_charger_voltage`) ?? null,
+    energyAdded: numState(`sensor.${prefix}_charge_energy_added`) ?? null,
+    timeToFull: numState(`sensor.${prefix}_time_to_full_charge`) ?? null,
+  };
 }
 
 function defaults(out) {
@@ -477,6 +555,25 @@ function diffAndDispatch(prev, next, hass) {
       if (svc) call('alarm_control_panel', svc, { entity_id: next.ring.id });
       else diagPush({ ts: Date.now(), kind: 'skip', message: `Unknown ring mode: ${next.ring.mode}` });
     }
+  }
+
+  // Tesla via Tessie. Watch state.tesla diffs and route them to the
+  // matching HA entity. The id field is the entity prefix (e.g. "tone").
+  if (next.tesla?.id && prev.tesla?.id === next.tesla.id) {
+    const t = next.tesla, pt = prev.tesla;
+    const lockId = `lock.${t.id}`;
+    const climateId = `climate.${t.id}_climate`;
+    const frunkId = `cover.${t.id}_frunk`;
+    const trunkId = `cover.${t.id}_trunk`;
+    const sentryId = `switch.${t.id}_sentry_mode`;
+    const defrostId = `switch.${t.id}_defrost`;
+    if (pt.locked !== t.locked) call('lock', t.locked ? 'lock' : 'unlock', { entity_id: lockId });
+    if (pt.climateOn !== t.climateOn) call('climate', t.climateOn ? 'turn_on' : 'turn_off', { entity_id: climateId });
+    if (pt.target !== t.target) call('climate', 'set_temperature', { entity_id: climateId, temperature: t.target });
+    if (pt.frunk !== t.frunk) call('cover', t.frunk ? 'open_cover' : 'close_cover', { entity_id: frunkId });
+    if (pt.trunk !== t.trunk) call('cover', t.trunk ? 'open_cover' : 'close_cover', { entity_id: trunkId });
+    if (pt.sentry !== t.sentry) call('switch', t.sentry ? 'turn_on' : 'turn_off', { entity_id: sentryId });
+    if (pt.defrost !== t.defrost) call('switch', t.defrost ? 'turn_on' : 'turn_off', { entity_id: defrostId });
   }
 }
 
