@@ -145,7 +145,11 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       }}>
         {/* Left column */}
         <div style={{display:'flex', flexDirection:'column', gap: narrow ? 14 : 18}}>
-          <WeatherCard weather={state.weather} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} narrow={narrow} />
+          <WeatherCard
+            weather={state.weather} hass={hass}
+            accent={accent} fonts={fonts} surface={surface} surface2={surface2}
+            fg={fg} fg2={fg2} fg3={fg3} border={border} narrow={narrow}
+          />
 
           <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap: narrow ? 14 : 18}}>
             <TodoCard todos={state.todos} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
@@ -172,36 +176,129 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
 };
 
 // ── Section: Weather ──────────────────────────────────────────────────────
-const WeatherCard = ({ weather, accent, fonts, surface, fg, fg2, fg3, border, narrow }) => {
+const CONDITION_ICON = {
+  'sunny': '☀️',
+  'clear-night': '🌙',
+  'partlycloudy': '⛅',
+  'cloudy': '☁️',
+  'rainy': '🌧️',
+  'pouring': '🌧️',
+  'lightning': '⛈️',
+  'lightning-rainy': '⛈️',
+  'snowy': '❄️',
+  'snowy-rainy': '🌨️',
+  'fog': '🌫️',
+  'windy': '💨',
+  'windy-variant': '💨',
+  'hail': '🌨️',
+  'exceptional': '⚠️',
+};
+const conditionIcon = (c) => CONDITION_ICON[c] || '☁️';
+const conditionLabel = (c) => (c || 'unknown').replace(/-/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
+
+const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow }) => {
+  // Pull a daily forecast via the get_forecasts service. Newer HA versions
+  // (2024.1+) deprecated the inline forecast attribute; this is the right
+  // path going forward and works across most weather integrations.
+  const [daily, setDaily] = React.useState([]);
+  const weatherId = weather?.id;
+  React.useEffect(() => {
+    if (!hass || !weatherId) return;
+    let alive = true;
+    const fetchForecast = async () => {
+      try {
+        const resp = await hass.connection.sendMessagePromise({
+          type: 'call_service',
+          domain: 'weather',
+          service: 'get_forecasts',
+          service_data: { type: 'daily' },
+          target: { entity_id: weatherId },
+          return_response: true,
+        });
+        const arr = resp?.response?.[weatherId]?.forecast;
+        if (alive && Array.isArray(arr)) setDaily(arr.slice(0, 4));
+      } catch {
+        // Fallback for older integrations: read the inline forecast attr
+        const att = hass.states?.[weatherId]?.attributes;
+        if (alive && Array.isArray(att?.forecast)) {
+          setDaily(att.forecast.slice(0, 4));
+        }
+      }
+    };
+    fetchForecast();
+    const t = setInterval(fetchForecast, 30 * 60 * 1000); // 30 min
+    return () => { alive = false; clearInterval(t); };
+  }, [hass, weatherId]);
+
   if (!weather || weather.summary === 'Unavailable') {
     return <EmptyCard title="Weather" hint="Add a Weather integration in HA → Devices & Services. Pirate Weather and Met.no are both free." surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} fonts={fonts} accent={accent}/>;
   }
+
   return (
     <div style={{
-      padding: narrow ? '20px 18px' : '28px 28px',
+      padding: narrow ? '20px 18px' : '24px 28px',
       borderRadius: 16, background: surface, border: `.5px solid ${border}`,
-      display: 'flex', alignItems: 'center', gap: narrow ? 18 : 28,
+      display: 'flex', flexDirection: 'column', gap: narrow ? 18 : 22,
     }}>
-      <div style={{flex:1, minWidth: 0}}>
-        <div style={{fontSize:11, color:fg3, letterSpacing:'.06em', textTransform:'uppercase', marginBottom: 6}}>Weather</div>
-        <div style={{fontFamily: fonts.display, fontSize: narrow ? 56 : 76, lineHeight: 1, color: fg, fontWeight: 400, fontVariantNumeric: 'tabular-nums'}}>
-          {weather.temp}°
+      {/* Top: current conditions + condition icon */}
+      <div style={{display:'flex', alignItems:'center', gap: narrow ? 14 : 24}}>
+        <div style={{flex: 1, minWidth: 0}}>
+          <div style={{fontSize:11, color:fg3, letterSpacing:'.06em', textTransform:'uppercase', marginBottom: 6}}>Weather</div>
+          <div style={{display: 'flex', alignItems: 'baseline', gap: 12}}>
+            <div style={{fontFamily: fonts.display, fontSize: narrow ? 56 : 72, lineHeight: 1, color: fg, fontWeight: 400, fontVariantNumeric: 'tabular-nums'}}>
+              {weather.temp}°
+            </div>
+            <div style={{fontSize: narrow ? 36 : 46, lineHeight: 1}}>{conditionIcon(weather.condition)}</div>
+          </div>
+          <div style={{fontSize: 13, color: fg2, marginTop: 6}}>{conditionLabel(weather.condition)}</div>
+          <div style={{fontSize: 11.5, color: fg3, marginTop: 2, fontVariantNumeric: 'tabular-nums'}}>
+            High {weather.high}° · Low {weather.low}°
+          </div>
         </div>
-        <div style={{fontSize: 14, color: fg2, marginTop: 8, textTransform: 'capitalize'}}>{weather.summary}</div>
-        <div style={{fontSize: 12, color: fg3, marginTop: 4, fontVariantNumeric: 'tabular-nums'}}>
-          High {weather.high}° · Low {weather.low}°
-        </div>
+
+        {weather.hourly?.length > 0 && (
+          <div style={{display:'flex', alignItems:'flex-end', gap: 3, height: 70, flex: 'none'}}>
+            {weather.hourly.slice(0, narrow ? 6 : 10).map((t, i) => {
+              const min = Math.min(...weather.hourly);
+              const max = Math.max(...weather.hourly);
+              const h = max === min ? 36 : ((t - min) / (max - min)) * 44 + 14;
+              return (
+                <div key={i} style={{display:'flex', flexDirection:'column', alignItems:'center', gap: 3}}>
+                  <div style={{fontSize: 9, color: fg3, fontVariantNumeric:'tabular-nums'}}>{Math.round(t)}°</div>
+                  <div style={{width: 5, height: h, background: i === 0 ? accent : `${accent}55`, borderRadius: 3}}/>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-      {weather.hourly?.length > 0 && (
-        <div style={{display:'flex', alignItems:'flex-end', gap: 4, height: 90, flex: 'none'}}>
-          {weather.hourly.slice(0, narrow ? 6 : 12).map((t, i) => {
-            const min = Math.min(...weather.hourly);
-            const max = Math.max(...weather.hourly);
-            const h = max === min ? 50 : ((t - min) / (max - min)) * 60 + 18;
+
+      {/* 3-day forecast row (skip the first entry since it's "today") */}
+      {daily.length > 1 && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${Math.min(daily.length, 4)}, 1fr)`,
+          gap: 8,
+          paddingTop: 14, borderTop: `.5px solid ${border}`,
+        }}>
+          {daily.slice(0, 4).map((f, i) => {
+            const d = new Date(f.datetime || f.date || Date.now());
+            const isToday = i === 0;
+            const dayLabel = isToday ? 'Today' : d.toLocaleDateString([], { weekday: 'short' });
+            const high = Math.round(f.temperature ?? f.temp ?? 0);
+            const low = Math.round(f.templow ?? f.temp_low ?? f.temp_min ?? 0);
             return (
-              <div key={i} style={{display:'flex', flexDirection:'column', alignItems:'center', gap: 4}}>
-                <div style={{fontSize: 9, color: fg3, fontVariantNumeric:'tabular-nums'}}>{Math.round(t)}°</div>
-                <div style={{width: 6, height: h, background: i === 0 ? accent : `${accent}55`, borderRadius: 3}}/>
+              <div key={i} style={{
+                padding: '10px 8px', borderRadius: 10,
+                background: isToday ? `${accent}11` : surface2,
+                border: isToday ? `.5px solid ${accent}55` : `.5px solid ${border}`,
+                display:'flex', flexDirection:'column', alignItems:'center', gap: 4,
+                textAlign:'center',
+              }}>
+                <div style={{fontSize: 10, color: fg3, letterSpacing:'.06em', textTransform:'uppercase', fontWeight: 500}}>{dayLabel}</div>
+                <div style={{fontSize: 28, lineHeight: 1}}>{conditionIcon(f.condition)}</div>
+                <div style={{fontFamily: fonts.display, fontSize: 16, color: fg, fontWeight: 500, fontVariantNumeric:'tabular-nums'}}>{high}°</div>
+                <div style={{fontSize: 11, color: fg3, fontVariantNumeric:'tabular-nums'}}>Low {low}°</div>
               </div>
             );
           })}
@@ -286,31 +383,187 @@ const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
   );
 };
 
-// ── Section: Notes ────────────────────────────────────────────────────────
+// ── Section: Notes (text + handwritten) ───────────────────────────────────
+const NOTES_TEXT_KEY = 'homecntrd_notes_v1';
+const NOTES_DRAW_KEY = 'homecntrd_drawing_v1';
+const NOTES_MODE_KEY = 'homecntrd_notes_mode_v1';
+
 const NotesCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
-  const KEY = 'homecntrd_notes_v1';
+  const [mode, setMode] = React.useState(() => {
+    try { return localStorage.getItem(NOTES_MODE_KEY) || 'text'; } catch { return 'text'; }
+  });
+  const switchMode = (m) => {
+    setMode(m);
+    try { localStorage.setItem(NOTES_MODE_KEY, m); } catch {}
+  };
+
+  return (
+    <Card surface={surface} border={border}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12, gap: 8}}>
+        <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500}}>Notes</div>
+        <div style={{display:'flex', gap: 4, padding: 3, borderRadius: 8, background: 'rgba(241,234,217,0.04)', border: `.5px solid ${border}`}}>
+          <button onClick={() => switchMode('text')} style={tabPill(mode === 'text', accent, fg2)}>Text</button>
+          <button onClick={() => switchMode('draw')} style={tabPill(mode === 'draw', accent, fg2)}>Draw</button>
+        </div>
+      </div>
+
+      {mode === 'text' && <TextNotes fg={fg} border={border} fonts={fonts} />}
+      {mode === 'draw' && <DrawNotes accent={accent} fg={fg} fg3={fg3} border={border} fonts={fonts} />}
+    </Card>
+  );
+};
+
+const tabPill = (active, accent, fg2) => ({
+  padding: '5px 12px', borderRadius: 6, border: 0,
+  background: active ? accent : 'transparent',
+  color: active ? '#fff' : fg2,
+  fontSize: 11.5, fontWeight: active ? 500 : 400,
+  cursor: 'pointer', fontFamily: 'inherit',
+});
+
+const TextNotes = ({ fg, border, fonts }) => {
   const [text, setText] = React.useState(() => {
-    try { return localStorage.getItem(KEY) || ''; } catch { return ''; }
+    try { return localStorage.getItem(NOTES_TEXT_KEY) || ''; } catch { return ''; }
   });
   const save = (v) => {
     setText(v);
-    try { localStorage.setItem(KEY, v); } catch {}
+    try { localStorage.setItem(NOTES_TEXT_KEY, v); } catch {}
   };
   return (
-    <Card surface={surface} border={border}>
-      <CardHeader title="Notes" right={<span style={{fontSize: 11, color: fg3}}>{text.length} chars</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
-      <textarea
-        value={text}
-        onChange={(e) => save(e.target.value)}
-        placeholder="Quick thoughts, reminders, things to remember…"
-        style={{
-          width: '100%', minHeight: 110, padding: '10px 12px', borderRadius: 8,
-          background: 'rgba(241,234,217,0.03)', color: fg,
-          border: `.5px solid ${border}`, outline: 'none', resize: 'vertical',
-          fontFamily: fonts.body, fontSize: 13, lineHeight: 1.5,
-        }}
-      />
-    </Card>
+    <textarea
+      value={text}
+      onChange={(e) => save(e.target.value)}
+      placeholder="Quick thoughts, reminders, things to remember…"
+      style={{
+        width: '100%', minHeight: 160, padding: '10px 12px', borderRadius: 8,
+        background: 'rgba(241,234,217,0.03)', color: fg,
+        border: `.5px solid ${border}`, outline: 'none', resize: 'vertical',
+        fontFamily: fonts.body, fontSize: 13, lineHeight: 1.5, boxSizing: 'border-box',
+      }}
+    />
+  );
+};
+
+const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
+  const canvasRef = React.useRef(null);
+  const wrapRef = React.useRef(null);
+  const drawingRef = React.useRef(false);
+  const lastRef = React.useRef({ x: 0, y: 0 });
+  const [tool, setTool] = React.useState('pen'); // pen | eraser
+
+  // Resize the canvas to its layout size while preserving the drawing.
+  // Re-bind on mount + on the wrap element resizing.
+  const resizeAndRestore = React.useCallback(() => {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = wrap.clientWidth;
+    const cssH = 240;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // Restore from storage.
+    try {
+      const stored = localStorage.getItem(NOTES_DRAW_KEY);
+      if (stored) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, cssW, cssH);
+        img.src = stored;
+      }
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    resizeAndRestore();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(resizeAndRestore);
+    if (wrapRef.current) ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, [resizeAndRestore]);
+
+  const getPos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const onPointerDown = (e) => {
+    e.preventDefault();
+    canvasRef.current.setPointerCapture?.(e.pointerId);
+    drawingRef.current = true;
+    lastRef.current = getPos(e);
+  };
+  const onPointerMove = (e) => {
+    if (!drawingRef.current) return;
+    e.preventDefault();
+    const ctx = canvasRef.current.getContext('2d');
+    const { x, y } = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastRef.current.x, lastRef.current.y);
+    ctx.lineTo(x, y);
+    ctx.lineWidth = tool === 'eraser' ? 18 : 2.5;
+    ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : '#f1ead9';
+    ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.stroke();
+    lastRef.current = { x, y };
+  };
+  const onPointerUp = () => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    try {
+      localStorage.setItem(NOTES_DRAW_KEY, canvasRef.current.toDataURL('image/png'));
+    } catch {}
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    try { localStorage.removeItem(NOTES_DRAW_KEY); } catch {}
+  };
+
+  return (
+    <div>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap: 8, marginBottom: 8}}>
+        <div style={{display:'flex', gap: 4, padding: 3, borderRadius: 7, background: 'rgba(241,234,217,0.03)', border: `.5px solid ${border}`}}>
+          <button onClick={() => setTool('pen')} style={tabPill(tool === 'pen', accent, fg3)}>Pen</button>
+          <button onClick={() => setTool('eraser')} style={tabPill(tool === 'eraser', accent, fg3)}>Eraser</button>
+        </div>
+        <button onClick={clear} style={{
+          padding: '5px 10px', borderRadius: 6, border: `.5px solid ${border}`,
+          background: 'transparent', color: fg3, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+        }}>Clear</button>
+      </div>
+      <div ref={wrapRef} style={{
+        background: 'rgba(241,234,217,0.03)', border: `.5px solid ${border}`,
+        borderRadius: 8, overflow: 'hidden',
+      }}>
+        <canvas
+          ref={canvasRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onPointerLeave={onPointerUp}
+          style={{
+            display: 'block', width: '100%', height: 240,
+            touchAction: 'none', // critical: stops the page from scrolling while you draw with a finger or stylus
+            cursor: tool === 'eraser' ? 'cell' : 'crosshair',
+          }}
+        />
+      </div>
+      <div style={{fontSize: 10.5, color: fg3, marginTop: 6, lineHeight: 1.4}}>
+        Use Apple Pencil, stylus, or finger. Drawings save automatically per device.
+      </div>
+    </div>
   );
 };
 

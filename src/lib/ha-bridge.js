@@ -163,6 +163,8 @@ function translate(states) {
       case 'weather':
         if (!out.weather) {
           out.weather = {
+            id,
+            condition: e.state || 'unknown',
             temp: Math.round(e.attributes?.temperature ?? 64),
             summary: (e.state || 'Partly cloudy').replace(/-/g, ' '),
             high: Math.round(e.attributes?.forecast?.[0]?.temperature ?? 71),
