@@ -9,10 +9,16 @@
 //   2. Tesla's public configurator compositor URL     ← live render
 //   3. Inline SVG silhouette                          ← always works
 
+// Tesla's public configurator compositor. Options chosen for a Pearl
+// White 2020 Model 3 with 19" Sport wheels (silver) and a black interior.
+//   $MT311 — Model 3 Long Range
+//   $PPSW  — Pearl White paint
+//   $IBB1  — Black interior
+//   $WY19B — 19" Sport wheels (silver)
 const TESLA_COMPOSITOR_URL =
   'https://static-assets.tesla.com/configurator/compositor' +
   '?context=design_studio_2&bkba_opt=1&view=STUD_3QTR&size=1920' +
-  '&model=m3&options=$MT311,$PPSW,$IBB1,$WY18B';
+  '&model=m3&options=$MT311,$PPSW,$IBB1,$WY19B';
 
 const CarView = ({ ctx }) => {
   const { p, fonts, dens, state, setState } = ctx;

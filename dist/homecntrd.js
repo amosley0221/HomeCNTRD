@@ -1,5 +1,5 @@
 typeof globalThis < "u" && typeof globalThis.process > "u" && (globalThis.process = { env: { NODE_ENV: "production" } });
-function $u(e) {
+function Mu(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
 }
 var rd = { exports: {} }, A = {};
@@ -12,7 +12,7 @@ var rd = { exports: {} }, A = {};
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-var Cr = Symbol.for("react.element"), Mu = Symbol.for("react.portal"), Fu = Symbol.for("react.fragment"), Eu = Symbol.for("react.strict_mode"), Pu = Symbol.for("react.profiler"), Du = Symbol.for("react.provider"), Nu = Symbol.for("react.context"), Lu = Symbol.for("react.forward_ref"), Au = Symbol.for("react.suspense"), Ou = Symbol.for("react.memo"), Wu = Symbol.for("react.lazy"), Es = Symbol.iterator;
+var Cr = Symbol.for("react.element"), $u = Symbol.for("react.portal"), Fu = Symbol.for("react.fragment"), Eu = Symbol.for("react.strict_mode"), Pu = Symbol.for("react.profiler"), Du = Symbol.for("react.provider"), Nu = Symbol.for("react.context"), Lu = Symbol.for("react.forward_ref"), Au = Symbol.for("react.suspense"), Ou = Symbol.for("react.memo"), Wu = Symbol.for("react.lazy"), Es = Symbol.iterator;
 function Hu(e) {
   return e === null || typeof e != "object" ? null : (e = Es && e[Es] || e["@@iterator"], typeof e == "function" ? e : null);
 }
@@ -22,27 +22,27 @@ var id = { isMounted: function() {
 }, enqueueReplaceState: function() {
 }, enqueueSetState: function() {
 } }, od = Object.assign, ld = {};
-function Mn(e, t, n) {
+function $n(e, t, n) {
   this.props = e, this.context = t, this.refs = ld, this.updater = n || id;
 }
-Mn.prototype.isReactComponent = {};
-Mn.prototype.setState = function(e, t) {
+$n.prototype.isReactComponent = {};
+$n.prototype.setState = function(e, t) {
   if (typeof e != "object" && typeof e != "function" && e != null) throw Error("setState(...): takes an object of state variables to update or a function which returns an object of state variables.");
   this.updater.enqueueSetState(this, e, t, "setState");
 };
-Mn.prototype.forceUpdate = function(e) {
+$n.prototype.forceUpdate = function(e) {
   this.updater.enqueueForceUpdate(this, e, "forceUpdate");
 };
 function sd() {
 }
-sd.prototype = Mn.prototype;
-function $l(e, t, n) {
+sd.prototype = $n.prototype;
+function Ml(e, t, n) {
   this.props = e, this.context = t, this.refs = ld, this.updater = n || id;
 }
-var Ml = $l.prototype = new sd();
-Ml.constructor = $l;
-od(Ml, Mn.prototype);
-Ml.isPureReactComponent = !0;
+var $l = Ml.prototype = new sd();
+$l.constructor = Ml;
+od($l, $n.prototype);
+$l.isPureReactComponent = !0;
 var Ps = Array.isArray, ad = Object.prototype.hasOwnProperty, Fl = { current: null }, dd = { key: !0, ref: !0, __self: !0, __source: !0 };
 function cd(e, t, n) {
   var i, o = {}, l = null, s = null;
@@ -50,7 +50,7 @@ function cd(e, t, n) {
   var a = arguments.length - 2;
   if (a === 1) o.children = n;
   else if (1 < a) {
-    for (var d = Array(a), c = 0; c < a; c++) d[c] = arguments[c + 2];
+    for (var d = Array(a), u = 0; u < a; u++) d[u] = arguments[u + 2];
     o.children = d;
   }
   if (e && e.defaultProps) for (i in a = e.defaultProps, a) o[i] === void 0 && (o[i] = a[i]);
@@ -85,12 +85,12 @@ function Zr(e, t, n, i, o) {
     case "object":
       switch (e.$$typeof) {
         case Cr:
-        case Mu:
+        case $u:
           s = !0;
       }
   }
-  if (s) return s = e, o = o(s), e = i === "" ? "." + to(s, 0) : i, Ps(o) ? (n = "", e != null && (n = e.replace(Ds, "$&/") + "/"), Zr(o, t, n, "", function(c) {
-    return c;
+  if (s) return s = e, o = o(s), e = i === "" ? "." + to(s, 0) : i, Ps(o) ? (n = "", e != null && (n = e.replace(Ds, "$&/") + "/"), Zr(o, t, n, "", function(u) {
+    return u;
   })) : o != null && (El(o) && (o = Bu(o, n + (!o.key || s && s.key === o.key ? "" : ("" + o.key).replace(Ds, "$&/") + "/") + e)), t.push(o)), 1;
   if (s = 0, i = i === "" ? "." : i + ":", Ps(e)) for (var a = 0; a < e.length; a++) {
     l = e[a];
@@ -141,10 +141,10 @@ A.Children = { map: Fr, forEach: function(e, t, n) {
   if (!El(e)) throw Error("React.Children.only expected to receive a single React element child.");
   return e;
 } };
-A.Component = Mn;
+A.Component = $n;
 A.Fragment = Fu;
 A.Profiler = Pu;
-A.PureComponent = $l;
+A.PureComponent = Ml;
 A.StrictMode = Eu;
 A.Suspense = Au;
 A.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = Gu;
@@ -160,7 +160,7 @@ A.cloneElement = function(e, t, n) {
   if (d === 1) i.children = n;
   else if (1 < d) {
     a = Array(d);
-    for (var c = 0; c < d; c++) a[c] = arguments[c + 2];
+    for (var u = 0; u < d; u++) a[u] = arguments[u + 2];
     i.children = a;
   }
   return { $$typeof: Cr, type: e.type, key: o, ref: l, props: i, _owner: s };
@@ -243,8 +243,8 @@ A.useTransition = function() {
 A.version = "18.3.1";
 rd.exports = A;
 var Pl = rd.exports;
-const se = /* @__PURE__ */ $u(Pl);
-var pd = { exports: {} }, Le = {}, fd = { exports: {} }, hd = {};
+const se = /* @__PURE__ */ Mu(Pl);
+var fd = { exports: {} }, Le = {}, pd = { exports: {} }, hd = {};
 /**
  * @license React
  * scheduler.production.min.js
@@ -296,49 +296,49 @@ var pd = { exports: {} }, Le = {}, fd = { exports: {} }, hd = {};
       return s.now() - a;
     };
   }
-  var d = [], c = [], p = 1, u = null, h = 3, v = !1, w = !1, f = !1, k = typeof setTimeout == "function" ? setTimeout : null, m = typeof clearTimeout == "function" ? clearTimeout : null, g = typeof setImmediate < "u" ? setImmediate : null;
+  var d = [], u = [], f = 1, c = null, p = 3, w = !1, x = !1, h = !1, k = typeof setTimeout == "function" ? setTimeout : null, m = typeof clearTimeout == "function" ? clearTimeout : null, g = typeof setImmediate < "u" ? setImmediate : null;
   typeof navigator < "u" && navigator.scheduling !== void 0 && navigator.scheduling.isInputPending !== void 0 && navigator.scheduling.isInputPending.bind(navigator.scheduling);
   function y(I) {
-    for (var R = n(c); R !== null; ) {
-      if (R.callback === null) i(c);
-      else if (R.startTime <= I) i(c), R.sortIndex = R.expirationTime, t(d, R);
+    for (var R = n(u); R !== null; ) {
+      if (R.callback === null) i(u);
+      else if (R.startTime <= I) i(u), R.sortIndex = R.expirationTime, t(d, R);
       else break;
-      R = n(c);
+      R = n(u);
     }
   }
-  function x(I) {
-    if (f = !1, y(I), !w) if (n(d) !== null) w = !0, B(b);
+  function v(I) {
+    if (h = !1, y(I), !x) if (n(d) !== null) x = !0, B(b);
     else {
-      var R = n(c);
-      R !== null && U(x, R.startTime - I);
+      var R = n(u);
+      R !== null && U(v, R.startTime - I);
     }
   }
   function b(I, R) {
-    w = !1, f && (f = !1, m(C), C = -1), v = !0;
-    var F = h;
+    x = !1, h && (h = !1, m(C), C = -1), w = !0;
+    var F = p;
     try {
-      for (y(R), u = n(d); u !== null && (!(u.expirationTime > R) || I && !_()); ) {
-        var N = u.callback;
+      for (y(R), c = n(d); c !== null && (!(c.expirationTime > R) || I && !_()); ) {
+        var N = c.callback;
         if (typeof N == "function") {
-          u.callback = null, h = u.priorityLevel;
-          var O = N(u.expirationTime <= R);
-          R = e.unstable_now(), typeof O == "function" ? u.callback = O : u === n(d) && i(d), y(R);
+          c.callback = null, p = c.priorityLevel;
+          var O = N(c.expirationTime <= R);
+          R = e.unstable_now(), typeof O == "function" ? c.callback = O : c === n(d) && i(d), y(R);
         } else i(d);
-        u = n(d);
+        c = n(d);
       }
-      if (u !== null) var me = !0;
+      if (c !== null) var me = !0;
       else {
-        var ye = n(c);
-        ye !== null && U(x, ye.startTime - R), me = !1;
+        var ye = n(u);
+        ye !== null && U(v, ye.startTime - R), me = !1;
       }
       return me;
     } finally {
-      u = null, h = F, v = !1;
+      c = null, p = F, w = !1;
     }
   }
-  var j = !1, S = null, C = -1, $ = 5, T = -1;
+  var j = !1, S = null, C = -1, M = 5, T = -1;
   function _() {
-    return !(e.unstable_now() - T < $);
+    return !(e.unstable_now() - T < M);
   }
   function E() {
     if (S !== null) {
@@ -375,29 +375,29 @@ var pd = { exports: {} }, Le = {}, fd = { exports: {} }, hd = {};
   e.unstable_IdlePriority = 5, e.unstable_ImmediatePriority = 1, e.unstable_LowPriority = 4, e.unstable_NormalPriority = 3, e.unstable_Profiling = null, e.unstable_UserBlockingPriority = 2, e.unstable_cancelCallback = function(I) {
     I.callback = null;
   }, e.unstable_continueExecution = function() {
-    w || v || (w = !0, B(b));
+    x || w || (x = !0, B(b));
   }, e.unstable_forceFrameRate = function(I) {
-    0 > I || 125 < I ? console.error("forceFrameRate takes a positive int between 0 and 125, forcing frame rates higher than 125 fps is not supported") : $ = 0 < I ? Math.floor(1e3 / I) : 5;
+    0 > I || 125 < I ? console.error("forceFrameRate takes a positive int between 0 and 125, forcing frame rates higher than 125 fps is not supported") : M = 0 < I ? Math.floor(1e3 / I) : 5;
   }, e.unstable_getCurrentPriorityLevel = function() {
-    return h;
+    return p;
   }, e.unstable_getFirstCallbackNode = function() {
     return n(d);
   }, e.unstable_next = function(I) {
-    switch (h) {
+    switch (p) {
       case 1:
       case 2:
       case 3:
         var R = 3;
         break;
       default:
-        R = h;
+        R = p;
     }
-    var F = h;
-    h = R;
+    var F = p;
+    p = R;
     try {
       return I();
     } finally {
-      h = F;
+      p = F;
     }
   }, e.unstable_pauseExecution = function() {
   }, e.unstable_requestPaint = function() {
@@ -412,12 +412,12 @@ var pd = { exports: {} }, Le = {}, fd = { exports: {} }, hd = {};
       default:
         I = 3;
     }
-    var F = h;
-    h = I;
+    var F = p;
+    p = I;
     try {
       return R();
     } finally {
-      h = F;
+      p = F;
     }
   }, e.unstable_scheduleCallback = function(I, R, F) {
     var N = e.unstable_now();
@@ -437,22 +437,22 @@ var pd = { exports: {} }, Le = {}, fd = { exports: {} }, hd = {};
       default:
         O = 5e3;
     }
-    return O = F + O, I = { id: p++, callback: R, priorityLevel: I, startTime: F, expirationTime: O, sortIndex: -1 }, F > N ? (I.sortIndex = F, t(c, I), n(d) === null && I === n(c) && (f ? (m(C), C = -1) : f = !0, U(x, F - N))) : (I.sortIndex = O, t(d, I), w || v || (w = !0, B(b))), I;
+    return O = F + O, I = { id: f++, callback: R, priorityLevel: I, startTime: F, expirationTime: O, sortIndex: -1 }, F > N ? (I.sortIndex = F, t(u, I), n(d) === null && I === n(u) && (h ? (m(C), C = -1) : h = !0, U(v, F - N))) : (I.sortIndex = O, t(d, I), x || w || (x = !0, B(b))), I;
   }, e.unstable_shouldYield = _, e.unstable_wrapCallback = function(I) {
-    var R = h;
+    var R = p;
     return function() {
-      var F = h;
-      h = R;
+      var F = p;
+      p = R;
       try {
         return I.apply(this, arguments);
       } finally {
-        h = F;
+        p = F;
       }
     };
   };
 })(hd);
-fd.exports = hd;
-var Qu = fd.exports;
+pd.exports = hd;
+var Qu = pd.exports;
 /**
  * @license React
  * react-dom.production.min.js
@@ -474,9 +474,9 @@ function en(e, t) {
 function Sn(e, t) {
   for (ar[e] = t, e = 0; e < t.length; e++) gd.add(t[e]);
 }
-var gt = !(typeof window > "u" || typeof window.document > "u" || typeof window.document.createElement > "u"), $o = Object.prototype.hasOwnProperty, Ku = /^[:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD][:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\-.0-9\u00B7\u0300-\u036F\u203F-\u2040]*$/, Ns = {}, Ls = {};
+var gt = !(typeof window > "u" || typeof window.document > "u" || typeof window.document.createElement > "u"), Mo = Object.prototype.hasOwnProperty, Ku = /^[:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD][:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\-.0-9\u00B7\u0300-\u036F\u203F-\u2040]*$/, Ns = {}, Ls = {};
 function Xu(e) {
-  return $o.call(Ls, e) ? !0 : $o.call(Ns, e) ? !1 : Ku.test(e) ? Ls[e] = !0 : (Ns[e] = !0, !1);
+  return Mo.call(Ls, e) ? !0 : Mo.call(Ns, e) ? !1 : Ku.test(e) ? Ls[e] = !0 : (Ns[e] = !0, !1);
 }
 function qu(e, t, n, i) {
   if (n !== null && n.type === 0) return !1;
@@ -567,7 +567,7 @@ function Ll(e, t, n, i) {
   var o = ge.hasOwnProperty(t) ? ge[t] : null;
   (o !== null ? o.type !== 0 : i || !(2 < t.length) || t[0] !== "o" && t[0] !== "O" || t[1] !== "n" && t[1] !== "N") && (Ju(t, n, o, i) && (n = null), i || o === null ? Xu(t) && (n === null ? e.removeAttribute(t) : e.setAttribute(t, "" + n)) : o.mustUseProperty ? e[o.propertyName] = n === null ? o.type === 3 ? !1 : "" : n : (t = o.attributeName, i = o.attributeNamespace, n === null ? e.removeAttribute(t) : (o = o.type, n = o === 3 || o === 4 && n === !0 ? "" : "" + n, i ? e.setAttributeNS(i, t, n) : e.setAttribute(t, n))));
 }
-var vt = Yu.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED, Er = Symbol.for("react.element"), on = Symbol.for("react.portal"), ln = Symbol.for("react.fragment"), Al = Symbol.for("react.strict_mode"), Mo = Symbol.for("react.profiler"), md = Symbol.for("react.provider"), yd = Symbol.for("react.context"), Ol = Symbol.for("react.forward_ref"), Fo = Symbol.for("react.suspense"), Eo = Symbol.for("react.suspense_list"), Wl = Symbol.for("react.memo"), kt = Symbol.for("react.lazy"), xd = Symbol.for("react.offscreen"), As = Symbol.iterator;
+var vt = Yu.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED, Er = Symbol.for("react.element"), on = Symbol.for("react.portal"), ln = Symbol.for("react.fragment"), Al = Symbol.for("react.strict_mode"), $o = Symbol.for("react.profiler"), md = Symbol.for("react.provider"), yd = Symbol.for("react.context"), Ol = Symbol.for("react.forward_ref"), Fo = Symbol.for("react.suspense"), Eo = Symbol.for("react.suspense_list"), Wl = Symbol.for("react.memo"), kt = Symbol.for("react.lazy"), xd = Symbol.for("react.offscreen"), As = Symbol.iterator;
 function Ln(e) {
   return e === null || typeof e != "object" ? null : (e = As && e[As] || e["@@iterator"], typeof e == "function" ? e : null);
 }
@@ -596,29 +596,29 @@ function io(e, t) {
     } }), typeof Reflect == "object" && Reflect.construct) {
       try {
         Reflect.construct(t, []);
-      } catch (c) {
-        var i = c;
+      } catch (u) {
+        var i = u;
       }
       Reflect.construct(e, [], t);
     } else {
       try {
         t.call();
-      } catch (c) {
-        i = c;
+      } catch (u) {
+        i = u;
       }
       e.call(t.prototype);
     }
     else {
       try {
         throw Error();
-      } catch (c) {
-        i = c;
+      } catch (u) {
+        i = u;
       }
       e();
     }
-  } catch (c) {
-    if (c && i && typeof c.stack == "string") {
-      for (var o = c.stack.split(`
+  } catch (u) {
+    if (u && i && typeof u.stack == "string") {
+      for (var o = u.stack.split(`
 `), l = i.stack.split(`
 `), s = o.length - 1, a = l.length - 1; 1 <= s && 0 <= a && o[s] !== l[a]; ) a--;
       for (; 1 <= s && 0 <= a; s--, a--) if (o[s] !== l[a]) {
@@ -669,7 +669,7 @@ function Po(e) {
       return "Fragment";
     case on:
       return "Portal";
-    case Mo:
+    case $o:
       return "Profiler";
     case Al:
       return "StrictMode";
@@ -697,7 +697,7 @@ function Po(e) {
   }
   return null;
 }
-function ep(e) {
+function ef(e) {
   var t = e.type;
   switch (e.tag) {
     case 24:
@@ -764,7 +764,7 @@ function vd(e) {
   var t = e.type;
   return (e = e.nodeName) && e.toLowerCase() === "input" && (t === "checkbox" || t === "radio");
 }
-function tp(e) {
+function tf(e) {
   var t = vd(e) ? "checked" : "value", n = Object.getOwnPropertyDescriptor(e.constructor.prototype, t), i = "" + e[t];
   if (!e.hasOwnProperty(t) && typeof n < "u" && typeof n.get == "function" && typeof n.set == "function") {
     var o = n.get, l = n.set;
@@ -782,7 +782,7 @@ function tp(e) {
   }
 }
 function Pr(e) {
-  e._valueTracker || (e._valueTracker = tp(e));
+  e._valueTracker || (e._valueTracker = tf(e));
 }
 function wd(e) {
   if (!e) return !1;
@@ -791,7 +791,7 @@ function wd(e) {
   var n = t.getValue(), i = "";
   return e && (i = vd(e) ? e.checked ? "true" : "false" : e.value), e = i, e !== n ? (t.setValue(e), !0) : !1;
 }
-function pi(e) {
+function fi(e) {
   if (e = e || (typeof document < "u" ? document : void 0), typeof e > "u") return null;
   try {
     return e.activeElement || e.body;
@@ -829,7 +829,7 @@ function Ws(e, t, n) {
   n = e.name, n !== "" && (e.name = ""), e.defaultChecked = !!e._wrapperState.initialChecked, n !== "" && (e.name = n);
 }
 function Lo(e, t, n) {
-  (t !== "number" || pi(e.ownerDocument) !== e) && (n == null ? e.defaultValue = "" + e._wrapperState.initialValue : e.defaultValue !== "" + n && (e.defaultValue = "" + n));
+  (t !== "number" || fi(e.ownerDocument) !== e) && (n == null ? e.defaultValue = "" + e._wrapperState.initialValue : e.defaultValue !== "" + n && (e.defaultValue = "" + n));
 }
 var Xn = Array.isArray;
 function xn(e, t, n, i) {
@@ -955,9 +955,9 @@ var Zn = {
   strokeMiterlimit: !0,
   strokeOpacity: !0,
   strokeWidth: !0
-}, np = ["Webkit", "ms", "Moz", "O"];
+}, nf = ["Webkit", "ms", "Moz", "O"];
 Object.keys(Zn).forEach(function(e) {
-  np.forEach(function(t) {
+  nf.forEach(function(t) {
     t = t + e.charAt(0).toUpperCase() + e.substring(1), Zn[t] = Zn[e];
   });
 });
@@ -971,10 +971,10 @@ function zd(e, t) {
     n === "float" && (n = "cssFloat"), i ? e.setProperty(n, o) : e[n] = o;
   }
 }
-var rp = Z({ menuitem: !0 }, { area: !0, base: !0, br: !0, col: !0, embed: !0, hr: !0, img: !0, input: !0, keygen: !0, link: !0, meta: !0, param: !0, source: !0, track: !0, wbr: !0 });
+var rf = Z({ menuitem: !0 }, { area: !0, base: !0, br: !0, col: !0, embed: !0, hr: !0, img: !0, input: !0, keygen: !0, link: !0, meta: !0, param: !0, source: !0, track: !0, wbr: !0 });
 function Wo(e, t) {
   if (t) {
-    if (rp[e] && (t.children != null || t.dangerouslySetInnerHTML != null)) throw Error(z(137, e));
+    if (rf[e] && (t.children != null || t.dangerouslySetInnerHTML != null)) throw Error(z(137, e));
     if (t.dangerouslySetInnerHTML != null) {
       if (t.children != null) throw Error(z(60));
       if (typeof t.dangerouslySetInnerHTML != "object" || !("__html" in t.dangerouslySetInnerHTML)) throw Error(z(61));
@@ -1025,7 +1025,7 @@ function Rd(e, t) {
 function Id() {
 }
 var oo = !1;
-function $d(e, t, n) {
+function Md(e, t, n) {
   if (oo) return e(t, n);
   oo = !0;
   try {
@@ -1070,27 +1070,27 @@ if (gt) try {
 } catch {
   Uo = !1;
 }
-function ip(e, t, n, i, o, l, s, a, d) {
-  var c = Array.prototype.slice.call(arguments, 3);
+function of(e, t, n, i, o, l, s, a, d) {
+  var u = Array.prototype.slice.call(arguments, 3);
   try {
-    t.apply(n, c);
-  } catch (p) {
-    this.onError(p);
+    t.apply(n, u);
+  } catch (f) {
+    this.onError(f);
   }
 }
-var er = !1, fi = null, hi = !1, Go = null, op = { onError: function(e) {
-  er = !0, fi = e;
+var er = !1, pi = null, hi = !1, Go = null, lf = { onError: function(e) {
+  er = !0, pi = e;
 } };
-function lp(e, t, n, i, o, l, s, a, d) {
-  er = !1, fi = null, ip.apply(op, arguments);
+function sf(e, t, n, i, o, l, s, a, d) {
+  er = !1, pi = null, of.apply(lf, arguments);
 }
-function sp(e, t, n, i, o, l, s, a, d) {
-  if (lp.apply(this, arguments), er) {
+function af(e, t, n, i, o, l, s, a, d) {
+  if (sf.apply(this, arguments), er) {
     if (er) {
-      var c = fi;
-      er = !1, fi = null;
+      var u = pi;
+      er = !1, pi = null;
     } else throw Error(z(198));
-    hi || (hi = !0, Go = c);
+    hi || (hi = !0, Go = u);
   }
 }
 function tn(e) {
@@ -1104,7 +1104,7 @@ function tn(e) {
   }
   return t.tag === 3 ? n : null;
 }
-function Md(e) {
+function $d(e) {
   if (e.tag === 13) {
     var t = e.memoizedState;
     if (t === null && (e = e.alternate, e !== null && (t = e.memoizedState)), t !== null) return t.dehydrated;
@@ -1114,7 +1114,7 @@ function Md(e) {
 function Us(e) {
   if (tn(e) !== e) throw Error(z(188));
 }
-function ap(e) {
+function df(e) {
   var t = e.alternate;
   if (!t) {
     if (t = tn(e), t === null) throw Error(z(188));
@@ -1173,7 +1173,7 @@ function ap(e) {
   return n.stateNode.current === n ? e : t;
 }
 function Fd(e) {
-  return e = ap(e), e !== null ? Ed(e) : null;
+  return e = df(e), e !== null ? Ed(e) : null;
 }
 function Ed(e) {
   if (e.tag === 5 || e.tag === 6) return e;
@@ -1184,16 +1184,16 @@ function Ed(e) {
   }
   return null;
 }
-var Pd = Ne.unstable_scheduleCallback, Gs = Ne.unstable_cancelCallback, dp = Ne.unstable_shouldYield, cp = Ne.unstable_requestPaint, re = Ne.unstable_now, up = Ne.unstable_getCurrentPriorityLevel, Bl = Ne.unstable_ImmediatePriority, Dd = Ne.unstable_UserBlockingPriority, gi = Ne.unstable_NormalPriority, pp = Ne.unstable_LowPriority, Nd = Ne.unstable_IdlePriority, Ai = null, st = null;
-function fp(e) {
+var Pd = Ne.unstable_scheduleCallback, Gs = Ne.unstable_cancelCallback, cf = Ne.unstable_shouldYield, uf = Ne.unstable_requestPaint, re = Ne.unstable_now, ff = Ne.unstable_getCurrentPriorityLevel, Bl = Ne.unstable_ImmediatePriority, Dd = Ne.unstable_UserBlockingPriority, gi = Ne.unstable_NormalPriority, pf = Ne.unstable_LowPriority, Nd = Ne.unstable_IdlePriority, Ai = null, st = null;
+function hf(e) {
   if (st && typeof st.onCommitFiberRoot == "function") try {
     st.onCommitFiberRoot(Ai, e, void 0, (e.current.flags & 128) === 128);
   } catch {
   }
 }
-var et = Math.clz32 ? Math.clz32 : mp, hp = Math.log, gp = Math.LN2;
-function mp(e) {
-  return e >>>= 0, e === 0 ? 32 : 31 - (hp(e) / gp | 0) | 0;
+var et = Math.clz32 ? Math.clz32 : yf, gf = Math.log, mf = Math.LN2;
+function yf(e) {
+  return e >>>= 0, e === 0 ? 32 : 31 - (gf(e) / mf | 0) | 0;
 }
 var Nr = 64, Lr = 4194304;
 function qn(e) {
@@ -1258,7 +1258,7 @@ function mi(e, t) {
   if (i & 4 && (i |= n & 16), t = e.entangledLanes, t !== 0) for (e = e.entanglements, t &= i; 0 < t; ) n = 31 - et(t), o = 1 << n, i |= e[n], t &= ~o;
   return i;
 }
-function yp(e, t) {
+function xf(e, t) {
   switch (e) {
     case 1:
     case 2:
@@ -1299,10 +1299,10 @@ function yp(e, t) {
       return -1;
   }
 }
-function xp(e, t) {
+function vf(e, t) {
   for (var n = e.suspendedLanes, i = e.pingedLanes, o = e.expirationTimes, l = e.pendingLanes; 0 < l; ) {
     var s = 31 - et(l), a = 1 << s, d = o[s];
-    d === -1 ? (!(a & n) || a & i) && (o[s] = yp(a, t)) : d <= t && (e.expiredLanes |= a), l &= ~a;
+    d === -1 ? (!(a & n) || a & i) && (o[s] = xf(a, t)) : d <= t && (e.expiredLanes |= a), l &= ~a;
   }
 }
 function Qo(e) {
@@ -1319,7 +1319,7 @@ function lo(e) {
 function zr(e, t, n) {
   e.pendingLanes |= t, t !== 536870912 && (e.suspendedLanes = 0, e.pingedLanes = 0), e = e.eventTimes, t = 31 - et(t), e[t] = n;
 }
-function vp(e, t) {
+function wf(e, t) {
   var n = e.pendingLanes & ~t;
   e.pendingLanes = t, e.suspendedLanes = 0, e.pingedLanes = 0, e.expiredLanes &= t, e.mutableReadLanes &= t, e.entangledLanes &= t, t = e.entanglements;
   var i = e.eventTimes;
@@ -1339,7 +1339,7 @@ var V = 0;
 function Ad(e) {
   return e &= -e, 1 < e ? 4 < e ? e & 268435455 ? 16 : 536870912 : 4 : 1;
 }
-var Od, Ul, Wd, Hd, Bd, Yo = !1, Ar = [], Tt = null, _t = null, Rt = null, ur = /* @__PURE__ */ new Map(), pr = /* @__PURE__ */ new Map(), jt = [], wp = "mousedown mouseup touchcancel touchend touchstart auxclick dblclick pointercancel pointerdown pointerup dragend dragstart drop compositionend compositionstart keydown keypress keyup input textInput copy cut paste click change contextmenu reset submit".split(" ");
+var Od, Ul, Wd, Hd, Bd, Yo = !1, Ar = [], Tt = null, _t = null, Rt = null, ur = /* @__PURE__ */ new Map(), fr = /* @__PURE__ */ new Map(), jt = [], kf = "mousedown mouseup touchcancel touchend touchstart auxclick dblclick pointercancel pointerdown pointerup dragend dragstart drop compositionend compositionstart keydown keypress keyup input textInput copy cut paste click change contextmenu reset submit".split(" ");
 function Qs(e, t) {
   switch (e) {
     case "focusin":
@@ -1360,13 +1360,13 @@ function Qs(e, t) {
       break;
     case "gotpointercapture":
     case "lostpointercapture":
-      pr.delete(t.pointerId);
+      fr.delete(t.pointerId);
   }
 }
 function On(e, t, n, i, o, l) {
   return e === null || e.nativeEvent !== l ? (e = { blockedOn: t, domEventName: n, eventSystemFlags: i, nativeEvent: l, targetContainers: [o] }, t !== null && (t = _r(t), t !== null && Ul(t)), e) : (e.eventSystemFlags |= i, t = e.targetContainers, o !== null && t.indexOf(o) === -1 && t.push(o), e);
 }
-function kp(e, t, n, i, o) {
+function bf(e, t, n, i, o) {
   switch (t) {
     case "focusin":
       return Tt = On(Tt, e, t, n, i, o), !0;
@@ -1378,7 +1378,7 @@ function kp(e, t, n, i, o) {
       var l = o.pointerId;
       return ur.set(l, On(ur.get(l) || null, e, t, n, i, o)), !0;
     case "gotpointercapture":
-      return l = o.pointerId, pr.set(l, On(pr.get(l) || null, e, t, n, i, o)), !0;
+      return l = o.pointerId, fr.set(l, On(fr.get(l) || null, e, t, n, i, o)), !0;
   }
   return !1;
 }
@@ -1388,7 +1388,7 @@ function Vd(e) {
     var n = tn(t);
     if (n !== null) {
       if (t = n.tag, t === 13) {
-        if (t = Md(n), t !== null) {
+        if (t = $d(n), t !== null) {
           e.blockedOn = t, Bd(e.priority, function() {
             Wd(n);
           });
@@ -1418,13 +1418,13 @@ function ti(e) {
 function Ys(e, t, n) {
   ti(e) && n.delete(t);
 }
-function bp() {
-  Yo = !1, Tt !== null && ti(Tt) && (Tt = null), _t !== null && ti(_t) && (_t = null), Rt !== null && ti(Rt) && (Rt = null), ur.forEach(Ys), pr.forEach(Ys);
+function jf() {
+  Yo = !1, Tt !== null && ti(Tt) && (Tt = null), _t !== null && ti(_t) && (_t = null), Rt !== null && ti(Rt) && (Rt = null), ur.forEach(Ys), fr.forEach(Ys);
 }
 function Wn(e, t) {
-  e.blockedOn === t && (e.blockedOn = null, Yo || (Yo = !0, Ne.unstable_scheduleCallback(Ne.unstable_NormalPriority, bp)));
+  e.blockedOn === t && (e.blockedOn = null, Yo || (Yo = !0, Ne.unstable_scheduleCallback(Ne.unstable_NormalPriority, jf)));
 }
-function fr(e) {
+function pr(e) {
   function t(o) {
     return Wn(o, e);
   }
@@ -1435,11 +1435,11 @@ function fr(e) {
       i.blockedOn === e && (i.blockedOn = null);
     }
   }
-  for (Tt !== null && Wn(Tt, e), _t !== null && Wn(_t, e), Rt !== null && Wn(Rt, e), ur.forEach(t), pr.forEach(t), n = 0; n < jt.length; n++) i = jt[n], i.blockedOn === e && (i.blockedOn = null);
+  for (Tt !== null && Wn(Tt, e), _t !== null && Wn(_t, e), Rt !== null && Wn(Rt, e), ur.forEach(t), fr.forEach(t), n = 0; n < jt.length; n++) i = jt[n], i.blockedOn === e && (i.blockedOn = null);
   for (; 0 < jt.length && (n = jt[0], n.blockedOn === null); ) Vd(n), n.blockedOn === null && jt.shift();
 }
 var kn = vt.ReactCurrentBatchConfig, yi = !0;
-function jp(e, t, n, i) {
+function Sf(e, t, n, i) {
   var o = V, l = kn.transition;
   kn.transition = null;
   try {
@@ -1448,7 +1448,7 @@ function jp(e, t, n, i) {
     V = o, kn.transition = l;
   }
 }
-function Sp(e, t, n, i) {
+function Cf(e, t, n, i) {
   var o = V, l = kn.transition;
   kn.transition = null;
   try {
@@ -1461,8 +1461,8 @@ function Gl(e, t, n, i) {
   if (yi) {
     var o = Ko(e, t, n, i);
     if (o === null) yo(e, t, i, xi, n), Qs(e, i);
-    else if (kp(o, e, t, n, i)) i.stopPropagation();
-    else if (Qs(e, i), t & 4 && -1 < wp.indexOf(e)) {
+    else if (bf(o, e, t, n, i)) i.stopPropagation();
+    else if (Qs(e, i), t & 4 && -1 < kf.indexOf(e)) {
       for (; o !== null; ) {
         var l = _r(o);
         if (l !== null && Od(l), l = Ko(e, t, n, i), l === null && yo(e, t, i, xi, n), l === o) break;
@@ -1476,7 +1476,7 @@ var xi = null;
 function Ko(e, t, n, i) {
   if (xi = null, e = Hl(i), e = Vt(e), e !== null) if (t = tn(e), t === null) e = null;
   else if (n = t.tag, n === 13) {
-    if (e = Md(t), e !== null) return e;
+    if (e = $d(t), e !== null) return e;
     e = null;
   } else if (n === 3) {
     if (t.stateNode.current.memoizedState.isDehydrated) return t.tag === 3 ? t.stateNode.containerInfo : null;
@@ -1559,13 +1559,13 @@ function Ud(e) {
     case "pointerleave":
       return 4;
     case "message":
-      switch (up()) {
+      switch (ff()) {
         case Bl:
           return 1;
         case Dd:
           return 4;
         case gi:
-        case pp:
+        case pf:
           return 16;
         case Nd:
           return 536870912;
@@ -1613,15 +1613,15 @@ function Ae(e) {
 }
 var Fn = { eventPhase: 0, bubbles: 0, cancelable: 0, timeStamp: function(e) {
   return e.timeStamp || Date.now();
-}, defaultPrevented: 0, isTrusted: 0 }, Yl = Ae(Fn), Tr = Z({}, Fn, { view: 0, detail: 0 }), Cp = Ae(Tr), so, ao, Hn, Oi = Z({}, Tr, { screenX: 0, screenY: 0, clientX: 0, clientY: 0, pageX: 0, pageY: 0, ctrlKey: 0, shiftKey: 0, altKey: 0, metaKey: 0, getModifierState: Kl, button: 0, buttons: 0, relatedTarget: function(e) {
+}, defaultPrevented: 0, isTrusted: 0 }, Yl = Ae(Fn), Tr = Z({}, Fn, { view: 0, detail: 0 }), zf = Ae(Tr), so, ao, Hn, Oi = Z({}, Tr, { screenX: 0, screenY: 0, clientX: 0, clientY: 0, pageX: 0, pageY: 0, ctrlKey: 0, shiftKey: 0, altKey: 0, metaKey: 0, getModifierState: Kl, button: 0, buttons: 0, relatedTarget: function(e) {
   return e.relatedTarget === void 0 ? e.fromElement === e.srcElement ? e.toElement : e.fromElement : e.relatedTarget;
 }, movementX: function(e) {
   return "movementX" in e ? e.movementX : (e !== Hn && (Hn && e.type === "mousemove" ? (so = e.screenX - Hn.screenX, ao = e.screenY - Hn.screenY) : ao = so = 0, Hn = e), so);
 }, movementY: function(e) {
   return "movementY" in e ? e.movementY : ao;
-} }), Xs = Ae(Oi), zp = Z({}, Oi, { dataTransfer: 0 }), Tp = Ae(zp), _p = Z({}, Tr, { relatedTarget: 0 }), co = Ae(_p), Rp = Z({}, Fn, { animationName: 0, elapsedTime: 0, pseudoElement: 0 }), Ip = Ae(Rp), $p = Z({}, Fn, { clipboardData: function(e) {
+} }), Xs = Ae(Oi), Tf = Z({}, Oi, { dataTransfer: 0 }), _f = Ae(Tf), Rf = Z({}, Tr, { relatedTarget: 0 }), co = Ae(Rf), If = Z({}, Fn, { animationName: 0, elapsedTime: 0, pseudoElement: 0 }), Mf = Ae(If), $f = Z({}, Fn, { clipboardData: function(e) {
   return "clipboardData" in e ? e.clipboardData : window.clipboardData;
-} }), Mp = Ae($p), Fp = Z({}, Fn, { data: 0 }), qs = Ae(Fp), Ep = {
+} }), Ff = Ae($f), Ef = Z({}, Fn, { data: 0 }), qs = Ae(Ef), Pf = {
   Esc: "Escape",
   Spacebar: " ",
   Left: "ArrowLeft",
@@ -1634,7 +1634,7 @@ var Fn = { eventPhase: 0, bubbles: 0, cancelable: 0, timeStamp: function(e) {
   Apps: "ContextMenu",
   Scroll: "ScrollLock",
   MozPrintableKey: "Unidentified"
-}, Pp = {
+}, Df = {
   8: "Backspace",
   9: "Tab",
   12: "Clear",
@@ -1671,27 +1671,27 @@ var Fn = { eventPhase: 0, bubbles: 0, cancelable: 0, timeStamp: function(e) {
   144: "NumLock",
   145: "ScrollLock",
   224: "Meta"
-}, Dp = { Alt: "altKey", Control: "ctrlKey", Meta: "metaKey", Shift: "shiftKey" };
-function Np(e) {
+}, Nf = { Alt: "altKey", Control: "ctrlKey", Meta: "metaKey", Shift: "shiftKey" };
+function Lf(e) {
   var t = this.nativeEvent;
-  return t.getModifierState ? t.getModifierState(e) : (e = Dp[e]) ? !!t[e] : !1;
+  return t.getModifierState ? t.getModifierState(e) : (e = Nf[e]) ? !!t[e] : !1;
 }
 function Kl() {
-  return Np;
+  return Lf;
 }
-var Lp = Z({}, Tr, { key: function(e) {
+var Af = Z({}, Tr, { key: function(e) {
   if (e.key) {
-    var t = Ep[e.key] || e.key;
+    var t = Pf[e.key] || e.key;
     if (t !== "Unidentified") return t;
   }
-  return e.type === "keypress" ? (e = ri(e), e === 13 ? "Enter" : String.fromCharCode(e)) : e.type === "keydown" || e.type === "keyup" ? Pp[e.keyCode] || "Unidentified" : "";
+  return e.type === "keypress" ? (e = ri(e), e === 13 ? "Enter" : String.fromCharCode(e)) : e.type === "keydown" || e.type === "keyup" ? Df[e.keyCode] || "Unidentified" : "";
 }, code: 0, location: 0, ctrlKey: 0, shiftKey: 0, altKey: 0, metaKey: 0, repeat: 0, locale: 0, getModifierState: Kl, charCode: function(e) {
   return e.type === "keypress" ? ri(e) : 0;
 }, keyCode: function(e) {
   return e.type === "keydown" || e.type === "keyup" ? e.keyCode : 0;
 }, which: function(e) {
   return e.type === "keypress" ? ri(e) : e.type === "keydown" || e.type === "keyup" ? e.keyCode : 0;
-} }), Ap = Ae(Lp), Op = Z({}, Oi, { pointerId: 0, width: 0, height: 0, pressure: 0, tangentialPressure: 0, tiltX: 0, tiltY: 0, twist: 0, pointerType: 0, isPrimary: 0 }), Js = Ae(Op), Wp = Z({}, Tr, { touches: 0, targetTouches: 0, changedTouches: 0, altKey: 0, metaKey: 0, ctrlKey: 0, shiftKey: 0, getModifierState: Kl }), Hp = Ae(Wp), Bp = Z({}, Fn, { propertyName: 0, elapsedTime: 0, pseudoElement: 0 }), Vp = Ae(Bp), Up = Z({}, Oi, {
+} }), Of = Ae(Af), Wf = Z({}, Oi, { pointerId: 0, width: 0, height: 0, pressure: 0, tangentialPressure: 0, tiltX: 0, tiltY: 0, twist: 0, pointerType: 0, isPrimary: 0 }), Js = Ae(Wf), Hf = Z({}, Tr, { touches: 0, targetTouches: 0, changedTouches: 0, altKey: 0, metaKey: 0, ctrlKey: 0, shiftKey: 0, getModifierState: Kl }), Bf = Ae(Hf), Vf = Z({}, Fn, { propertyName: 0, elapsedTime: 0, pseudoElement: 0 }), Uf = Ae(Vf), Gf = Z({}, Oi, {
   deltaX: function(e) {
     return "deltaX" in e ? e.deltaX : "wheelDeltaX" in e ? -e.wheelDeltaX : 0;
   },
@@ -1700,13 +1700,13 @@ var Lp = Z({}, Tr, { key: function(e) {
   },
   deltaZ: 0,
   deltaMode: 0
-}), Gp = Ae(Up), Qp = [9, 13, 27, 32], Xl = gt && "CompositionEvent" in window, tr = null;
+}), Qf = Ae(Gf), Yf = [9, 13, 27, 32], Xl = gt && "CompositionEvent" in window, tr = null;
 gt && "documentMode" in document && (tr = document.documentMode);
-var Yp = gt && "TextEvent" in window && !tr, Qd = gt && (!Xl || tr && 8 < tr && 11 >= tr), Zs = " ", ea = !1;
+var Kf = gt && "TextEvent" in window && !tr, Qd = gt && (!Xl || tr && 8 < tr && 11 >= tr), Zs = " ", ea = !1;
 function Yd(e, t) {
   switch (e) {
     case "keyup":
-      return Qp.indexOf(t.keyCode) !== -1;
+      return Yf.indexOf(t.keyCode) !== -1;
     case "keydown":
       return t.keyCode !== 229;
     case "keypress":
@@ -1721,7 +1721,7 @@ function Kd(e) {
   return e = e.detail, typeof e == "object" && "data" in e ? e.data : null;
 }
 var sn = !1;
-function Kp(e, t) {
+function Xf(e, t) {
   switch (e) {
     case "compositionend":
       return Kd(t);
@@ -1733,7 +1733,7 @@ function Kp(e, t) {
       return null;
   }
 }
-function Xp(e, t) {
+function qf(e, t) {
   if (sn) return e === "compositionend" || !Xl && Yd(e, t) ? (e = Gd(), ni = Ql = Ct = null, sn = !1, e) : null;
   switch (e) {
     case "paste":
@@ -1750,35 +1750,35 @@ function Xp(e, t) {
       return null;
   }
 }
-var qp = { color: !0, date: !0, datetime: !0, "datetime-local": !0, email: !0, month: !0, number: !0, password: !0, range: !0, search: !0, tel: !0, text: !0, time: !0, url: !0, week: !0 };
+var Jf = { color: !0, date: !0, datetime: !0, "datetime-local": !0, email: !0, month: !0, number: !0, password: !0, range: !0, search: !0, tel: !0, text: !0, time: !0, url: !0, week: !0 };
 function ta(e) {
   var t = e && e.nodeName && e.nodeName.toLowerCase();
-  return t === "input" ? !!qp[e.type] : t === "textarea";
+  return t === "input" ? !!Jf[e.type] : t === "textarea";
 }
 function Xd(e, t, n, i) {
   Td(i), t = vi(t, "onChange"), 0 < t.length && (n = new Yl("onChange", "change", null, n, i), e.push({ event: n, listeners: t }));
 }
 var nr = null, hr = null;
-function Jp(e) {
+function Zf(e) {
   sc(e, 0);
 }
 function Wi(e) {
   var t = cn(e);
   if (wd(t)) return e;
 }
-function Zp(e, t) {
+function ep(e, t) {
   if (e === "change") return t;
 }
 var qd = !1;
 if (gt) {
   var uo;
   if (gt) {
-    var po = "oninput" in document;
-    if (!po) {
+    var fo = "oninput" in document;
+    if (!fo) {
       var na = document.createElement("div");
-      na.setAttribute("oninput", "return;"), po = typeof na.oninput == "function";
+      na.setAttribute("oninput", "return;"), fo = typeof na.oninput == "function";
     }
-    uo = po;
+    uo = fo;
   } else uo = !1;
   qd = uo && (!document.documentMode || 9 < document.documentMode);
 }
@@ -1788,25 +1788,25 @@ function ra() {
 function Jd(e) {
   if (e.propertyName === "value" && Wi(hr)) {
     var t = [];
-    Xd(t, hr, e, Hl(e)), $d(Jp, t);
+    Xd(t, hr, e, Hl(e)), Md(Zf, t);
   }
 }
-function ef(e, t, n) {
+function tp(e, t, n) {
   e === "focusin" ? (ra(), nr = t, hr = n, nr.attachEvent("onpropertychange", Jd)) : e === "focusout" && ra();
 }
-function tf(e) {
+function np(e) {
   if (e === "selectionchange" || e === "keyup" || e === "keydown") return Wi(hr);
 }
-function nf(e, t) {
+function rp(e, t) {
   if (e === "click") return Wi(t);
 }
-function rf(e, t) {
+function ip(e, t) {
   if (e === "input" || e === "change") return Wi(t);
 }
-function of(e, t) {
+function op(e, t) {
   return e === t && (e !== 0 || 1 / e === 1 / t) || e !== e && t !== t;
 }
-var nt = typeof Object.is == "function" ? Object.is : of;
+var nt = typeof Object.is == "function" ? Object.is : op;
 function gr(e, t) {
   if (nt(e, t)) return !0;
   if (typeof e != "object" || e === null || typeof t != "object" || t === null) return !1;
@@ -1814,7 +1814,7 @@ function gr(e, t) {
   if (n.length !== i.length) return !1;
   for (i = 0; i < n.length; i++) {
     var o = n[i];
-    if (!$o.call(t, o) || !nt(e[o], t[o])) return !1;
+    if (!Mo.call(t, o) || !nt(e[o], t[o])) return !1;
   }
   return !0;
 }
@@ -1847,7 +1847,7 @@ function Zd(e, t) {
   return e && t ? e === t ? !0 : e && e.nodeType === 3 ? !1 : t && t.nodeType === 3 ? Zd(e, t.parentNode) : "contains" in e ? e.contains(t) : e.compareDocumentPosition ? !!(e.compareDocumentPosition(t) & 16) : !1 : !1;
 }
 function ec() {
-  for (var e = window, t = pi(); t instanceof e.HTMLIFrameElement; ) {
+  for (var e = window, t = fi(); t instanceof e.HTMLIFrameElement; ) {
     try {
       var n = typeof t.contentWindow.location.href == "string";
     } catch {
@@ -1855,7 +1855,7 @@ function ec() {
     }
     if (n) e = t.contentWindow;
     else break;
-    t = pi(e.document);
+    t = fi(e.document);
   }
   return t;
 }
@@ -1863,7 +1863,7 @@ function ql(e) {
   var t = e && e.nodeName && e.nodeName.toLowerCase();
   return t && (t === "input" && (e.type === "text" || e.type === "search" || e.type === "tel" || e.type === "url" || e.type === "password") || t === "textarea" || e.contentEditable === "true");
 }
-function lf(e) {
+function lp(e) {
   var t = ec(), n = e.focusedElem, i = e.selectionRange;
   if (t !== n && n && n.ownerDocument && Zd(n.ownerDocument.documentElement, n)) {
     if (i !== null && ql(n)) {
@@ -1883,22 +1883,22 @@ function lf(e) {
     for (typeof n.focus == "function" && n.focus(), n = 0; n < t.length; n++) e = t[n], e.element.scrollLeft = e.left, e.element.scrollTop = e.top;
   }
 }
-var sf = gt && "documentMode" in document && 11 >= document.documentMode, an = null, Xo = null, rr = null, qo = !1;
+var sp = gt && "documentMode" in document && 11 >= document.documentMode, an = null, Xo = null, rr = null, qo = !1;
 function la(e, t, n) {
   var i = n.window === n ? n.document : n.nodeType === 9 ? n : n.ownerDocument;
-  qo || an == null || an !== pi(i) || (i = an, "selectionStart" in i && ql(i) ? i = { start: i.selectionStart, end: i.selectionEnd } : (i = (i.ownerDocument && i.ownerDocument.defaultView || window).getSelection(), i = { anchorNode: i.anchorNode, anchorOffset: i.anchorOffset, focusNode: i.focusNode, focusOffset: i.focusOffset }), rr && gr(rr, i) || (rr = i, i = vi(Xo, "onSelect"), 0 < i.length && (t = new Yl("onSelect", "select", null, t, n), e.push({ event: t, listeners: i }), t.target = an)));
+  qo || an == null || an !== fi(i) || (i = an, "selectionStart" in i && ql(i) ? i = { start: i.selectionStart, end: i.selectionEnd } : (i = (i.ownerDocument && i.ownerDocument.defaultView || window).getSelection(), i = { anchorNode: i.anchorNode, anchorOffset: i.anchorOffset, focusNode: i.focusNode, focusOffset: i.focusOffset }), rr && gr(rr, i) || (rr = i, i = vi(Xo, "onSelect"), 0 < i.length && (t = new Yl("onSelect", "select", null, t, n), e.push({ event: t, listeners: i }), t.target = an)));
 }
 function Wr(e, t) {
   var n = {};
   return n[e.toLowerCase()] = t.toLowerCase(), n["Webkit" + e] = "webkit" + t, n["Moz" + e] = "moz" + t, n;
 }
-var dn = { animationend: Wr("Animation", "AnimationEnd"), animationiteration: Wr("Animation", "AnimationIteration"), animationstart: Wr("Animation", "AnimationStart"), transitionend: Wr("Transition", "TransitionEnd") }, fo = {}, tc = {};
+var dn = { animationend: Wr("Animation", "AnimationEnd"), animationiteration: Wr("Animation", "AnimationIteration"), animationstart: Wr("Animation", "AnimationStart"), transitionend: Wr("Transition", "TransitionEnd") }, po = {}, tc = {};
 gt && (tc = document.createElement("div").style, "AnimationEvent" in window || (delete dn.animationend.animation, delete dn.animationiteration.animation, delete dn.animationstart.animation), "TransitionEvent" in window || delete dn.transitionend.transition);
 function Hi(e) {
-  if (fo[e]) return fo[e];
+  if (po[e]) return po[e];
   if (!dn[e]) return e;
   var t = dn[e], n;
-  for (n in t) if (t.hasOwnProperty(n) && n in tc) return fo[e] = t[n];
+  for (n in t) if (t.hasOwnProperty(n) && n in tc) return po[e] = t[n];
   return e;
 }
 var nc = Hi("animationend"), rc = Hi("animationiteration"), ic = Hi("animationstart"), oc = Hi("transitionend"), lc = /* @__PURE__ */ new Map(), sa = "abort auxClick cancel canPlay canPlayThrough click close contextMenu copy cut drag dragEnd dragEnter dragExit dragLeave dragOver dragStart drop durationChange emptied encrypted ended error gotPointerCapture input invalid keyDown keyPress keyUp load loadedData loadedMetadata loadStart lostPointerCapture mouseDown mouseMove mouseOut mouseOver mouseUp paste pause play playing pointerCancel pointerDown pointerMove pointerOut pointerOver pointerUp progress rateChange reset resize seeked seeking stalled submit suspend timeUpdate touchCancel touchEnd touchStart volumeChange scroll toggle touchMove waiting wheel".split(" ");
@@ -1906,8 +1906,8 @@ function Nt(e, t) {
   lc.set(e, t), en(t, [e]);
 }
 for (var ho = 0; ho < sa.length; ho++) {
-  var go = sa[ho], af = go.toLowerCase(), df = go[0].toUpperCase() + go.slice(1);
-  Nt(af, "on" + df);
+  var go = sa[ho], ap = go.toLowerCase(), dp = go[0].toUpperCase() + go.slice(1);
+  Nt(ap, "on" + dp);
 }
 Nt(nc, "onAnimationEnd");
 Nt(rc, "onAnimationIteration");
@@ -1926,10 +1926,10 @@ en("onBeforeInput", ["compositionend", "keypress", "textInput", "paste"]);
 en("onCompositionEnd", "compositionend focusout keydown keypress keyup mousedown".split(" "));
 en("onCompositionStart", "compositionstart focusout keydown keypress keyup mousedown".split(" "));
 en("onCompositionUpdate", "compositionupdate focusout keydown keypress keyup mousedown".split(" "));
-var Jn = "abort canplay canplaythrough durationchange emptied encrypted ended error loadeddata loadedmetadata loadstart pause play playing progress ratechange resize seeked seeking stalled suspend timeupdate volumechange waiting".split(" "), cf = new Set("cancel close invalid load scroll toggle".split(" ").concat(Jn));
+var Jn = "abort canplay canplaythrough durationchange emptied encrypted ended error loadeddata loadedmetadata loadstart pause play playing progress ratechange resize seeked seeking stalled suspend timeupdate volumechange waiting".split(" "), cp = new Set("cancel close invalid load scroll toggle".split(" ").concat(Jn));
 function aa(e, t, n) {
   var i = e.type || "unknown-event";
-  e.currentTarget = n, sp(i, t, void 0, e), e.currentTarget = null;
+  e.currentTarget = n, af(i, t, void 0, e), e.currentTarget = null;
 }
 function sc(e, t) {
   t = (t & 4) !== 0;
@@ -1939,13 +1939,13 @@ function sc(e, t) {
     e: {
       var l = void 0;
       if (t) for (var s = i.length - 1; 0 <= s; s--) {
-        var a = i[s], d = a.instance, c = a.currentTarget;
+        var a = i[s], d = a.instance, u = a.currentTarget;
         if (a = a.listener, d !== l && o.isPropagationStopped()) break e;
-        aa(o, a, c), l = d;
+        aa(o, a, u), l = d;
       }
       else for (s = 0; s < i.length; s++) {
-        if (a = i[s], d = a.instance, c = a.currentTarget, a = a.listener, d !== l && o.isPropagationStopped()) break e;
-        aa(o, a, c), l = d;
+        if (a = i[s], d = a.instance, u = a.currentTarget, a = a.listener, d !== l && o.isPropagationStopped()) break e;
+        aa(o, a, u), l = d;
       }
     }
   }
@@ -1965,7 +1965,7 @@ var Hr = "_reactListening" + Math.random().toString(36).slice(2);
 function mr(e) {
   if (!e[Hr]) {
     e[Hr] = !0, gd.forEach(function(n) {
-      n !== "selectionchange" && (cf.has(n) || mo(n, !1, e), mo(n, !0, e));
+      n !== "selectionchange" && (cp.has(n) || mo(n, !1, e), mo(n, !0, e));
     });
     var t = e.nodeType === 9 ? e : e.ownerDocument;
     t === null || t[Hr] || (t[Hr] = !0, mo("selectionchange", !1, t));
@@ -1974,10 +1974,10 @@ function mr(e) {
 function ac(e, t, n, i) {
   switch (Ud(t)) {
     case 1:
-      var o = jp;
+      var o = Sf;
       break;
     case 4:
-      o = Sp;
+      o = Cf;
       break;
     default:
       o = Gl;
@@ -2008,28 +2008,28 @@ function yo(e, t, n, i, o) {
     }
     i = i.return;
   }
-  $d(function() {
-    var c = l, p = Hl(n), u = [];
+  Md(function() {
+    var u = l, f = Hl(n), c = [];
     e: {
-      var h = lc.get(e);
-      if (h !== void 0) {
-        var v = Yl, w = e;
+      var p = lc.get(e);
+      if (p !== void 0) {
+        var w = Yl, x = e;
         switch (e) {
           case "keypress":
             if (ri(n) === 0) break e;
           case "keydown":
           case "keyup":
-            v = Ap;
+            w = Of;
             break;
           case "focusin":
-            w = "focus", v = co;
+            x = "focus", w = co;
             break;
           case "focusout":
-            w = "blur", v = co;
+            x = "blur", w = co;
             break;
           case "beforeblur":
           case "afterblur":
-            v = co;
+            w = co;
             break;
           case "click":
             if (n.button === 2) break e;
@@ -2041,7 +2041,7 @@ function yo(e, t, n, i, o) {
           case "mouseout":
           case "mouseover":
           case "contextmenu":
-            v = Xs;
+            w = Xs;
             break;
           case "drag":
           case "dragend":
@@ -2051,32 +2051,32 @@ function yo(e, t, n, i, o) {
           case "dragover":
           case "dragstart":
           case "drop":
-            v = Tp;
+            w = _f;
             break;
           case "touchcancel":
           case "touchend":
           case "touchmove":
           case "touchstart":
-            v = Hp;
+            w = Bf;
             break;
           case nc:
           case rc:
           case ic:
-            v = Ip;
+            w = Mf;
             break;
           case oc:
-            v = Vp;
+            w = Uf;
             break;
           case "scroll":
-            v = Cp;
+            w = zf;
             break;
           case "wheel":
-            v = Gp;
+            w = Qf;
             break;
           case "copy":
           case "cut":
           case "paste":
-            v = Mp;
+            w = Ff;
             break;
           case "gotpointercapture":
           case "lostpointercapture":
@@ -2086,55 +2086,55 @@ function yo(e, t, n, i, o) {
           case "pointerout":
           case "pointerover":
           case "pointerup":
-            v = Js;
+            w = Js;
         }
-        var f = (t & 4) !== 0, k = !f && e === "scroll", m = f ? h !== null ? h + "Capture" : null : h;
-        f = [];
-        for (var g = c, y; g !== null; ) {
+        var h = (t & 4) !== 0, k = !h && e === "scroll", m = h ? p !== null ? p + "Capture" : null : p;
+        h = [];
+        for (var g = u, y; g !== null; ) {
           y = g;
-          var x = y.stateNode;
-          if (y.tag === 5 && x !== null && (y = x, m !== null && (x = cr(g, m), x != null && f.push(yr(g, x, y)))), k) break;
+          var v = y.stateNode;
+          if (y.tag === 5 && v !== null && (y = v, m !== null && (v = cr(g, m), v != null && h.push(yr(g, v, y)))), k) break;
           g = g.return;
         }
-        0 < f.length && (h = new v(h, w, null, n, p), u.push({ event: h, listeners: f }));
+        0 < h.length && (p = new w(p, x, null, n, f), c.push({ event: p, listeners: h }));
       }
     }
     if (!(t & 7)) {
       e: {
-        if (h = e === "mouseover" || e === "pointerover", v = e === "mouseout" || e === "pointerout", h && n !== Bo && (w = n.relatedTarget || n.fromElement) && (Vt(w) || w[mt])) break e;
-        if ((v || h) && (h = p.window === p ? p : (h = p.ownerDocument) ? h.defaultView || h.parentWindow : window, v ? (w = n.relatedTarget || n.toElement, v = c, w = w ? Vt(w) : null, w !== null && (k = tn(w), w !== k || w.tag !== 5 && w.tag !== 6) && (w = null)) : (v = null, w = c), v !== w)) {
-          if (f = Xs, x = "onMouseLeave", m = "onMouseEnter", g = "mouse", (e === "pointerout" || e === "pointerover") && (f = Js, x = "onPointerLeave", m = "onPointerEnter", g = "pointer"), k = v == null ? h : cn(v), y = w == null ? h : cn(w), h = new f(x, g + "leave", v, n, p), h.target = k, h.relatedTarget = y, x = null, Vt(p) === c && (f = new f(m, g + "enter", w, n, p), f.target = y, f.relatedTarget = k, x = f), k = x, v && w) t: {
-            for (f = v, m = w, g = 0, y = f; y; y = rn(y)) g++;
-            for (y = 0, x = m; x; x = rn(x)) y++;
-            for (; 0 < g - y; ) f = rn(f), g--;
+        if (p = e === "mouseover" || e === "pointerover", w = e === "mouseout" || e === "pointerout", p && n !== Bo && (x = n.relatedTarget || n.fromElement) && (Vt(x) || x[mt])) break e;
+        if ((w || p) && (p = f.window === f ? f : (p = f.ownerDocument) ? p.defaultView || p.parentWindow : window, w ? (x = n.relatedTarget || n.toElement, w = u, x = x ? Vt(x) : null, x !== null && (k = tn(x), x !== k || x.tag !== 5 && x.tag !== 6) && (x = null)) : (w = null, x = u), w !== x)) {
+          if (h = Xs, v = "onMouseLeave", m = "onMouseEnter", g = "mouse", (e === "pointerout" || e === "pointerover") && (h = Js, v = "onPointerLeave", m = "onPointerEnter", g = "pointer"), k = w == null ? p : cn(w), y = x == null ? p : cn(x), p = new h(v, g + "leave", w, n, f), p.target = k, p.relatedTarget = y, v = null, Vt(f) === u && (h = new h(m, g + "enter", x, n, f), h.target = y, h.relatedTarget = k, v = h), k = v, w && x) t: {
+            for (h = w, m = x, g = 0, y = h; y; y = rn(y)) g++;
+            for (y = 0, v = m; v; v = rn(v)) y++;
+            for (; 0 < g - y; ) h = rn(h), g--;
             for (; 0 < y - g; ) m = rn(m), y--;
             for (; g--; ) {
-              if (f === m || m !== null && f === m.alternate) break t;
-              f = rn(f), m = rn(m);
+              if (h === m || m !== null && h === m.alternate) break t;
+              h = rn(h), m = rn(m);
             }
-            f = null;
+            h = null;
           }
-          else f = null;
-          v !== null && da(u, h, v, f, !1), w !== null && k !== null && da(u, k, w, f, !0);
+          else h = null;
+          w !== null && da(c, p, w, h, !1), x !== null && k !== null && da(c, k, x, h, !0);
         }
       }
       e: {
-        if (h = c ? cn(c) : window, v = h.nodeName && h.nodeName.toLowerCase(), v === "select" || v === "input" && h.type === "file") var b = Zp;
-        else if (ta(h)) if (qd) b = rf;
+        if (p = u ? cn(u) : window, w = p.nodeName && p.nodeName.toLowerCase(), w === "select" || w === "input" && p.type === "file") var b = ep;
+        else if (ta(p)) if (qd) b = ip;
         else {
-          b = tf;
-          var j = ef;
+          b = np;
+          var j = tp;
         }
-        else (v = h.nodeName) && v.toLowerCase() === "input" && (h.type === "checkbox" || h.type === "radio") && (b = nf);
-        if (b && (b = b(e, c))) {
-          Xd(u, b, n, p);
+        else (w = p.nodeName) && w.toLowerCase() === "input" && (p.type === "checkbox" || p.type === "radio") && (b = rp);
+        if (b && (b = b(e, u))) {
+          Xd(c, b, n, f);
           break e;
         }
-        j && j(e, h, c), e === "focusout" && (j = h._wrapperState) && j.controlled && h.type === "number" && Lo(h, "number", h.value);
+        j && j(e, p, u), e === "focusout" && (j = p._wrapperState) && j.controlled && p.type === "number" && Lo(p, "number", p.value);
       }
-      switch (j = c ? cn(c) : window, e) {
+      switch (j = u ? cn(u) : window, e) {
         case "focusin":
-          (ta(j) || j.contentEditable === "true") && (an = j, Xo = c, rr = null);
+          (ta(j) || j.contentEditable === "true") && (an = j, Xo = u, rr = null);
           break;
         case "focusout":
           rr = Xo = an = null;
@@ -2145,13 +2145,13 @@ function yo(e, t, n, i, o) {
         case "contextmenu":
         case "mouseup":
         case "dragend":
-          qo = !1, la(u, n, p);
+          qo = !1, la(c, n, f);
           break;
         case "selectionchange":
-          if (sf) break;
+          if (sp) break;
         case "keydown":
         case "keyup":
-          la(u, n, p);
+          la(c, n, f);
       }
       var S;
       if (Xl) e: {
@@ -2169,9 +2169,9 @@ function yo(e, t, n, i, o) {
         C = void 0;
       }
       else sn ? Yd(e, n) && (C = "onCompositionEnd") : e === "keydown" && n.keyCode === 229 && (C = "onCompositionStart");
-      C && (Qd && n.locale !== "ko" && (sn || C !== "onCompositionStart" ? C === "onCompositionEnd" && sn && (S = Gd()) : (Ct = p, Ql = "value" in Ct ? Ct.value : Ct.textContent, sn = !0)), j = vi(c, C), 0 < j.length && (C = new qs(C, e, null, n, p), u.push({ event: C, listeners: j }), S ? C.data = S : (S = Kd(n), S !== null && (C.data = S)))), (S = Yp ? Kp(e, n) : Xp(e, n)) && (c = vi(c, "onBeforeInput"), 0 < c.length && (p = new qs("onBeforeInput", "beforeinput", null, n, p), u.push({ event: p, listeners: c }), p.data = S));
+      C && (Qd && n.locale !== "ko" && (sn || C !== "onCompositionStart" ? C === "onCompositionEnd" && sn && (S = Gd()) : (Ct = f, Ql = "value" in Ct ? Ct.value : Ct.textContent, sn = !0)), j = vi(u, C), 0 < j.length && (C = new qs(C, e, null, n, f), c.push({ event: C, listeners: j }), S ? C.data = S : (S = Kd(n), S !== null && (C.data = S)))), (S = Kf ? Xf(e, n) : qf(e, n)) && (u = vi(u, "onBeforeInput"), 0 < u.length && (f = new qs("onBeforeInput", "beforeinput", null, n, f), c.push({ event: f, listeners: u }), f.data = S));
     }
-    sc(u, t);
+    sc(c, t);
   });
 }
 function yr(e, t, n) {
@@ -2193,16 +2193,16 @@ function rn(e) {
 }
 function da(e, t, n, i, o) {
   for (var l = t._reactName, s = []; n !== null && n !== i; ) {
-    var a = n, d = a.alternate, c = a.stateNode;
+    var a = n, d = a.alternate, u = a.stateNode;
     if (d !== null && d === i) break;
-    a.tag === 5 && c !== null && (a = c, o ? (d = cr(n, l), d != null && s.unshift(yr(n, d, a))) : o || (d = cr(n, l), d != null && s.push(yr(n, d, a)))), n = n.return;
+    a.tag === 5 && u !== null && (a = u, o ? (d = cr(n, l), d != null && s.unshift(yr(n, d, a))) : o || (d = cr(n, l), d != null && s.push(yr(n, d, a)))), n = n.return;
   }
   s.length !== 0 && e.push({ event: t, listeners: s });
 }
-var uf = /\r\n?/g, pf = /\u0000|\uFFFD/g;
+var up = /\r\n?/g, fp = /\u0000|\uFFFD/g;
 function ca(e) {
-  return (typeof e == "string" ? e : "" + e).replace(uf, `
-`).replace(pf, "");
+  return (typeof e == "string" ? e : "" + e).replace(up, `
+`).replace(fp, "");
 }
 function Br(e, t, n) {
   if (t = ca(t), ca(e) !== t && n) throw Error(z(425));
@@ -2213,10 +2213,10 @@ var Jo = null, Zo = null;
 function el(e, t) {
   return e === "textarea" || e === "noscript" || typeof t.children == "string" || typeof t.children == "number" || typeof t.dangerouslySetInnerHTML == "object" && t.dangerouslySetInnerHTML !== null && t.dangerouslySetInnerHTML.__html != null;
 }
-var tl = typeof setTimeout == "function" ? setTimeout : void 0, ff = typeof clearTimeout == "function" ? clearTimeout : void 0, ua = typeof Promise == "function" ? Promise : void 0, hf = typeof queueMicrotask == "function" ? queueMicrotask : typeof ua < "u" ? function(e) {
-  return ua.resolve(null).then(e).catch(gf);
+var tl = typeof setTimeout == "function" ? setTimeout : void 0, pp = typeof clearTimeout == "function" ? clearTimeout : void 0, ua = typeof Promise == "function" ? Promise : void 0, hp = typeof queueMicrotask == "function" ? queueMicrotask : typeof ua < "u" ? function(e) {
+  return ua.resolve(null).then(e).catch(gp);
 } : tl;
-function gf(e) {
+function gp(e) {
   setTimeout(function() {
     throw e;
   });
@@ -2227,14 +2227,14 @@ function xo(e, t) {
     var o = n.nextSibling;
     if (e.removeChild(n), o && o.nodeType === 8) if (n = o.data, n === "/$") {
       if (i === 0) {
-        e.removeChild(o), fr(t);
+        e.removeChild(o), pr(t);
         return;
       }
       i--;
     } else n !== "$" && n !== "$?" && n !== "$!" || i++;
     n = o;
   } while (n);
-  fr(t);
+  pr(t);
 }
 function It(e) {
   for (; e != null; e = e.nextSibling) {
@@ -2247,7 +2247,7 @@ function It(e) {
   }
   return e;
 }
-function pa(e) {
+function fa(e) {
   e = e.previousSibling;
   for (var t = 0; e; ) {
     if (e.nodeType === 8) {
@@ -2261,15 +2261,15 @@ function pa(e) {
   }
   return null;
 }
-var En = Math.random().toString(36).slice(2), ot = "__reactFiber$" + En, xr = "__reactProps$" + En, mt = "__reactContainer$" + En, nl = "__reactEvents$" + En, mf = "__reactListeners$" + En, yf = "__reactHandles$" + En;
+var En = Math.random().toString(36).slice(2), ot = "__reactFiber$" + En, xr = "__reactProps$" + En, mt = "__reactContainer$" + En, nl = "__reactEvents$" + En, mp = "__reactListeners$" + En, yp = "__reactHandles$" + En;
 function Vt(e) {
   var t = e[ot];
   if (t) return t;
   for (var n = e.parentNode; n; ) {
     if (t = n[mt] || n[ot]) {
-      if (n = t.alternate, t.child !== null || n !== null && n.child !== null) for (e = pa(e); e !== null; ) {
+      if (n = t.alternate, t.child !== null || n !== null && n.child !== null) for (e = fa(e); e !== null; ) {
         if (n = e[ot]) return n;
-        e = pa(e);
+        e = fa(e);
       }
       return t;
     }
@@ -2307,13 +2307,13 @@ function Cn(e, t) {
   for (l in n) o[l] = t[l];
   return i && (e = e.stateNode, e.__reactInternalMemoizedUnmaskedChildContext = t, e.__reactInternalMemoizedMaskedChildContext = o), o;
 }
-function $e(e) {
+function Me(e) {
   return e = e.childContextTypes, e != null;
 }
 function ki() {
   K(Ie), K(be);
 }
-function fa(e, t, n) {
+function pa(e, t, n) {
   if (be.current !== Dt) throw Error(z(168));
   Q(be, t), Q(Ie, n);
 }
@@ -2321,7 +2321,7 @@ function dc(e, t, n) {
   var i = e.stateNode;
   if (t = t.childContextTypes, typeof i.getChildContext != "function") return n;
   i = i.getChildContext();
-  for (var o in i) if (!(o in t)) throw Error(z(108, ep(e) || "Unknown", o));
+  for (var o in i) if (!(o in t)) throw Error(z(108, ef(e) || "Unknown", o));
   return Z({}, n, i);
 }
 function bi(e) {
@@ -2336,7 +2336,7 @@ var ut = null, Vi = !1, vo = !1;
 function cc(e) {
   ut === null ? ut = [e] : ut.push(e);
 }
-function xf(e) {
+function xp(e) {
   Vi = !0, cc(e);
 }
 function At() {
@@ -2360,31 +2360,31 @@ function At() {
   }
   return null;
 }
-var pn = [], fn = 0, ji = null, Si = 0, Be = [], Ve = 0, Xt = null, pt = 1, ft = "";
+var fn = [], pn = 0, ji = null, Si = 0, Be = [], Ve = 0, Xt = null, ft = 1, pt = "";
 function Wt(e, t) {
-  pn[fn++] = Si, pn[fn++] = ji, ji = e, Si = t;
+  fn[pn++] = Si, fn[pn++] = ji, ji = e, Si = t;
 }
 function uc(e, t, n) {
-  Be[Ve++] = pt, Be[Ve++] = ft, Be[Ve++] = Xt, Xt = e;
-  var i = pt;
-  e = ft;
+  Be[Ve++] = ft, Be[Ve++] = pt, Be[Ve++] = Xt, Xt = e;
+  var i = ft;
+  e = pt;
   var o = 32 - et(i) - 1;
   i &= ~(1 << o), n += 1;
   var l = 32 - et(t) + o;
   if (30 < l) {
     var s = o - o % 5;
-    l = (i & (1 << s) - 1).toString(32), i >>= s, o -= s, pt = 1 << 32 - et(t) + o | n << o | i, ft = l + e;
-  } else pt = 1 << l | n << o | i, ft = e;
+    l = (i & (1 << s) - 1).toString(32), i >>= s, o -= s, ft = 1 << 32 - et(t) + o | n << o | i, pt = l + e;
+  } else ft = 1 << l | n << o | i, pt = e;
 }
 function Jl(e) {
   e.return !== null && (Wt(e, 1), uc(e, 1, 0));
 }
 function Zl(e) {
-  for (; e === ji; ) ji = pn[--fn], pn[fn] = null, Si = pn[--fn], pn[fn] = null;
-  for (; e === Xt; ) Xt = Be[--Ve], Be[Ve] = null, ft = Be[--Ve], Be[Ve] = null, pt = Be[--Ve], Be[Ve] = null;
+  for (; e === ji; ) ji = fn[--pn], fn[pn] = null, Si = fn[--pn], fn[pn] = null;
+  for (; e === Xt; ) Xt = Be[--Ve], Be[Ve] = null, pt = Be[--Ve], Be[Ve] = null, ft = Be[--Ve], Be[Ve] = null;
 }
 var De = null, Pe = null, X = !1, Ze = null;
-function pc(e, t) {
+function fc(e, t) {
   var n = Ue(5, null, null, 0);
   n.elementType = "DELETED", n.stateNode = t, n.return = e, t = e.deletions, t === null ? (e.deletions = [n], e.flags |= 16) : t.push(n);
 }
@@ -2396,7 +2396,7 @@ function ga(e, t) {
     case 6:
       return t = e.pendingProps === "" || t.nodeType !== 3 ? null : t, t !== null ? (e.stateNode = t, De = e, Pe = null, !0) : !1;
     case 13:
-      return t = t.nodeType !== 8 ? null : t, t !== null ? (n = Xt !== null ? { id: pt, overflow: ft } : null, e.memoizedState = { dehydrated: t, treeContext: n, retryLane: 1073741824 }, n = Ue(18, null, null, 0), n.stateNode = t, n.return = e, e.child = n, De = e, Pe = null, !0) : !1;
+      return t = t.nodeType !== 8 ? null : t, t !== null ? (n = Xt !== null ? { id: ft, overflow: pt } : null, e.memoizedState = { dehydrated: t, treeContext: n, retryLane: 1073741824 }, n = Ue(18, null, null, 0), n.stateNode = t, n.return = e, e.child = n, De = e, Pe = null, !0) : !1;
     default:
       return !1;
   }
@@ -2413,7 +2413,7 @@ function ol(e) {
         if (il(e)) throw Error(z(418));
         t = It(n.nextSibling);
         var i = De;
-        t && ga(e, t) ? pc(i, n) : (e.flags = e.flags & -4097 | 2, X = !1, De = e);
+        t && ga(e, t) ? fc(i, n) : (e.flags = e.flags & -4097 | 2, X = !1, De = e);
       }
     } else {
       if (il(e)) throw Error(z(418));
@@ -2430,8 +2430,8 @@ function Vr(e) {
   if (!X) return ma(e), X = !0, !1;
   var t;
   if ((t = e.tag !== 3) && !(t = e.tag !== 5) && (t = e.type, t = t !== "head" && t !== "body" && !el(e.type, e.memoizedProps)), t && (t = Pe)) {
-    if (il(e)) throw fc(), Error(z(418));
-    for (; t; ) pc(e, t), t = It(t.nextSibling);
+    if (il(e)) throw pc(), Error(z(418));
+    for (; t; ) fc(e, t), t = It(t.nextSibling);
   }
   if (ma(e), e.tag === 13) {
     if (e = e.memoizedState, e = e !== null ? e.dehydrated : null, !e) throw Error(z(317));
@@ -2454,7 +2454,7 @@ function Vr(e) {
   } else Pe = De ? It(e.stateNode.nextSibling) : null;
   return !0;
 }
-function fc() {
+function pc() {
   for (var e = Pe; e; ) e = It(e.nextSibling);
 }
 function zn() {
@@ -2463,7 +2463,7 @@ function zn() {
 function es(e) {
   Ze === null ? Ze = [e] : Ze.push(e);
 }
-var vf = vt.ReactCurrentBatchConfig;
+var vp = vt.ReactCurrentBatchConfig;
 function Bn(e, t, n) {
   if (e = n.ref, e !== null && typeof e != "function" && typeof e != "object") {
     if (n._owner) {
@@ -2515,20 +2515,20 @@ function hc(e) {
   function s(m) {
     return e && m.alternate === null && (m.flags |= 2), m;
   }
-  function a(m, g, y, x) {
-    return g === null || g.tag !== 6 ? (g = zo(y, m.mode, x), g.return = m, g) : (g = o(g, y), g.return = m, g);
+  function a(m, g, y, v) {
+    return g === null || g.tag !== 6 ? (g = zo(y, m.mode, v), g.return = m, g) : (g = o(g, y), g.return = m, g);
   }
-  function d(m, g, y, x) {
+  function d(m, g, y, v) {
     var b = y.type;
-    return b === ln ? p(m, g, y.props.children, x, y.key) : g !== null && (g.elementType === b || typeof b == "object" && b !== null && b.$$typeof === kt && ya(b) === g.type) ? (x = o(g, y.props), x.ref = Bn(m, g, y), x.return = m, x) : (x = ci(y.type, y.key, y.props, null, m.mode, x), x.ref = Bn(m, g, y), x.return = m, x);
+    return b === ln ? f(m, g, y.props.children, v, y.key) : g !== null && (g.elementType === b || typeof b == "object" && b !== null && b.$$typeof === kt && ya(b) === g.type) ? (v = o(g, y.props), v.ref = Bn(m, g, y), v.return = m, v) : (v = ci(y.type, y.key, y.props, null, m.mode, v), v.ref = Bn(m, g, y), v.return = m, v);
   }
-  function c(m, g, y, x) {
-    return g === null || g.tag !== 4 || g.stateNode.containerInfo !== y.containerInfo || g.stateNode.implementation !== y.implementation ? (g = To(y, m.mode, x), g.return = m, g) : (g = o(g, y.children || []), g.return = m, g);
+  function u(m, g, y, v) {
+    return g === null || g.tag !== 4 || g.stateNode.containerInfo !== y.containerInfo || g.stateNode.implementation !== y.implementation ? (g = To(y, m.mode, v), g.return = m, g) : (g = o(g, y.children || []), g.return = m, g);
   }
-  function p(m, g, y, x, b) {
-    return g === null || g.tag !== 7 ? (g = Yt(y, m.mode, x, b), g.return = m, g) : (g = o(g, y), g.return = m, g);
+  function f(m, g, y, v, b) {
+    return g === null || g.tag !== 7 ? (g = Yt(y, m.mode, v, b), g.return = m, g) : (g = o(g, y), g.return = m, g);
   }
-  function u(m, g, y) {
+  function c(m, g, y) {
     if (typeof g == "string" && g !== "" || typeof g == "number") return g = zo("" + g, m.mode, y), g.return = m, g;
     if (typeof g == "object" && g !== null) {
       switch (g.$$typeof) {
@@ -2537,100 +2537,100 @@ function hc(e) {
         case on:
           return g = To(g, m.mode, y), g.return = m, g;
         case kt:
-          var x = g._init;
-          return u(m, x(g._payload), y);
+          var v = g._init;
+          return c(m, v(g._payload), y);
       }
       if (Xn(g) || Ln(g)) return g = Yt(g, m.mode, y, null), g.return = m, g;
       Ur(m, g);
     }
     return null;
   }
-  function h(m, g, y, x) {
+  function p(m, g, y, v) {
     var b = g !== null ? g.key : null;
-    if (typeof y == "string" && y !== "" || typeof y == "number") return b !== null ? null : a(m, g, "" + y, x);
+    if (typeof y == "string" && y !== "" || typeof y == "number") return b !== null ? null : a(m, g, "" + y, v);
     if (typeof y == "object" && y !== null) {
       switch (y.$$typeof) {
         case Er:
-          return y.key === b ? d(m, g, y, x) : null;
+          return y.key === b ? d(m, g, y, v) : null;
         case on:
-          return y.key === b ? c(m, g, y, x) : null;
+          return y.key === b ? u(m, g, y, v) : null;
         case kt:
-          return b = y._init, h(
+          return b = y._init, p(
             m,
             g,
             b(y._payload),
-            x
+            v
           );
       }
-      if (Xn(y) || Ln(y)) return b !== null ? null : p(m, g, y, x, null);
+      if (Xn(y) || Ln(y)) return b !== null ? null : f(m, g, y, v, null);
       Ur(m, y);
     }
     return null;
   }
-  function v(m, g, y, x, b) {
-    if (typeof x == "string" && x !== "" || typeof x == "number") return m = m.get(y) || null, a(g, m, "" + x, b);
-    if (typeof x == "object" && x !== null) {
-      switch (x.$$typeof) {
+  function w(m, g, y, v, b) {
+    if (typeof v == "string" && v !== "" || typeof v == "number") return m = m.get(y) || null, a(g, m, "" + v, b);
+    if (typeof v == "object" && v !== null) {
+      switch (v.$$typeof) {
         case Er:
-          return m = m.get(x.key === null ? y : x.key) || null, d(g, m, x, b);
+          return m = m.get(v.key === null ? y : v.key) || null, d(g, m, v, b);
         case on:
-          return m = m.get(x.key === null ? y : x.key) || null, c(g, m, x, b);
+          return m = m.get(v.key === null ? y : v.key) || null, u(g, m, v, b);
         case kt:
-          var j = x._init;
-          return v(m, g, y, j(x._payload), b);
+          var j = v._init;
+          return w(m, g, y, j(v._payload), b);
       }
-      if (Xn(x) || Ln(x)) return m = m.get(y) || null, p(g, m, x, b, null);
-      Ur(g, x);
+      if (Xn(v) || Ln(v)) return m = m.get(y) || null, f(g, m, v, b, null);
+      Ur(g, v);
     }
     return null;
   }
-  function w(m, g, y, x) {
-    for (var b = null, j = null, S = g, C = g = 0, $ = null; S !== null && C < y.length; C++) {
-      S.index > C ? ($ = S, S = null) : $ = S.sibling;
-      var T = h(m, S, y[C], x);
+  function x(m, g, y, v) {
+    for (var b = null, j = null, S = g, C = g = 0, M = null; S !== null && C < y.length; C++) {
+      S.index > C ? (M = S, S = null) : M = S.sibling;
+      var T = p(m, S, y[C], v);
       if (T === null) {
-        S === null && (S = $);
+        S === null && (S = M);
         break;
       }
-      e && S && T.alternate === null && t(m, S), g = l(T, g, C), j === null ? b = T : j.sibling = T, j = T, S = $;
+      e && S && T.alternate === null && t(m, S), g = l(T, g, C), j === null ? b = T : j.sibling = T, j = T, S = M;
     }
     if (C === y.length) return n(m, S), X && Wt(m, C), b;
     if (S === null) {
-      for (; C < y.length; C++) S = u(m, y[C], x), S !== null && (g = l(S, g, C), j === null ? b = S : j.sibling = S, j = S);
+      for (; C < y.length; C++) S = c(m, y[C], v), S !== null && (g = l(S, g, C), j === null ? b = S : j.sibling = S, j = S);
       return X && Wt(m, C), b;
     }
-    for (S = i(m, S); C < y.length; C++) $ = v(S, m, C, y[C], x), $ !== null && (e && $.alternate !== null && S.delete($.key === null ? C : $.key), g = l($, g, C), j === null ? b = $ : j.sibling = $, j = $);
+    for (S = i(m, S); C < y.length; C++) M = w(S, m, C, y[C], v), M !== null && (e && M.alternate !== null && S.delete(M.key === null ? C : M.key), g = l(M, g, C), j === null ? b = M : j.sibling = M, j = M);
     return e && S.forEach(function(_) {
       return t(m, _);
     }), X && Wt(m, C), b;
   }
-  function f(m, g, y, x) {
+  function h(m, g, y, v) {
     var b = Ln(y);
     if (typeof b != "function") throw Error(z(150));
     if (y = b.call(y), y == null) throw Error(z(151));
-    for (var j = b = null, S = g, C = g = 0, $ = null, T = y.next(); S !== null && !T.done; C++, T = y.next()) {
-      S.index > C ? ($ = S, S = null) : $ = S.sibling;
-      var _ = h(m, S, T.value, x);
+    for (var j = b = null, S = g, C = g = 0, M = null, T = y.next(); S !== null && !T.done; C++, T = y.next()) {
+      S.index > C ? (M = S, S = null) : M = S.sibling;
+      var _ = p(m, S, T.value, v);
       if (_ === null) {
-        S === null && (S = $);
+        S === null && (S = M);
         break;
       }
-      e && S && _.alternate === null && t(m, S), g = l(_, g, C), j === null ? b = _ : j.sibling = _, j = _, S = $;
+      e && S && _.alternate === null && t(m, S), g = l(_, g, C), j === null ? b = _ : j.sibling = _, j = _, S = M;
     }
     if (T.done) return n(
       m,
       S
     ), X && Wt(m, C), b;
     if (S === null) {
-      for (; !T.done; C++, T = y.next()) T = u(m, T.value, x), T !== null && (g = l(T, g, C), j === null ? b = T : j.sibling = T, j = T);
+      for (; !T.done; C++, T = y.next()) T = c(m, T.value, v), T !== null && (g = l(T, g, C), j === null ? b = T : j.sibling = T, j = T);
       return X && Wt(m, C), b;
     }
-    for (S = i(m, S); !T.done; C++, T = y.next()) T = v(S, m, C, T.value, x), T !== null && (e && T.alternate !== null && S.delete(T.key === null ? C : T.key), g = l(T, g, C), j === null ? b = T : j.sibling = T, j = T);
+    for (S = i(m, S); !T.done; C++, T = y.next()) T = w(S, m, C, T.value, v), T !== null && (e && T.alternate !== null && S.delete(T.key === null ? C : T.key), g = l(T, g, C), j === null ? b = T : j.sibling = T, j = T);
     return e && S.forEach(function(E) {
       return t(m, E);
     }), X && Wt(m, C), b;
   }
-  function k(m, g, y, x) {
+  function k(m, g, y, v) {
     if (typeof y == "object" && y !== null && y.type === ln && y.key === null && (y = y.props.children), typeof y == "object" && y !== null) {
       switch (y.$$typeof) {
         case Er:
@@ -2651,7 +2651,7 @@ function hc(e) {
               } else t(m, j);
               j = j.sibling;
             }
-            y.type === ln ? (g = Yt(y.props.children, m.mode, x, y.key), g.return = m, m = g) : (x = ci(y.type, y.key, y.props, null, m.mode, x), x.ref = Bn(m, g, y), x.return = m, m = x);
+            y.type === ln ? (g = Yt(y.props.children, m.mode, v, y.key), g.return = m, m = g) : (v = ci(y.type, y.key, y.props, null, m.mode, v), v.ref = Bn(m, g, y), v.return = m, m = v);
           }
           return s(m);
         case on:
@@ -2667,17 +2667,17 @@ function hc(e) {
               else t(m, g);
               g = g.sibling;
             }
-            g = To(y, m.mode, x), g.return = m, m = g;
+            g = To(y, m.mode, v), g.return = m, m = g;
           }
           return s(m);
         case kt:
-          return j = y._init, k(m, g, j(y._payload), x);
+          return j = y._init, k(m, g, j(y._payload), v);
       }
-      if (Xn(y)) return w(m, g, y, x);
-      if (Ln(y)) return f(m, g, y, x);
+      if (Xn(y)) return x(m, g, y, v);
+      if (Ln(y)) return h(m, g, y, v);
       Ur(m, y);
     }
-    return typeof y == "string" && y !== "" || typeof y == "number" ? (y = "" + y, g !== null && g.tag === 6 ? (n(m, g.sibling), g = o(g, y), g.return = m, m = g) : (n(m, g), g = zo(y, m.mode, x), g.return = m, m = g), s(m)) : n(m, g);
+    return typeof y == "string" && y !== "" || typeof y == "number" ? (y = "" + y, g !== null && g.tag === 6 ? (n(m, g.sibling), g = o(g, y), g.return = m, m = g) : (n(m, g), g = zo(y, m.mode, v), g.return = m, m = g), s(m)) : n(m, g);
   }
   return k;
 }
@@ -2731,7 +2731,7 @@ function yc(e, t) {
 function ht(e, t) {
   return { eventTime: e, lane: t, tag: 0, payload: null, callback: null, next: null };
 }
-function $t(e, t, n) {
+function Mt(e, t, n) {
   var i = e.updateQueue;
   if (i === null) return null;
   if (i = i.shared, W & 2) {
@@ -2768,19 +2768,19 @@ function Ti(e, t, n, i) {
   var l = o.firstBaseUpdate, s = o.lastBaseUpdate, a = o.shared.pending;
   if (a !== null) {
     o.shared.pending = null;
-    var d = a, c = d.next;
-    d.next = null, s === null ? l = c : s.next = c, s = d;
-    var p = e.alternate;
-    p !== null && (p = p.updateQueue, a = p.lastBaseUpdate, a !== s && (a === null ? p.firstBaseUpdate = c : a.next = c, p.lastBaseUpdate = d));
+    var d = a, u = d.next;
+    d.next = null, s === null ? l = u : s.next = u, s = d;
+    var f = e.alternate;
+    f !== null && (f = f.updateQueue, a = f.lastBaseUpdate, a !== s && (a === null ? f.firstBaseUpdate = u : a.next = u, f.lastBaseUpdate = d));
   }
   if (l !== null) {
-    var u = o.baseState;
-    s = 0, p = c = d = null, a = l;
+    var c = o.baseState;
+    s = 0, f = u = d = null, a = l;
     do {
-      var h = a.lane, v = a.eventTime;
-      if ((i & h) === h) {
-        p !== null && (p = p.next = {
-          eventTime: v,
+      var p = a.lane, w = a.eventTime;
+      if ((i & p) === p) {
+        f !== null && (f = f.next = {
+          eventTime: w,
           lane: 0,
           tag: a.tag,
           payload: a.payload,
@@ -2788,39 +2788,39 @@ function Ti(e, t, n, i) {
           next: null
         });
         e: {
-          var w = e, f = a;
-          switch (h = t, v = n, f.tag) {
+          var x = e, h = a;
+          switch (p = t, w = n, h.tag) {
             case 1:
-              if (w = f.payload, typeof w == "function") {
-                u = w.call(v, u, h);
+              if (x = h.payload, typeof x == "function") {
+                c = x.call(w, c, p);
                 break e;
               }
-              u = w;
+              c = x;
               break e;
             case 3:
-              w.flags = w.flags & -65537 | 128;
+              x.flags = x.flags & -65537 | 128;
             case 0:
-              if (w = f.payload, h = typeof w == "function" ? w.call(v, u, h) : w, h == null) break e;
-              u = Z({}, u, h);
+              if (x = h.payload, p = typeof x == "function" ? x.call(w, c, p) : x, p == null) break e;
+              c = Z({}, c, p);
               break e;
             case 2:
               bt = !0;
           }
         }
-        a.callback !== null && a.lane !== 0 && (e.flags |= 64, h = o.effects, h === null ? o.effects = [a] : h.push(a));
-      } else v = { eventTime: v, lane: h, tag: a.tag, payload: a.payload, callback: a.callback, next: null }, p === null ? (c = p = v, d = u) : p = p.next = v, s |= h;
+        a.callback !== null && a.lane !== 0 && (e.flags |= 64, p = o.effects, p === null ? o.effects = [a] : p.push(a));
+      } else w = { eventTime: w, lane: p, tag: a.tag, payload: a.payload, callback: a.callback, next: null }, f === null ? (u = f = w, d = c) : f = f.next = w, s |= p;
       if (a = a.next, a === null) {
         if (a = o.shared.pending, a === null) break;
-        h = a, a = h.next, h.next = null, o.lastBaseUpdate = h, o.shared.pending = null;
+        p = a, a = p.next, p.next = null, o.lastBaseUpdate = p, o.shared.pending = null;
       }
     } while (!0);
-    if (p === null && (d = u), o.baseState = d, o.firstBaseUpdate = c, o.lastBaseUpdate = p, t = o.shared.interleaved, t !== null) {
+    if (f === null && (d = c), o.baseState = d, o.firstBaseUpdate = u, o.lastBaseUpdate = f, t = o.shared.interleaved, t !== null) {
       o = t;
       do
         s |= o.lane, o = o.next;
       while (o !== t);
     } else l === null && (o.shared.lanes = 0);
-    Jt |= s, e.lanes = s, e.memoizedState = u;
+    Jt |= s, e.lanes = s, e.memoizedState = c;
   }
 }
 function va(e, t, n) {
@@ -2885,7 +2885,7 @@ function as() {
   for (var e = 0; e < wo.length; e++) wo[e]._workInProgressVersionPrimary = null;
   wo.length = 0;
 }
-var oi = vt.ReactCurrentDispatcher, ko = vt.ReactCurrentBatchConfig, qt = 0, J = null, ae = null, ue = null, Ri = !1, ir = !1, kr = 0, wf = 0;
+var oi = vt.ReactCurrentDispatcher, ko = vt.ReactCurrentBatchConfig, qt = 0, J = null, ae = null, ue = null, Ri = !1, ir = !1, kr = 0, wp = 0;
 function ve() {
   throw Error(z(321));
 }
@@ -2895,11 +2895,11 @@ function ds(e, t) {
   return !0;
 }
 function cs(e, t, n, i, o, l) {
-  if (qt = l, J = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, oi.current = e === null || e.memoizedState === null ? Sf : Cf, e = n(i, o), ir) {
+  if (qt = l, J = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, oi.current = e === null || e.memoizedState === null ? Sp : Cp, e = n(i, o), ir) {
     l = 0;
     do {
       if (ir = !1, kr = 0, 25 <= l) throw Error(z(301));
-      l += 1, ue = ae = null, t.updateQueue = null, oi.current = zf, e = n(i, o);
+      l += 1, ue = ae = null, t.updateQueue = null, oi.current = zp, e = n(i, o);
     } while (ir);
   }
   if (oi.current = Ii, t = ae !== null && ae.next !== null, qt = 0, ue = ae = J = null, Ri = !1, t) throw Error(z(300));
@@ -2943,22 +2943,22 @@ function bo(e) {
   }
   if (o !== null) {
     l = o.next, i = i.baseState;
-    var a = s = null, d = null, c = l;
+    var a = s = null, d = null, u = l;
     do {
-      var p = c.lane;
-      if ((qt & p) === p) d !== null && (d = d.next = { lane: 0, action: c.action, hasEagerState: c.hasEagerState, eagerState: c.eagerState, next: null }), i = c.hasEagerState ? c.eagerState : e(i, c.action);
+      var f = u.lane;
+      if ((qt & f) === f) d !== null && (d = d.next = { lane: 0, action: u.action, hasEagerState: u.hasEagerState, eagerState: u.eagerState, next: null }), i = u.hasEagerState ? u.eagerState : e(i, u.action);
       else {
-        var u = {
-          lane: p,
-          action: c.action,
-          hasEagerState: c.hasEagerState,
-          eagerState: c.eagerState,
+        var c = {
+          lane: f,
+          action: u.action,
+          hasEagerState: u.hasEagerState,
+          eagerState: u.eagerState,
           next: null
         };
-        d === null ? (a = d = u, s = i) : d = d.next = u, J.lanes |= p, Jt |= p;
+        d === null ? (a = d = c, s = i) : d = d.next = c, J.lanes |= f, Jt |= f;
       }
-      c = c.next;
-    } while (c !== null && c !== l);
+      u = u.next;
+    } while (u !== null && u !== l);
     d === null ? s = i : d.next = a, nt(i, t.memoizedState) || (Re = !0), t.memoizedState = i, t.baseState = s, t.baseQueue = d, n.lastRenderedState = i;
   }
   if (e = n.interleaved, e !== null) {
@@ -2988,8 +2988,8 @@ function vc() {
 }
 function wc(e, t) {
   var n = J, i = Ke(), o = t(), l = !nt(i.memoizedState, o);
-  if (l && (i.memoizedState = o, Re = !0), i = i.queue, ps(jc.bind(null, n, i, e), [e]), i.getSnapshot !== t || l || ue !== null && ue.memoizedState.tag & 1) {
-    if (n.flags |= 2048, jr(9, bc.bind(null, n, i, o, t), void 0, null), pe === null) throw Error(z(349));
+  if (l && (i.memoizedState = o, Re = !0), i = i.queue, fs(jc.bind(null, n, i, e), [e]), i.getSnapshot !== t || l || ue !== null && ue.memoizedState.tag & 1) {
+    if (n.flags |= 2048, jr(9, bc.bind(null, n, i, o, t), void 0, null), fe === null) throw Error(z(349));
     qt & 30 || kc(n, t, o);
   }
   return o;
@@ -3021,7 +3021,7 @@ function Cc(e) {
 }
 function wa(e) {
   var t = it();
-  return typeof e == "function" && (e = e()), t.memoizedState = t.baseState = e, e = { pending: null, interleaved: null, lanes: 0, dispatch: null, lastRenderedReducer: br, lastRenderedState: e }, t.queue = e, e = e.dispatch = jf.bind(null, J, e), [t.memoizedState, e];
+  return typeof e == "function" && (e = e()), t.memoizedState = t.baseState = e, e = { pending: null, interleaved: null, lanes: 0, dispatch: null, lastRenderedReducer: br, lastRenderedState: e }, t.queue = e, e = e.dispatch = jp.bind(null, J, e), [t.memoizedState, e];
 }
 function jr(e, t, n, i) {
   return e = { tag: e, create: t, destroy: n, deps: i, next: null }, t = J.updateQueue, t === null ? (t = { lastEffect: null, stores: null }, J.updateQueue = t, t.lastEffect = e.next = e) : (n = t.lastEffect, n === null ? t.lastEffect = e.next = e : (i = n.next, n.next = e, e.next = i, t.lastEffect = e)), e;
@@ -3049,7 +3049,7 @@ function Ui(e, t, n, i) {
 function ka(e, t) {
   return li(8390656, 8, e, t);
 }
-function ps(e, t) {
+function fs(e, t) {
   return Ui(2048, 8, e, t);
 }
 function Tc(e, t) {
@@ -3069,15 +3069,15 @@ function Rc(e, t) {
 function Ic(e, t, n) {
   return n = n != null ? n.concat([e]) : null, Ui(4, 4, Rc.bind(null, t, e), n);
 }
-function fs() {
+function ps() {
 }
-function $c(e, t) {
+function Mc(e, t) {
   var n = Ke();
   t = t === void 0 ? null : t;
   var i = n.memoizedState;
   return i !== null && t !== null && ds(t, i[1]) ? i[0] : (n.memoizedState = [e, t], e);
 }
-function Mc(e, t) {
+function $c(e, t) {
   var n = Ke();
   t = t === void 0 ? null : t;
   var i = n.memoizedState;
@@ -3086,7 +3086,7 @@ function Mc(e, t) {
 function Fc(e, t, n) {
   return qt & 21 ? (nt(n, t) || (n = Ld(), J.lanes |= n, Jt |= n, e.baseState = !0), t) : (e.baseState && (e.baseState = !1, Re = !0), e.memoizedState = n);
 }
-function kf(e, t) {
+function kp(e, t) {
   var n = V;
   V = n !== 0 && 4 > n ? n : 4, e(!0);
   var i = ko.transition;
@@ -3100,7 +3100,7 @@ function kf(e, t) {
 function Ec() {
   return Ke().memoizedState;
 }
-function bf(e, t, n) {
+function bp(e, t, n) {
   var i = Ft(e);
   if (n = { lane: i, action: n, hasEagerState: !1, eagerState: null, next: null }, Pc(e)) Dc(t, n);
   else if (n = mc(e, t, n, i), n !== null) {
@@ -3108,7 +3108,7 @@ function bf(e, t, n) {
     tt(n, e, i, o), Nc(n, t, i);
   }
 }
-function jf(e, t, n) {
+function jp(e, t, n) {
   var i = Ft(e), o = { lane: i, action: n, hasEagerState: !1, eagerState: null, next: null };
   if (Pc(e)) Dc(t, o);
   else {
@@ -3141,7 +3141,7 @@ function Nc(e, t, n) {
     i &= e.pendingLanes, n |= i, t.lanes = n, Vl(e, n);
   }
 }
-var Ii = { readContext: Ye, useCallback: ve, useContext: ve, useEffect: ve, useImperativeHandle: ve, useInsertionEffect: ve, useLayoutEffect: ve, useMemo: ve, useReducer: ve, useRef: ve, useState: ve, useDebugValue: ve, useDeferredValue: ve, useTransition: ve, useMutableSource: ve, useSyncExternalStore: ve, useId: ve, unstable_isNewReconciler: !1 }, Sf = { readContext: Ye, useCallback: function(e, t) {
+var Ii = { readContext: Ye, useCallback: ve, useContext: ve, useEffect: ve, useImperativeHandle: ve, useInsertionEffect: ve, useLayoutEffect: ve, useMemo: ve, useReducer: ve, useRef: ve, useState: ve, useDebugValue: ve, useDeferredValue: ve, useTransition: ve, useMutableSource: ve, useSyncExternalStore: ve, useId: ve, unstable_isNewReconciler: !1 }, Sp = { readContext: Ye, useCallback: function(e, t) {
   return it().memoizedState = [e, t === void 0 ? null : t], e;
 }, useContext: Ye, useEffect: ka, useImperativeHandle: function(e, t, n) {
   return n = n != null ? n.concat([e]) : null, li(
@@ -3159,15 +3159,15 @@ var Ii = { readContext: Ye, useCallback: ve, useContext: ve, useEffect: ve, useI
   return t = t === void 0 ? null : t, e = e(), n.memoizedState = [e, t], e;
 }, useReducer: function(e, t, n) {
   var i = it();
-  return t = n !== void 0 ? n(t) : t, i.memoizedState = i.baseState = t, e = { pending: null, interleaved: null, lanes: 0, dispatch: null, lastRenderedReducer: e, lastRenderedState: t }, i.queue = e, e = e.dispatch = bf.bind(null, J, e), [i.memoizedState, e];
+  return t = n !== void 0 ? n(t) : t, i.memoizedState = i.baseState = t, e = { pending: null, interleaved: null, lanes: 0, dispatch: null, lastRenderedReducer: e, lastRenderedState: t }, i.queue = e, e = e.dispatch = bp.bind(null, J, e), [i.memoizedState, e];
 }, useRef: function(e) {
   var t = it();
   return e = { current: e }, t.memoizedState = e;
-}, useState: wa, useDebugValue: fs, useDeferredValue: function(e) {
+}, useState: wa, useDebugValue: ps, useDeferredValue: function(e) {
   return it().memoizedState = e;
 }, useTransition: function() {
   var e = wa(!1), t = e[0];
-  return e = kf.bind(null, e[1]), it().memoizedState = e, [t, e];
+  return e = kp.bind(null, e[1]), it().memoizedState = e, [t, e];
 }, useMutableSource: function() {
 }, useSyncExternalStore: function(e, t, n) {
   var i = J, o = it();
@@ -3175,7 +3175,7 @@ var Ii = { readContext: Ye, useCallback: ve, useContext: ve, useEffect: ve, useI
     if (n === void 0) throw Error(z(407));
     n = n();
   } else {
-    if (n = t(), pe === null) throw Error(z(349));
+    if (n = t(), fe === null) throw Error(z(349));
     qt & 30 || kc(i, t, n);
   }
   o.memoizedState = n;
@@ -3187,27 +3187,27 @@ var Ii = { readContext: Ye, useCallback: ve, useContext: ve, useEffect: ve, useI
     e
   ), [e]), i.flags |= 2048, jr(9, bc.bind(null, i, l, n, t), void 0, null), n;
 }, useId: function() {
-  var e = it(), t = pe.identifierPrefix;
+  var e = it(), t = fe.identifierPrefix;
   if (X) {
-    var n = ft, i = pt;
+    var n = pt, i = ft;
     n = (i & ~(1 << 32 - et(i) - 1)).toString(32) + n, t = ":" + t + "R" + n, n = kr++, 0 < n && (t += "H" + n.toString(32)), t += ":";
-  } else n = wf++, t = ":" + t + "r" + n.toString(32) + ":";
+  } else n = wp++, t = ":" + t + "r" + n.toString(32) + ":";
   return e.memoizedState = t;
-}, unstable_isNewReconciler: !1 }, Cf = {
+}, unstable_isNewReconciler: !1 }, Cp = {
   readContext: Ye,
-  useCallback: $c,
+  useCallback: Mc,
   useContext: Ye,
-  useEffect: ps,
+  useEffect: fs,
   useImperativeHandle: Ic,
   useInsertionEffect: Tc,
   useLayoutEffect: _c,
-  useMemo: Mc,
+  useMemo: $c,
   useReducer: bo,
   useRef: zc,
   useState: function() {
     return bo(br);
   },
-  useDebugValue: fs,
+  useDebugValue: ps,
   useDeferredValue: function(e) {
     var t = Ke();
     return Fc(t, ae.memoizedState, e);
@@ -3220,9 +3220,9 @@ var Ii = { readContext: Ye, useCallback: ve, useContext: ve, useEffect: ve, useI
   useSyncExternalStore: wc,
   useId: Ec,
   unstable_isNewReconciler: !1
-}, zf = { readContext: Ye, useCallback: $c, useContext: Ye, useEffect: ps, useImperativeHandle: Ic, useInsertionEffect: Tc, useLayoutEffect: _c, useMemo: Mc, useReducer: jo, useRef: zc, useState: function() {
+}, zp = { readContext: Ye, useCallback: Mc, useContext: Ye, useEffect: fs, useImperativeHandle: Ic, useInsertionEffect: Tc, useLayoutEffect: _c, useMemo: $c, useReducer: jo, useRef: zc, useState: function() {
   return jo(br);
-}, useDebugValue: fs, useDeferredValue: function(e) {
+}, useDebugValue: ps, useDeferredValue: function(e) {
   var t = Ke();
   return ae === null ? t.memoizedState = e : Fc(t, ae.memoizedState, e);
 }, useTransition: function() {
@@ -3245,22 +3245,22 @@ var Gi = { isMounted: function(e) {
 }, enqueueSetState: function(e, t, n) {
   e = e._reactInternals;
   var i = Se(), o = Ft(e), l = ht(i, o);
-  l.payload = t, n != null && (l.callback = n), t = $t(e, l, o), t !== null && (tt(t, e, o, i), ii(t, e, o));
+  l.payload = t, n != null && (l.callback = n), t = Mt(e, l, o), t !== null && (tt(t, e, o, i), ii(t, e, o));
 }, enqueueReplaceState: function(e, t, n) {
   e = e._reactInternals;
   var i = Se(), o = Ft(e), l = ht(i, o);
-  l.tag = 1, l.payload = t, n != null && (l.callback = n), t = $t(e, l, o), t !== null && (tt(t, e, o, i), ii(t, e, o));
+  l.tag = 1, l.payload = t, n != null && (l.callback = n), t = Mt(e, l, o), t !== null && (tt(t, e, o, i), ii(t, e, o));
 }, enqueueForceUpdate: function(e, t) {
   e = e._reactInternals;
   var n = Se(), i = Ft(e), o = ht(n, i);
-  o.tag = 2, t != null && (o.callback = t), t = $t(e, o, i), t !== null && (tt(t, e, i, n), ii(t, e, i));
+  o.tag = 2, t != null && (o.callback = t), t = Mt(e, o, i), t !== null && (tt(t, e, i, n), ii(t, e, i));
 } };
 function ba(e, t, n, i, o, l, s) {
   return e = e.stateNode, typeof e.shouldComponentUpdate == "function" ? e.shouldComponentUpdate(i, l, s) : t.prototype && t.prototype.isPureReactComponent ? !gr(n, i) || !gr(o, l) : !0;
 }
 function Lc(e, t, n) {
   var i = !1, o = Dt, l = t.contextType;
-  return typeof l == "object" && l !== null ? l = Ye(l) : (o = $e(t) ? Kt : be.current, i = t.contextTypes, l = (i = i != null) ? Cn(e, o) : Dt), t = new t(n, l), e.memoizedState = t.state !== null && t.state !== void 0 ? t.state : null, t.updater = Gi, e.stateNode = t, t._reactInternals = e, i && (e = e.stateNode, e.__reactInternalMemoizedUnmaskedChildContext = o, e.__reactInternalMemoizedMaskedChildContext = l), t;
+  return typeof l == "object" && l !== null ? l = Ye(l) : (o = Me(t) ? Kt : be.current, i = t.contextTypes, l = (i = i != null) ? Cn(e, o) : Dt), t = new t(n, l), e.memoizedState = t.state !== null && t.state !== void 0 ? t.state : null, t.updater = Gi, e.stateNode = t, t._reactInternals = e, i && (e = e.stateNode, e.__reactInternalMemoizedUnmaskedChildContext = o, e.__reactInternalMemoizedMaskedChildContext = l), t;
 }
 function ja(e, t, n, i) {
   e = t.state, typeof t.componentWillReceiveProps == "function" && t.componentWillReceiveProps(n, i), typeof t.UNSAFE_componentWillReceiveProps == "function" && t.UNSAFE_componentWillReceiveProps(n, i), t.state !== e && Gi.enqueueReplaceState(t, t.state, null);
@@ -3269,7 +3269,7 @@ function al(e, t, n, i) {
   var o = e.stateNode;
   o.props = n, o.state = e.memoizedState, o.refs = {}, os(e);
   var l = t.contextType;
-  typeof l == "object" && l !== null ? o.context = Ye(l) : (l = $e(t) ? Kt : be.current, o.context = Cn(e, l)), o.state = e.memoizedState, l = t.getDerivedStateFromProps, typeof l == "function" && (sl(e, t, l, n), o.state = e.memoizedState), typeof t.getDerivedStateFromProps == "function" || typeof o.getSnapshotBeforeUpdate == "function" || typeof o.UNSAFE_componentWillMount != "function" && typeof o.componentWillMount != "function" || (t = o.state, typeof o.componentWillMount == "function" && o.componentWillMount(), typeof o.UNSAFE_componentWillMount == "function" && o.UNSAFE_componentWillMount(), t !== o.state && Gi.enqueueReplaceState(o, o.state, null), Ti(e, n, o, i), o.state = e.memoizedState), typeof o.componentDidMount == "function" && (e.flags |= 4194308);
+  typeof l == "object" && l !== null ? o.context = Ye(l) : (l = Me(t) ? Kt : be.current, o.context = Cn(e, l)), o.state = e.memoizedState, l = t.getDerivedStateFromProps, typeof l == "function" && (sl(e, t, l, n), o.state = e.memoizedState), typeof t.getDerivedStateFromProps == "function" || typeof o.getSnapshotBeforeUpdate == "function" || typeof o.UNSAFE_componentWillMount != "function" && typeof o.componentWillMount != "function" || (t = o.state, typeof o.componentWillMount == "function" && o.componentWillMount(), typeof o.UNSAFE_componentWillMount == "function" && o.UNSAFE_componentWillMount(), t !== o.state && Gi.enqueueReplaceState(o, o.state, null), Ti(e, n, o, i), o.state = e.memoizedState), typeof o.componentDidMount == "function" && (e.flags |= 4194308);
 }
 function Rn(e, t) {
   try {
@@ -3297,12 +3297,12 @@ function dl(e, t) {
     });
   }
 }
-var Tf = typeof WeakMap == "function" ? WeakMap : Map;
+var Tp = typeof WeakMap == "function" ? WeakMap : Map;
 function Ac(e, t, n) {
   n = ht(-1, n), n.tag = 3, n.payload = { element: null };
   var i = t.value;
   return n.callback = function() {
-    Mi || (Mi = !0, vl = i), dl(e, t);
+    $i || ($i = !0, vl = i), dl(e, t);
   }, n;
 }
 function Oc(e, t, n) {
@@ -3318,7 +3318,7 @@ function Oc(e, t, n) {
   }
   var l = e.stateNode;
   return l !== null && typeof l.componentDidCatch == "function" && (n.callback = function() {
-    dl(e, t), typeof i != "function" && (Mt === null ? Mt = /* @__PURE__ */ new Set([this]) : Mt.add(this));
+    dl(e, t), typeof i != "function" && ($t === null ? $t = /* @__PURE__ */ new Set([this]) : $t.add(this));
     var s = t.stack;
     this.componentDidCatch(t.value, { componentStack: s !== null ? s : "" });
   }), n;
@@ -3326,11 +3326,11 @@ function Oc(e, t, n) {
 function Sa(e, t, n) {
   var i = e.pingCache;
   if (i === null) {
-    i = e.pingCache = new Tf();
+    i = e.pingCache = new Tp();
     var o = /* @__PURE__ */ new Set();
     i.set(t, o);
   } else o = i.get(t), o === void 0 && (o = /* @__PURE__ */ new Set(), i.set(t, o));
-  o.has(n) || (o.add(n), e = Wf.bind(null, e, t, n), t.then(e, e));
+  o.has(n) || (o.add(n), e = Wp.bind(null, e, t, n), t.then(e, e));
 }
 function Ca(e) {
   do {
@@ -3341,9 +3341,9 @@ function Ca(e) {
   return null;
 }
 function za(e, t, n, i, o) {
-  return e.mode & 1 ? (e.flags |= 65536, e.lanes = o, e) : (e === t ? e.flags |= 65536 : (e.flags |= 128, n.flags |= 131072, n.flags &= -52805, n.tag === 1 && (n.alternate === null ? n.tag = 17 : (t = ht(-1, 1), t.tag = 2, $t(n, t, 1))), n.lanes |= 1), e);
+  return e.mode & 1 ? (e.flags |= 65536, e.lanes = o, e) : (e === t ? e.flags |= 65536 : (e.flags |= 128, n.flags |= 131072, n.flags &= -52805, n.tag === 1 && (n.alternate === null ? n.tag = 17 : (t = ht(-1, 1), t.tag = 2, Mt(n, t, 1))), n.lanes |= 1), e);
 }
-var _f = vt.ReactCurrentOwner, Re = !1;
+var _p = vt.ReactCurrentOwner, Re = !1;
 function je(e, t, n, i) {
   t.child = e === null ? gc(t, null, n, i) : Tn(t, e.child, n, i);
 }
@@ -3386,11 +3386,11 @@ function Bc(e, t) {
   (e === null && n !== null || e !== null && e.ref !== n) && (t.flags |= 512, t.flags |= 2097152);
 }
 function cl(e, t, n, i, o) {
-  var l = $e(n) ? Kt : be.current;
+  var l = Me(n) ? Kt : be.current;
   return l = Cn(t, l), bn(t, o), n = cs(e, t, n, i, l, o), i = us(), e !== null && !Re ? (t.updateQueue = e.updateQueue, t.flags &= -2053, e.lanes &= ~o, xt(e, t, o)) : (X && i && Jl(t), t.flags |= 1, je(e, t, n, o), t.child);
 }
 function Ra(e, t, n, i, o) {
-  if ($e(n)) {
+  if (Me(n)) {
     var l = !0;
     bi(t);
   } else l = !1;
@@ -3398,18 +3398,18 @@ function Ra(e, t, n, i, o) {
   else if (e === null) {
     var s = t.stateNode, a = t.memoizedProps;
     s.props = a;
-    var d = s.context, c = n.contextType;
-    typeof c == "object" && c !== null ? c = Ye(c) : (c = $e(n) ? Kt : be.current, c = Cn(t, c));
-    var p = n.getDerivedStateFromProps, u = typeof p == "function" || typeof s.getSnapshotBeforeUpdate == "function";
-    u || typeof s.UNSAFE_componentWillReceiveProps != "function" && typeof s.componentWillReceiveProps != "function" || (a !== i || d !== c) && ja(t, s, i, c), bt = !1;
-    var h = t.memoizedState;
-    s.state = h, Ti(t, i, s, o), d = t.memoizedState, a !== i || h !== d || Ie.current || bt ? (typeof p == "function" && (sl(t, n, p, i), d = t.memoizedState), (a = bt || ba(t, n, a, i, h, d, c)) ? (u || typeof s.UNSAFE_componentWillMount != "function" && typeof s.componentWillMount != "function" || (typeof s.componentWillMount == "function" && s.componentWillMount(), typeof s.UNSAFE_componentWillMount == "function" && s.UNSAFE_componentWillMount()), typeof s.componentDidMount == "function" && (t.flags |= 4194308)) : (typeof s.componentDidMount == "function" && (t.flags |= 4194308), t.memoizedProps = i, t.memoizedState = d), s.props = i, s.state = d, s.context = c, i = a) : (typeof s.componentDidMount == "function" && (t.flags |= 4194308), i = !1);
+    var d = s.context, u = n.contextType;
+    typeof u == "object" && u !== null ? u = Ye(u) : (u = Me(n) ? Kt : be.current, u = Cn(t, u));
+    var f = n.getDerivedStateFromProps, c = typeof f == "function" || typeof s.getSnapshotBeforeUpdate == "function";
+    c || typeof s.UNSAFE_componentWillReceiveProps != "function" && typeof s.componentWillReceiveProps != "function" || (a !== i || d !== u) && ja(t, s, i, u), bt = !1;
+    var p = t.memoizedState;
+    s.state = p, Ti(t, i, s, o), d = t.memoizedState, a !== i || p !== d || Ie.current || bt ? (typeof f == "function" && (sl(t, n, f, i), d = t.memoizedState), (a = bt || ba(t, n, a, i, p, d, u)) ? (c || typeof s.UNSAFE_componentWillMount != "function" && typeof s.componentWillMount != "function" || (typeof s.componentWillMount == "function" && s.componentWillMount(), typeof s.UNSAFE_componentWillMount == "function" && s.UNSAFE_componentWillMount()), typeof s.componentDidMount == "function" && (t.flags |= 4194308)) : (typeof s.componentDidMount == "function" && (t.flags |= 4194308), t.memoizedProps = i, t.memoizedState = d), s.props = i, s.state = d, s.context = u, i = a) : (typeof s.componentDidMount == "function" && (t.flags |= 4194308), i = !1);
   } else {
-    s = t.stateNode, yc(e, t), a = t.memoizedProps, c = t.type === t.elementType ? a : qe(t.type, a), s.props = c, u = t.pendingProps, h = s.context, d = n.contextType, typeof d == "object" && d !== null ? d = Ye(d) : (d = $e(n) ? Kt : be.current, d = Cn(t, d));
-    var v = n.getDerivedStateFromProps;
-    (p = typeof v == "function" || typeof s.getSnapshotBeforeUpdate == "function") || typeof s.UNSAFE_componentWillReceiveProps != "function" && typeof s.componentWillReceiveProps != "function" || (a !== u || h !== d) && ja(t, s, i, d), bt = !1, h = t.memoizedState, s.state = h, Ti(t, i, s, o);
-    var w = t.memoizedState;
-    a !== u || h !== w || Ie.current || bt ? (typeof v == "function" && (sl(t, n, v, i), w = t.memoizedState), (c = bt || ba(t, n, c, i, h, w, d) || !1) ? (p || typeof s.UNSAFE_componentWillUpdate != "function" && typeof s.componentWillUpdate != "function" || (typeof s.componentWillUpdate == "function" && s.componentWillUpdate(i, w, d), typeof s.UNSAFE_componentWillUpdate == "function" && s.UNSAFE_componentWillUpdate(i, w, d)), typeof s.componentDidUpdate == "function" && (t.flags |= 4), typeof s.getSnapshotBeforeUpdate == "function" && (t.flags |= 1024)) : (typeof s.componentDidUpdate != "function" || a === e.memoizedProps && h === e.memoizedState || (t.flags |= 4), typeof s.getSnapshotBeforeUpdate != "function" || a === e.memoizedProps && h === e.memoizedState || (t.flags |= 1024), t.memoizedProps = i, t.memoizedState = w), s.props = i, s.state = w, s.context = d, i = c) : (typeof s.componentDidUpdate != "function" || a === e.memoizedProps && h === e.memoizedState || (t.flags |= 4), typeof s.getSnapshotBeforeUpdate != "function" || a === e.memoizedProps && h === e.memoizedState || (t.flags |= 1024), i = !1);
+    s = t.stateNode, yc(e, t), a = t.memoizedProps, u = t.type === t.elementType ? a : qe(t.type, a), s.props = u, c = t.pendingProps, p = s.context, d = n.contextType, typeof d == "object" && d !== null ? d = Ye(d) : (d = Me(n) ? Kt : be.current, d = Cn(t, d));
+    var w = n.getDerivedStateFromProps;
+    (f = typeof w == "function" || typeof s.getSnapshotBeforeUpdate == "function") || typeof s.UNSAFE_componentWillReceiveProps != "function" && typeof s.componentWillReceiveProps != "function" || (a !== c || p !== d) && ja(t, s, i, d), bt = !1, p = t.memoizedState, s.state = p, Ti(t, i, s, o);
+    var x = t.memoizedState;
+    a !== c || p !== x || Ie.current || bt ? (typeof w == "function" && (sl(t, n, w, i), x = t.memoizedState), (u = bt || ba(t, n, u, i, p, x, d) || !1) ? (f || typeof s.UNSAFE_componentWillUpdate != "function" && typeof s.componentWillUpdate != "function" || (typeof s.componentWillUpdate == "function" && s.componentWillUpdate(i, x, d), typeof s.UNSAFE_componentWillUpdate == "function" && s.UNSAFE_componentWillUpdate(i, x, d)), typeof s.componentDidUpdate == "function" && (t.flags |= 4), typeof s.getSnapshotBeforeUpdate == "function" && (t.flags |= 1024)) : (typeof s.componentDidUpdate != "function" || a === e.memoizedProps && p === e.memoizedState || (t.flags |= 4), typeof s.getSnapshotBeforeUpdate != "function" || a === e.memoizedProps && p === e.memoizedState || (t.flags |= 1024), t.memoizedProps = i, t.memoizedState = x), s.props = i, s.state = x, s.context = d, i = u) : (typeof s.componentDidUpdate != "function" || a === e.memoizedProps && p === e.memoizedState || (t.flags |= 4), typeof s.getSnapshotBeforeUpdate != "function" || a === e.memoizedProps && p === e.memoizedState || (t.flags |= 1024), i = !1);
   }
   return ul(e, t, n, i, l, o);
 }
@@ -3417,30 +3417,30 @@ function ul(e, t, n, i, o, l) {
   Bc(e, t);
   var s = (t.flags & 128) !== 0;
   if (!i && !s) return o && ha(t, n, !1), xt(e, t, l);
-  i = t.stateNode, _f.current = t;
+  i = t.stateNode, _p.current = t;
   var a = s && typeof n.getDerivedStateFromError != "function" ? null : i.render();
   return t.flags |= 1, e !== null && s ? (t.child = Tn(t, e.child, null, l), t.child = Tn(t, null, a, l)) : je(e, t, a, l), t.memoizedState = i.state, o && ha(t, n, !0), t.child;
 }
 function Vc(e) {
   var t = e.stateNode;
-  t.pendingContext ? fa(e, t.pendingContext, t.pendingContext !== t.context) : t.context && fa(e, t.context, !1), ls(e, t.containerInfo);
+  t.pendingContext ? pa(e, t.pendingContext, t.pendingContext !== t.context) : t.context && pa(e, t.context, !1), ls(e, t.containerInfo);
 }
 function Ia(e, t, n, i, o) {
   return zn(), es(o), t.flags |= 256, je(e, t, n, i), t.child;
 }
-var pl = { dehydrated: null, treeContext: null, retryLane: 0 };
-function fl(e) {
+var fl = { dehydrated: null, treeContext: null, retryLane: 0 };
+function pl(e) {
   return { baseLanes: e, cachePool: null, transitions: null };
 }
 function Uc(e, t, n) {
   var i = t.pendingProps, o = q.current, l = !1, s = (t.flags & 128) !== 0, a;
   if ((a = s) || (a = e !== null && e.memoizedState === null ? !1 : (o & 2) !== 0), a ? (l = !0, t.flags &= -129) : (e === null || e.memoizedState !== null) && (o |= 1), Q(q, o & 1), e === null)
-    return ol(t), e = t.memoizedState, e !== null && (e = e.dehydrated, e !== null) ? (t.mode & 1 ? e.data === "$!" ? t.lanes = 8 : t.lanes = 1073741824 : t.lanes = 1, null) : (s = i.children, e = i.fallback, l ? (i = t.mode, l = t.child, s = { mode: "hidden", children: s }, !(i & 1) && l !== null ? (l.childLanes = 0, l.pendingProps = s) : l = Ki(s, i, 0, null), e = Yt(e, i, n, null), l.return = t, e.return = t, l.sibling = e, t.child = l, t.child.memoizedState = fl(n), t.memoizedState = pl, e) : hs(t, s));
-  if (o = e.memoizedState, o !== null && (a = o.dehydrated, a !== null)) return Rf(e, t, s, i, a, o, n);
+    return ol(t), e = t.memoizedState, e !== null && (e = e.dehydrated, e !== null) ? (t.mode & 1 ? e.data === "$!" ? t.lanes = 8 : t.lanes = 1073741824 : t.lanes = 1, null) : (s = i.children, e = i.fallback, l ? (i = t.mode, l = t.child, s = { mode: "hidden", children: s }, !(i & 1) && l !== null ? (l.childLanes = 0, l.pendingProps = s) : l = Ki(s, i, 0, null), e = Yt(e, i, n, null), l.return = t, e.return = t, l.sibling = e, t.child = l, t.child.memoizedState = pl(n), t.memoizedState = fl, e) : hs(t, s));
+  if (o = e.memoizedState, o !== null && (a = o.dehydrated, a !== null)) return Rp(e, t, s, i, a, o, n);
   if (l) {
     l = i.fallback, s = t.mode, o = e.child, a = o.sibling;
     var d = { mode: "hidden", children: i.children };
-    return !(s & 1) && t.child !== o ? (i = t.child, i.childLanes = 0, i.pendingProps = d, t.deletions = null) : (i = Et(o, d), i.subtreeFlags = o.subtreeFlags & 14680064), a !== null ? l = Et(a, l) : (l = Yt(l, s, n, null), l.flags |= 2), l.return = t, i.return = t, i.sibling = l, t.child = i, i = l, l = t.child, s = e.child.memoizedState, s = s === null ? fl(n) : { baseLanes: s.baseLanes | n, cachePool: null, transitions: s.transitions }, l.memoizedState = s, l.childLanes = e.childLanes & ~n, t.memoizedState = pl, i;
+    return !(s & 1) && t.child !== o ? (i = t.child, i.childLanes = 0, i.pendingProps = d, t.deletions = null) : (i = Et(o, d), i.subtreeFlags = o.subtreeFlags & 14680064), a !== null ? l = Et(a, l) : (l = Yt(l, s, n, null), l.flags |= 2), l.return = t, i.return = t, i.sibling = l, t.child = i, i = l, l = t.child, s = e.child.memoizedState, s = s === null ? pl(n) : { baseLanes: s.baseLanes | n, cachePool: null, transitions: s.transitions }, l.memoizedState = s, l.childLanes = e.childLanes & ~n, t.memoizedState = fl, i;
   }
   return l = e.child, e = l.sibling, i = Et(l, { mode: "visible", children: i.children }), !(t.mode & 1) && (i.lanes = n), i.return = t, i.sibling = null, e !== null && (n = t.deletions, n === null ? (t.deletions = [e], t.flags |= 16) : n.push(e)), t.child = i, t.memoizedState = null, i;
 }
@@ -3450,16 +3450,16 @@ function hs(e, t) {
 function Gr(e, t, n, i) {
   return i !== null && es(i), Tn(t, e.child, null, n), e = hs(t, t.pendingProps.children), e.flags |= 2, t.memoizedState = null, e;
 }
-function Rf(e, t, n, i, o, l, s) {
+function Rp(e, t, n, i, o, l, s) {
   if (n)
-    return t.flags & 256 ? (t.flags &= -257, i = So(Error(z(422))), Gr(e, t, s, i)) : t.memoizedState !== null ? (t.child = e.child, t.flags |= 128, null) : (l = i.fallback, o = t.mode, i = Ki({ mode: "visible", children: i.children }, o, 0, null), l = Yt(l, o, s, null), l.flags |= 2, i.return = t, l.return = t, i.sibling = l, t.child = i, t.mode & 1 && Tn(t, e.child, null, s), t.child.memoizedState = fl(s), t.memoizedState = pl, l);
+    return t.flags & 256 ? (t.flags &= -257, i = So(Error(z(422))), Gr(e, t, s, i)) : t.memoizedState !== null ? (t.child = e.child, t.flags |= 128, null) : (l = i.fallback, o = t.mode, i = Ki({ mode: "visible", children: i.children }, o, 0, null), l = Yt(l, o, s, null), l.flags |= 2, i.return = t, l.return = t, i.sibling = l, t.child = i, t.mode & 1 && Tn(t, e.child, null, s), t.child.memoizedState = pl(s), t.memoizedState = fl, l);
   if (!(t.mode & 1)) return Gr(e, t, s, null);
   if (o.data === "$!") {
     if (i = o.nextSibling && o.nextSibling.dataset, i) var a = i.dgst;
     return i = a, l = Error(z(419)), i = So(l, i, void 0), Gr(e, t, s, i);
   }
   if (a = (s & e.childLanes) !== 0, Re || a) {
-    if (i = pe, i !== null) {
+    if (i = fe, i !== null) {
       switch (s & -s) {
         case 4:
           o = 2;
@@ -3500,9 +3500,9 @@ function Rf(e, t, n, i, o, l, s) {
     }
     return ws(), i = So(Error(z(421))), Gr(e, t, s, i);
   }
-  return o.data === "$?" ? (t.flags |= 128, t.child = e.child, t = Hf.bind(null, e), o._reactRetry = t, null) : (e = l.treeContext, Pe = It(o.nextSibling), De = t, X = !0, Ze = null, e !== null && (Be[Ve++] = pt, Be[Ve++] = ft, Be[Ve++] = Xt, pt = e.id, ft = e.overflow, Xt = t), t = hs(t, i.children), t.flags |= 4096, t);
+  return o.data === "$?" ? (t.flags |= 128, t.child = e.child, t = Hp.bind(null, e), o._reactRetry = t, null) : (e = l.treeContext, Pe = It(o.nextSibling), De = t, X = !0, Ze = null, e !== null && (Be[Ve++] = ft, Be[Ve++] = pt, Be[Ve++] = Xt, ft = e.id, pt = e.overflow, Xt = t), t = hs(t, i.children), t.flags |= 4096, t);
 }
-function $a(e, t, n) {
+function Ma(e, t, n) {
   e.lanes |= t;
   var i = e.alternate;
   i !== null && (i.lanes |= t), ll(e.return, t, n);
@@ -3516,8 +3516,8 @@ function Gc(e, t, n) {
   if (je(e, t, i.children, n), i = q.current, i & 2) i = i & 1 | 2, t.flags |= 128;
   else {
     if (e !== null && e.flags & 128) e: for (e = t.child; e !== null; ) {
-      if (e.tag === 13) e.memoizedState !== null && $a(e, n, t);
-      else if (e.tag === 19) $a(e, n, t);
+      if (e.tag === 13) e.memoizedState !== null && Ma(e, n, t);
+      else if (e.tag === 19) Ma(e, n, t);
       else if (e.child !== null) {
         e.child.return = e, e = e.child;
         continue;
@@ -3567,7 +3567,7 @@ function xt(e, t, n) {
   }
   return t.child;
 }
-function If(e, t, n) {
+function Ip(e, t, n) {
   switch (t.tag) {
     case 3:
       Vc(t), zn();
@@ -3576,7 +3576,7 @@ function If(e, t, n) {
       xc(t);
       break;
     case 1:
-      $e(t.type) && bi(t);
+      Me(t.type) && bi(t);
       break;
     case 4:
       ls(t, t.stateNode.containerInfo);
@@ -3642,24 +3642,24 @@ Yc = function(e, t, n, i) {
     Wo(n, i);
     var s;
     n = null;
-    for (c in o) if (!i.hasOwnProperty(c) && o.hasOwnProperty(c) && o[c] != null) if (c === "style") {
-      var a = o[c];
+    for (u in o) if (!i.hasOwnProperty(u) && o.hasOwnProperty(u) && o[u] != null) if (u === "style") {
+      var a = o[u];
       for (s in a) a.hasOwnProperty(s) && (n || (n = {}), n[s] = "");
-    } else c !== "dangerouslySetInnerHTML" && c !== "children" && c !== "suppressContentEditableWarning" && c !== "suppressHydrationWarning" && c !== "autoFocus" && (ar.hasOwnProperty(c) ? l || (l = []) : (l = l || []).push(c, null));
-    for (c in i) {
-      var d = i[c];
-      if (a = o?.[c], i.hasOwnProperty(c) && d !== a && (d != null || a != null)) if (c === "style") if (a) {
+    } else u !== "dangerouslySetInnerHTML" && u !== "children" && u !== "suppressContentEditableWarning" && u !== "suppressHydrationWarning" && u !== "autoFocus" && (ar.hasOwnProperty(u) ? l || (l = []) : (l = l || []).push(u, null));
+    for (u in i) {
+      var d = i[u];
+      if (a = o?.[u], i.hasOwnProperty(u) && d !== a && (d != null || a != null)) if (u === "style") if (a) {
         for (s in a) !a.hasOwnProperty(s) || d && d.hasOwnProperty(s) || (n || (n = {}), n[s] = "");
         for (s in d) d.hasOwnProperty(s) && a[s] !== d[s] && (n || (n = {}), n[s] = d[s]);
       } else n || (l || (l = []), l.push(
-        c,
+        u,
         n
       )), n = d;
-      else c === "dangerouslySetInnerHTML" ? (d = d ? d.__html : void 0, a = a ? a.__html : void 0, d != null && a !== d && (l = l || []).push(c, d)) : c === "children" ? typeof d != "string" && typeof d != "number" || (l = l || []).push(c, "" + d) : c !== "suppressContentEditableWarning" && c !== "suppressHydrationWarning" && (ar.hasOwnProperty(c) ? (d != null && c === "onScroll" && Y("scroll", e), l || a === d || (l = [])) : (l = l || []).push(c, d));
+      else u === "dangerouslySetInnerHTML" ? (d = d ? d.__html : void 0, a = a ? a.__html : void 0, d != null && a !== d && (l = l || []).push(u, d)) : u === "children" ? typeof d != "string" && typeof d != "number" || (l = l || []).push(u, "" + d) : u !== "suppressContentEditableWarning" && u !== "suppressHydrationWarning" && (ar.hasOwnProperty(u) ? (d != null && u === "onScroll" && Y("scroll", e), l || a === d || (l = [])) : (l = l || []).push(u, d));
     }
     n && (l = l || []).push("style", n);
-    var c = l;
-    (t.updateQueue = c) && (t.flags |= 4);
+    var u = l;
+    (t.updateQueue = u) && (t.flags |= 4);
   }
 };
 Kc = function(e, t, n, i) {
@@ -3684,7 +3684,7 @@ function we(e) {
   else for (o = e.child; o !== null; ) n |= o.lanes | o.childLanes, i |= o.subtreeFlags, i |= o.flags, o.return = e, o = o.sibling;
   return e.subtreeFlags |= i, e.childLanes = n, t;
 }
-function $f(e, t, n) {
+function Mp(e, t, n) {
   var i = t.pendingProps;
   switch (Zl(t), t.tag) {
     case 2:
@@ -3699,7 +3699,7 @@ function $f(e, t, n) {
     case 14:
       return we(t), null;
     case 1:
-      return $e(t.type) && ki(), we(t), null;
+      return Me(t.type) && ki(), we(t), null;
     case 3:
       return i = t.stateNode, _n(), K(Ie), K(be), as(), i.pendingContext && (i.context = i.pendingContext, i.pendingContext = null), (e === null || e.child === null) && (Vr(t) ? t.flags |= 4 : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, Ze !== null && (bl(Ze), Ze = null))), hl(e, t), we(t), null;
     case 5:
@@ -3882,7 +3882,7 @@ function $f(e, t, n) {
       return we(t), null;
     case 13:
       if (K(q), i = t.memoizedState, e === null || e.memoizedState !== null && e.memoizedState.dehydrated !== null) {
-        if (X && Pe !== null && t.mode & 1 && !(t.flags & 128)) fc(), zn(), t.flags |= 98560, l = !1;
+        if (X && Pe !== null && t.mode & 1 && !(t.flags & 128)) pc(), zn(), t.flags |= 98560, l = !1;
         else if (l = Vr(t), i !== null && i.dehydrated !== null) {
           if (e === null) {
             if (!l) throw Error(z(318));
@@ -3899,7 +3899,7 @@ function $f(e, t, n) {
     case 10:
       return rs(t.type._context), we(t), null;
     case 17:
-      return $e(t.type) && ki(), we(t), null;
+      return Me(t.type) && ki(), we(t), null;
     case 19:
       if (K(q), l = t.memoizedState, l === null) return we(t), null;
       if (i = (t.flags & 128) !== 0, s = l.rendering, s === null) if (i) Vn(l, !1);
@@ -3930,10 +3930,10 @@ function $f(e, t, n) {
   }
   throw Error(z(156, t.tag));
 }
-function Mf(e, t) {
+function $p(e, t) {
   switch (Zl(t), t.tag) {
     case 1:
-      return $e(t.type) && ki(), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
+      return Me(t.type) && ki(), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
     case 3:
       return _n(), K(Ie), K(be), as(), e = t.flags, e & 65536 && !(e & 128) ? (t.flags = e & -65537 | 128, t) : null;
     case 5:
@@ -3959,7 +3959,7 @@ function Mf(e, t) {
       return null;
   }
 }
-var Qr = !1, ke = !1, Ff = typeof WeakSet == "function" ? WeakSet : Set, M = null;
+var Qr = !1, ke = !1, Fp = typeof WeakSet == "function" ? WeakSet : Set, $ = null;
 function gn(e, t) {
   var n = e.ref;
   if (n !== null) if (typeof n == "function") try {
@@ -3976,8 +3976,8 @@ function gl(e, t, n) {
     ne(e, t, i);
   }
 }
-var Ma = !1;
-function Ef(e, t) {
+var $a = !1;
+function Ep(e, t) {
   if (Jo = yi, e = ec(), ql(e)) {
     if ("selectionStart" in e) var n = { start: e.selectionStart, end: e.selectionEnd };
     else e: {
@@ -3993,35 +3993,35 @@ function Ef(e, t) {
           n = null;
           break e;
         }
-        var s = 0, a = -1, d = -1, c = 0, p = 0, u = e, h = null;
+        var s = 0, a = -1, d = -1, u = 0, f = 0, c = e, p = null;
         t: for (; ; ) {
-          for (var v; u !== n || o !== 0 && u.nodeType !== 3 || (a = s + o), u !== l || i !== 0 && u.nodeType !== 3 || (d = s + i), u.nodeType === 3 && (s += u.nodeValue.length), (v = u.firstChild) !== null; )
-            h = u, u = v;
+          for (var w; c !== n || o !== 0 && c.nodeType !== 3 || (a = s + o), c !== l || i !== 0 && c.nodeType !== 3 || (d = s + i), c.nodeType === 3 && (s += c.nodeValue.length), (w = c.firstChild) !== null; )
+            p = c, c = w;
           for (; ; ) {
-            if (u === e) break t;
-            if (h === n && ++c === o && (a = s), h === l && ++p === i && (d = s), (v = u.nextSibling) !== null) break;
-            u = h, h = u.parentNode;
+            if (c === e) break t;
+            if (p === n && ++u === o && (a = s), p === l && ++f === i && (d = s), (w = c.nextSibling) !== null) break;
+            c = p, p = c.parentNode;
           }
-          u = v;
+          c = w;
         }
         n = a === -1 || d === -1 ? null : { start: a, end: d };
       } else n = null;
     }
     n = n || { start: 0, end: 0 };
   } else n = null;
-  for (Zo = { focusedElem: e, selectionRange: n }, yi = !1, M = t; M !== null; ) if (t = M, e = t.child, (t.subtreeFlags & 1028) !== 0 && e !== null) e.return = t, M = e;
-  else for (; M !== null; ) {
-    t = M;
+  for (Zo = { focusedElem: e, selectionRange: n }, yi = !1, $ = t; $ !== null; ) if (t = $, e = t.child, (t.subtreeFlags & 1028) !== 0 && e !== null) e.return = t, $ = e;
+  else for (; $ !== null; ) {
+    t = $;
     try {
-      var w = t.alternate;
+      var x = t.alternate;
       if (t.flags & 1024) switch (t.tag) {
         case 0:
         case 11:
         case 15:
           break;
         case 1:
-          if (w !== null) {
-            var f = w.memoizedProps, k = w.memoizedState, m = t.stateNode, g = m.getSnapshotBeforeUpdate(t.elementType === t.type ? f : qe(t.type, f), k);
+          if (x !== null) {
+            var h = x.memoizedProps, k = x.memoizedState, m = t.stateNode, g = m.getSnapshotBeforeUpdate(t.elementType === t.type ? h : qe(t.type, h), k);
             m.__reactInternalSnapshotBeforeUpdate = g;
           }
           break;
@@ -4037,16 +4037,16 @@ function Ef(e, t) {
         default:
           throw Error(z(163));
       }
-    } catch (x) {
-      ne(t, t.return, x);
+    } catch (v) {
+      ne(t, t.return, v);
     }
     if (e = t.sibling, e !== null) {
-      e.return = t.return, M = e;
+      e.return = t.return, $ = e;
       break;
     }
-    M = t.return;
+    $ = t.return;
   }
-  return w = Ma, Ma = !1, w;
+  return x = $a, $a = !1, x;
 }
 function or(e, t, n) {
   var i = t.updateQueue;
@@ -4089,7 +4089,7 @@ function ml(e) {
 }
 function Xc(e) {
   var t = e.alternate;
-  t !== null && (e.alternate = null, Xc(t)), e.child = null, e.deletions = null, e.sibling = null, e.tag === 5 && (t = e.stateNode, t !== null && (delete t[ot], delete t[xr], delete t[nl], delete t[mf], delete t[yf])), e.stateNode = null, e.return = null, e.dependencies = null, e.memoizedProps = null, e.memoizedState = null, e.pendingProps = null, e.stateNode = null, e.updateQueue = null;
+  t !== null && (e.alternate = null, Xc(t)), e.child = null, e.deletions = null, e.sibling = null, e.tag === 5 && (t = e.stateNode, t !== null && (delete t[ot], delete t[xr], delete t[nl], delete t[mp], delete t[yp])), e.stateNode = null, e.return = null, e.dependencies = null, e.memoizedProps = null, e.memoizedState = null, e.pendingProps = null, e.stateNode = null, e.updateQueue = null;
 }
 function qc(e) {
   return e.tag === 5 || e.tag === 3 || e.tag === 4;
@@ -4117,7 +4117,7 @@ function xl(e, t, n) {
   if (i === 5 || i === 6) e = e.stateNode, t ? n.insertBefore(e, t) : n.appendChild(e);
   else if (i !== 4 && (e = e.child, e !== null)) for (xl(e, t, n), e = e.sibling; e !== null; ) xl(e, t, n), e = e.sibling;
 }
-var fe = null, Je = !1;
+var pe = null, Je = !1;
 function wt(e, t, n) {
   for (n = n.child; n !== null; ) Jc(e, t, n), n = n.sibling;
 }
@@ -4130,14 +4130,14 @@ function Jc(e, t, n) {
     case 5:
       ke || gn(n, t);
     case 6:
-      var i = fe, o = Je;
-      fe = null, wt(e, t, n), fe = i, Je = o, fe !== null && (Je ? (e = fe, n = n.stateNode, e.nodeType === 8 ? e.parentNode.removeChild(n) : e.removeChild(n)) : fe.removeChild(n.stateNode));
+      var i = pe, o = Je;
+      pe = null, wt(e, t, n), pe = i, Je = o, pe !== null && (Je ? (e = pe, n = n.stateNode, e.nodeType === 8 ? e.parentNode.removeChild(n) : e.removeChild(n)) : pe.removeChild(n.stateNode));
       break;
     case 18:
-      fe !== null && (Je ? (e = fe, n = n.stateNode, e.nodeType === 8 ? xo(e.parentNode, n) : e.nodeType === 1 && xo(e, n), fr(e)) : xo(fe, n.stateNode));
+      pe !== null && (Je ? (e = pe, n = n.stateNode, e.nodeType === 8 ? xo(e.parentNode, n) : e.nodeType === 1 && xo(e, n), pr(e)) : xo(pe, n.stateNode));
       break;
     case 4:
-      i = fe, o = Je, fe = n.stateNode.containerInfo, Je = !0, wt(e, t, n), fe = i, Je = o;
+      i = pe, o = Je, pe = n.stateNode.containerInfo, Je = !0, wt(e, t, n), pe = i, Je = o;
       break;
     case 0:
     case 11:
@@ -4175,8 +4175,8 @@ function Ea(e) {
   if (t !== null) {
     e.updateQueue = null;
     var n = e.stateNode;
-    n === null && (n = e.stateNode = new Ff()), t.forEach(function(i) {
-      var o = Bf.bind(null, e, i);
+    n === null && (n = e.stateNode = new Fp()), t.forEach(function(i) {
+      var o = Bp.bind(null, e, i);
       n.has(i) || (n.add(i), i.then(o, o));
     });
   }
@@ -4190,23 +4190,23 @@ function Xe(e, t) {
       e: for (; a !== null; ) {
         switch (a.tag) {
           case 5:
-            fe = a.stateNode, Je = !1;
+            pe = a.stateNode, Je = !1;
             break e;
           case 3:
-            fe = a.stateNode.containerInfo, Je = !0;
+            pe = a.stateNode.containerInfo, Je = !0;
             break e;
           case 4:
-            fe = a.stateNode.containerInfo, Je = !0;
+            pe = a.stateNode.containerInfo, Je = !0;
             break e;
         }
         a = a.return;
       }
-      if (fe === null) throw Error(z(160));
-      Jc(l, s, o), fe = null, Je = !1;
+      if (pe === null) throw Error(z(160));
+      Jc(l, s, o), pe = null, Je = !1;
       var d = o.alternate;
       d !== null && (d.return = null), o.return = null;
-    } catch (c) {
-      ne(o, t, c);
+    } catch (u) {
+      ne(o, t, u);
     }
   }
   if (t.subtreeFlags & 12854) for (t = t.child; t !== null; ) Zc(t, e), t = t.sibling;
@@ -4221,13 +4221,13 @@ function Zc(e, t) {
       if (Xe(t, e), rt(e), i & 4) {
         try {
           or(3, e, e.return), Qi(3, e);
-        } catch (f) {
-          ne(e, e.return, f);
+        } catch (h) {
+          ne(e, e.return, h);
         }
         try {
           or(5, e, e.return);
-        } catch (f) {
-          ne(e, e.return, f);
+        } catch (h) {
+          ne(e, e.return, h);
         }
       }
       break;
@@ -4239,18 +4239,18 @@ function Zc(e, t) {
         var o = e.stateNode;
         try {
           dr(o, "");
-        } catch (f) {
-          ne(e, e.return, f);
+        } catch (h) {
+          ne(e, e.return, h);
         }
       }
       if (i & 4 && (o = e.stateNode, o != null)) {
         var l = e.memoizedProps, s = n !== null ? n.memoizedProps : l, a = e.type, d = e.updateQueue;
         if (e.updateQueue = null, d !== null) try {
           a === "input" && l.type === "radio" && l.name != null && kd(o, l), Ho(a, s);
-          var c = Ho(a, l);
+          var u = Ho(a, l);
           for (s = 0; s < d.length; s += 2) {
-            var p = d[s], u = d[s + 1];
-            p === "style" ? zd(o, u) : p === "dangerouslySetInnerHTML" ? Sd(o, u) : p === "children" ? dr(o, u) : Ll(o, p, u, c);
+            var f = d[s], c = d[s + 1];
+            f === "style" ? zd(o, c) : f === "dangerouslySetInnerHTML" ? Sd(o, c) : f === "children" ? dr(o, c) : Ll(o, f, c, u);
           }
           switch (a) {
             case "input":
@@ -4260,10 +4260,10 @@ function Zc(e, t) {
               bd(o, l);
               break;
             case "select":
-              var h = o._wrapperState.wasMultiple;
+              var p = o._wrapperState.wasMultiple;
               o._wrapperState.wasMultiple = !!l.multiple;
-              var v = l.value;
-              v != null ? xn(o, !!l.multiple, v, !1) : h !== !!l.multiple && (l.defaultValue != null ? xn(
+              var w = l.value;
+              w != null ? xn(o, !!l.multiple, w, !1) : p !== !!l.multiple && (l.defaultValue != null ? xn(
                 o,
                 !!l.multiple,
                 l.defaultValue,
@@ -4271,8 +4271,8 @@ function Zc(e, t) {
               ) : xn(o, !!l.multiple, l.multiple ? [] : "", !1));
           }
           o[xr] = l;
-        } catch (f) {
-          ne(e, e.return, f);
+        } catch (h) {
+          ne(e, e.return, h);
         }
       }
       break;
@@ -4282,16 +4282,16 @@ function Zc(e, t) {
         o = e.stateNode, l = e.memoizedProps;
         try {
           o.nodeValue = l;
-        } catch (f) {
-          ne(e, e.return, f);
+        } catch (h) {
+          ne(e, e.return, h);
         }
       }
       break;
     case 3:
       if (Xe(t, e), rt(e), i & 4 && n !== null && n.memoizedState.isDehydrated) try {
-        fr(t.containerInfo);
-      } catch (f) {
-        ne(e, e.return, f);
+        pr(t.containerInfo);
+      } catch (h) {
+        ne(e, e.return, h);
       }
       break;
     case 4:
@@ -4301,67 +4301,67 @@ function Zc(e, t) {
       Xe(t, e), rt(e), o = e.child, o.flags & 8192 && (l = o.memoizedState !== null, o.stateNode.isHidden = l, !l || o.alternate !== null && o.alternate.memoizedState !== null || (ys = re())), i & 4 && Ea(e);
       break;
     case 22:
-      if (p = n !== null && n.memoizedState !== null, e.mode & 1 ? (ke = (c = ke) || p, Xe(t, e), ke = c) : Xe(t, e), rt(e), i & 8192) {
-        if (c = e.memoizedState !== null, (e.stateNode.isHidden = c) && !p && e.mode & 1) for (M = e, p = e.child; p !== null; ) {
-          for (u = M = p; M !== null; ) {
-            switch (h = M, v = h.child, h.tag) {
+      if (f = n !== null && n.memoizedState !== null, e.mode & 1 ? (ke = (u = ke) || f, Xe(t, e), ke = u) : Xe(t, e), rt(e), i & 8192) {
+        if (u = e.memoizedState !== null, (e.stateNode.isHidden = u) && !f && e.mode & 1) for ($ = e, f = e.child; f !== null; ) {
+          for (c = $ = f; $ !== null; ) {
+            switch (p = $, w = p.child, p.tag) {
               case 0:
               case 11:
               case 14:
               case 15:
-                or(4, h, h.return);
+                or(4, p, p.return);
                 break;
               case 1:
-                gn(h, h.return);
-                var w = h.stateNode;
-                if (typeof w.componentWillUnmount == "function") {
-                  i = h, n = h.return;
+                gn(p, p.return);
+                var x = p.stateNode;
+                if (typeof x.componentWillUnmount == "function") {
+                  i = p, n = p.return;
                   try {
-                    t = i, w.props = t.memoizedProps, w.state = t.memoizedState, w.componentWillUnmount();
-                  } catch (f) {
-                    ne(i, n, f);
+                    t = i, x.props = t.memoizedProps, x.state = t.memoizedState, x.componentWillUnmount();
+                  } catch (h) {
+                    ne(i, n, h);
                   }
                 }
                 break;
               case 5:
-                gn(h, h.return);
+                gn(p, p.return);
                 break;
               case 22:
-                if (h.memoizedState !== null) {
-                  Da(u);
+                if (p.memoizedState !== null) {
+                  Da(c);
                   continue;
                 }
             }
-            v !== null ? (v.return = h, M = v) : Da(u);
+            w !== null ? (w.return = p, $ = w) : Da(c);
           }
-          p = p.sibling;
+          f = f.sibling;
         }
-        e: for (p = null, u = e; ; ) {
-          if (u.tag === 5) {
-            if (p === null) {
-              p = u;
+        e: for (f = null, c = e; ; ) {
+          if (c.tag === 5) {
+            if (f === null) {
+              f = c;
               try {
-                o = u.stateNode, c ? (l = o.style, typeof l.setProperty == "function" ? l.setProperty("display", "none", "important") : l.display = "none") : (a = u.stateNode, d = u.memoizedProps.style, s = d != null && d.hasOwnProperty("display") ? d.display : null, a.style.display = Cd("display", s));
-              } catch (f) {
-                ne(e, e.return, f);
+                o = c.stateNode, u ? (l = o.style, typeof l.setProperty == "function" ? l.setProperty("display", "none", "important") : l.display = "none") : (a = c.stateNode, d = c.memoizedProps.style, s = d != null && d.hasOwnProperty("display") ? d.display : null, a.style.display = Cd("display", s));
+              } catch (h) {
+                ne(e, e.return, h);
               }
             }
-          } else if (u.tag === 6) {
-            if (p === null) try {
-              u.stateNode.nodeValue = c ? "" : u.memoizedProps;
-            } catch (f) {
-              ne(e, e.return, f);
+          } else if (c.tag === 6) {
+            if (f === null) try {
+              c.stateNode.nodeValue = u ? "" : c.memoizedProps;
+            } catch (h) {
+              ne(e, e.return, h);
             }
-          } else if ((u.tag !== 22 && u.tag !== 23 || u.memoizedState === null || u === e) && u.child !== null) {
-            u.child.return = u, u = u.child;
+          } else if ((c.tag !== 22 && c.tag !== 23 || c.memoizedState === null || c === e) && c.child !== null) {
+            c.child.return = c, c = c.child;
             continue;
           }
-          if (u === e) break e;
-          for (; u.sibling === null; ) {
-            if (u.return === null || u.return === e) break e;
-            p === u && (p = null), u = u.return;
+          if (c === e) break e;
+          for (; c.sibling === null; ) {
+            if (c.return === null || c.return === e) break e;
+            f === c && (f = null), c = c.return;
           }
-          p === u && (p = null), u.sibling.return = u.return, u = u.sibling;
+          f === c && (f = null), c.sibling.return = c.return, c = c.sibling;
         }
       }
       break;
@@ -4413,29 +4413,29 @@ function rt(e) {
   }
   t & 4096 && (e.flags &= -4097);
 }
-function Pf(e, t, n) {
-  M = e, eu(e);
+function Pp(e, t, n) {
+  $ = e, eu(e);
 }
 function eu(e, t, n) {
-  for (var i = (e.mode & 1) !== 0; M !== null; ) {
-    var o = M, l = o.child;
+  for (var i = (e.mode & 1) !== 0; $ !== null; ) {
+    var o = $, l = o.child;
     if (o.tag === 22 && i) {
       var s = o.memoizedState !== null || Qr;
       if (!s) {
         var a = o.alternate, d = a !== null && a.memoizedState !== null || ke;
         a = Qr;
-        var c = ke;
-        if (Qr = s, (ke = d) && !c) for (M = o; M !== null; ) s = M, d = s.child, s.tag === 22 && s.memoizedState !== null ? Na(o) : d !== null ? (d.return = s, M = d) : Na(o);
-        for (; l !== null; ) M = l, eu(l), l = l.sibling;
-        M = o, Qr = a, ke = c;
+        var u = ke;
+        if (Qr = s, (ke = d) && !u) for ($ = o; $ !== null; ) s = $, d = s.child, s.tag === 22 && s.memoizedState !== null ? Na(o) : d !== null ? (d.return = s, $ = d) : Na(o);
+        for (; l !== null; ) $ = l, eu(l), l = l.sibling;
+        $ = o, Qr = a, ke = u;
       }
       Pa(e);
-    } else o.subtreeFlags & 8772 && l !== null ? (l.return = o, M = l) : Pa(e);
+    } else o.subtreeFlags & 8772 && l !== null ? (l.return = o, $ = l) : Pa(e);
   }
 }
 function Pa(e) {
-  for (; M !== null; ) {
-    var t = M;
+  for (; $ !== null; ) {
+    var t = $;
     if (t.flags & 8772) {
       var n = t.alternate;
       try {
@@ -4493,12 +4493,12 @@ function Pa(e) {
             break;
           case 13:
             if (t.memoizedState === null) {
-              var c = t.alternate;
-              if (c !== null) {
-                var p = c.memoizedState;
-                if (p !== null) {
-                  var u = p.dehydrated;
-                  u !== null && fr(u);
+              var u = t.alternate;
+              if (u !== null) {
+                var f = u.memoizedState;
+                if (f !== null) {
+                  var c = f.dehydrated;
+                  c !== null && pr(c);
                 }
               }
             }
@@ -4514,39 +4514,39 @@ function Pa(e) {
             throw Error(z(163));
         }
         ke || t.flags & 512 && ml(t);
-      } catch (h) {
-        ne(t, t.return, h);
+      } catch (p) {
+        ne(t, t.return, p);
       }
     }
     if (t === e) {
-      M = null;
+      $ = null;
       break;
     }
     if (n = t.sibling, n !== null) {
-      n.return = t.return, M = n;
+      n.return = t.return, $ = n;
       break;
     }
-    M = t.return;
+    $ = t.return;
   }
 }
 function Da(e) {
-  for (; M !== null; ) {
-    var t = M;
+  for (; $ !== null; ) {
+    var t = $;
     if (t === e) {
-      M = null;
+      $ = null;
       break;
     }
     var n = t.sibling;
     if (n !== null) {
-      n.return = t.return, M = n;
+      n.return = t.return, $ = n;
       break;
     }
-    M = t.return;
+    $ = t.return;
   }
 }
 function Na(e) {
-  for (; M !== null; ) {
-    var t = M;
+  for (; $ !== null; ) {
+    var t = $;
     try {
       switch (t.tag) {
         case 0:
@@ -4588,35 +4588,35 @@ function Na(e) {
       ne(t, t.return, d);
     }
     if (t === e) {
-      M = null;
+      $ = null;
       break;
     }
     var a = t.sibling;
     if (a !== null) {
-      a.return = t.return, M = a;
+      a.return = t.return, $ = a;
       break;
     }
-    M = t.return;
+    $ = t.return;
   }
 }
-var Df = Math.ceil, $i = vt.ReactCurrentDispatcher, gs = vt.ReactCurrentOwner, Qe = vt.ReactCurrentBatchConfig, W = 0, pe = null, oe = null, he = 0, Ee = 0, mn = Lt(0), de = 0, Sr = null, Jt = 0, Yi = 0, ms = 0, lr = null, _e = null, ys = 0, In = 1 / 0, ct = null, Mi = !1, vl = null, Mt = null, Yr = !1, zt = null, Fi = 0, sr = 0, wl = null, ai = -1, di = 0;
+var Dp = Math.ceil, Mi = vt.ReactCurrentDispatcher, gs = vt.ReactCurrentOwner, Qe = vt.ReactCurrentBatchConfig, W = 0, fe = null, oe = null, he = 0, Ee = 0, mn = Lt(0), de = 0, Sr = null, Jt = 0, Yi = 0, ms = 0, lr = null, _e = null, ys = 0, In = 1 / 0, ct = null, $i = !1, vl = null, $t = null, Yr = !1, zt = null, Fi = 0, sr = 0, wl = null, ai = -1, di = 0;
 function Se() {
   return W & 6 ? re() : ai !== -1 ? ai : ai = re();
 }
 function Ft(e) {
-  return e.mode & 1 ? W & 2 && he !== 0 ? he & -he : vf.transition !== null ? (di === 0 && (di = Ld()), di) : (e = V, e !== 0 || (e = window.event, e = e === void 0 ? 16 : Ud(e.type)), e) : 1;
+  return e.mode & 1 ? W & 2 && he !== 0 ? he & -he : vp.transition !== null ? (di === 0 && (di = Ld()), di) : (e = V, e !== 0 || (e = window.event, e = e === void 0 ? 16 : Ud(e.type)), e) : 1;
 }
 function tt(e, t, n, i) {
   if (50 < sr) throw sr = 0, wl = null, Error(z(185));
-  zr(e, n, i), (!(W & 2) || e !== pe) && (e === pe && (!(W & 2) && (Yi |= n), de === 4 && St(e, he)), Me(e, i), n === 1 && W === 0 && !(t.mode & 1) && (In = re() + 500, Vi && At()));
+  zr(e, n, i), (!(W & 2) || e !== fe) && (e === fe && (!(W & 2) && (Yi |= n), de === 4 && St(e, he)), $e(e, i), n === 1 && W === 0 && !(t.mode & 1) && (In = re() + 500, Vi && At()));
 }
-function Me(e, t) {
+function $e(e, t) {
   var n = e.callbackNode;
-  xp(e, t);
-  var i = mi(e, e === pe ? he : 0);
+  vf(e, t);
+  var i = mi(e, e === fe ? he : 0);
   if (i === 0) n !== null && Gs(n), e.callbackNode = null, e.callbackPriority = 0;
   else if (t = i & -i, e.callbackPriority !== t) {
-    if (n != null && Gs(n), t === 1) e.tag === 0 ? xf(La.bind(null, e)) : cc(La.bind(null, e)), hf(function() {
+    if (n != null && Gs(n), t === 1) e.tag === 0 ? xp(La.bind(null, e)) : cc(La.bind(null, e)), hp(function() {
       !(W & 6) && At();
     }), n = null;
     else {
@@ -4645,7 +4645,7 @@ function tu(e, t) {
   if (ai = -1, di = 0, W & 6) throw Error(z(327));
   var n = e.callbackNode;
   if (jn() && e.callbackNode !== n) return null;
-  var i = mi(e, e === pe ? he : 0);
+  var i = mi(e, e === fe ? he : 0);
   if (i === 0) return null;
   if (i & 30 || i & e.expiredLanes || t) t = Ei(e, i);
   else {
@@ -4653,22 +4653,22 @@ function tu(e, t) {
     var o = W;
     W |= 2;
     var l = ru();
-    (pe !== e || he !== t) && (ct = null, In = re() + 500, Qt(e, t));
+    (fe !== e || he !== t) && (ct = null, In = re() + 500, Qt(e, t));
     do
       try {
-        Af();
+        Ap();
         break;
       } catch (a) {
         nu(e, a);
       }
     while (!0);
-    ns(), $i.current = l, W = o, oe !== null ? t = 0 : (pe = null, he = 0, t = de);
+    ns(), Mi.current = l, W = o, oe !== null ? t = 0 : (fe = null, he = 0, t = de);
   }
   if (t !== 0) {
-    if (t === 2 && (o = Qo(e), o !== 0 && (i = o, t = kl(e, o))), t === 1) throw n = Sr, Qt(e, 0), St(e, i), Me(e, re()), n;
+    if (t === 2 && (o = Qo(e), o !== 0 && (i = o, t = kl(e, o))), t === 1) throw n = Sr, Qt(e, 0), St(e, i), $e(e, re()), n;
     if (t === 6) St(e, i);
     else {
-      if (o = e.current.alternate, !(i & 30) && !Nf(o) && (t = Ei(e, i), t === 2 && (l = Qo(e), l !== 0 && (i = l, t = kl(e, l))), t === 1)) throw n = Sr, Qt(e, 0), St(e, i), Me(e, re()), n;
+      if (o = e.current.alternate, !(i & 30) && !Np(o) && (t = Ei(e, i), t === 2 && (l = Qo(e), l !== 0 && (i = l, t = kl(e, l))), t === 1)) throw n = Sr, Qt(e, 0), St(e, i), $e(e, re()), n;
       switch (e.finishedWork = o, e.finishedLanes = i, t) {
         case 0:
         case 1:
@@ -4694,7 +4694,7 @@ function tu(e, t) {
             var s = 31 - et(i);
             l = 1 << s, s = t[s], s > o && (o = s), i &= ~l;
           }
-          if (i = o, i = re() - i, i = (120 > i ? 120 : 480 > i ? 480 : 1080 > i ? 1080 : 1920 > i ? 1920 : 3e3 > i ? 3e3 : 4320 > i ? 4320 : 1960 * Df(i / 1960)) - i, 10 < i) {
+          if (i = o, i = re() - i, i = (120 > i ? 120 : 480 > i ? 480 : 1080 > i ? 1080 : 1920 > i ? 1920 : 3e3 > i ? 3e3 : 4320 > i ? 4320 : 1960 * Dp(i / 1960)) - i, 10 < i) {
             e.timeoutHandle = tl(Ht.bind(null, e, _e, ct), i);
             break;
           }
@@ -4708,7 +4708,7 @@ function tu(e, t) {
       }
     }
   }
-  return Me(e, re()), e.callbackNode === n ? tu.bind(null, e) : null;
+  return $e(e, re()), e.callbackNode === n ? tu.bind(null, e) : null;
 }
 function kl(e, t) {
   var n = lr;
@@ -4717,7 +4717,7 @@ function kl(e, t) {
 function bl(e) {
   _e === null ? _e = e : _e.push.apply(_e, e);
 }
-function Nf(e) {
+function Np(e) {
   for (var t = e; ; ) {
     if (t.flags & 16384) {
       var n = t.updateQueue;
@@ -4753,15 +4753,15 @@ function La(e) {
   if (W & 6) throw Error(z(327));
   jn();
   var t = mi(e, 0);
-  if (!(t & 1)) return Me(e, re()), null;
+  if (!(t & 1)) return $e(e, re()), null;
   var n = Ei(e, t);
   if (e.tag !== 0 && n === 2) {
     var i = Qo(e);
     i !== 0 && (t = i, n = kl(e, i));
   }
-  if (n === 1) throw n = Sr, Qt(e, 0), St(e, t), Me(e, re()), n;
+  if (n === 1) throw n = Sr, Qt(e, 0), St(e, t), $e(e, re()), n;
   if (n === 6) throw Error(z(345));
-  return e.finishedWork = e.current.alternate, e.finishedLanes = t, Ht(e, _e, ct), Me(e, re()), null;
+  return e.finishedWork = e.current.alternate, e.finishedLanes = t, Ht(e, _e, ct), $e(e, re()), null;
 }
 function xs(e, t) {
   var n = W;
@@ -4789,7 +4789,7 @@ function vs() {
 function Qt(e, t) {
   e.finishedWork = null, e.finishedLanes = 0;
   var n = e.timeoutHandle;
-  if (n !== -1 && (e.timeoutHandle = -1, ff(n)), oe !== null) for (n = oe.return; n !== null; ) {
+  if (n !== -1 && (e.timeoutHandle = -1, pp(n)), oe !== null) for (n = oe.return; n !== null; ) {
     var i = n;
     switch (Zl(i), i.tag) {
       case 1:
@@ -4819,7 +4819,7 @@ function Qt(e, t) {
     }
     n = n.return;
   }
-  if (pe = e, oe = e = Et(e.current, null), he = Ee = t, de = 0, Sr = null, ms = Yi = Jt = 0, _e = lr = null, Ut !== null) {
+  if (fe = e, oe = e = Et(e.current, null), he = Ee = t, de = 0, Sr = null, ms = Yi = Jt = 0, _e = lr = null, Ut !== null) {
     for (t = 0; t < Ut.length; t++) if (n = Ut[t], i = n.interleaved, i !== null) {
       n.interleaved = null;
       var o = i.next, l = n.pending;
@@ -4851,23 +4851,23 @@ function nu(e, t) {
       e: {
         var l = e, s = n.return, a = n, d = t;
         if (t = he, a.flags |= 32768, d !== null && typeof d == "object" && typeof d.then == "function") {
-          var c = d, p = a, u = p.tag;
-          if (!(p.mode & 1) && (u === 0 || u === 11 || u === 15)) {
-            var h = p.alternate;
-            h ? (p.updateQueue = h.updateQueue, p.memoizedState = h.memoizedState, p.lanes = h.lanes) : (p.updateQueue = null, p.memoizedState = null);
+          var u = d, f = a, c = f.tag;
+          if (!(f.mode & 1) && (c === 0 || c === 11 || c === 15)) {
+            var p = f.alternate;
+            p ? (f.updateQueue = p.updateQueue, f.memoizedState = p.memoizedState, f.lanes = p.lanes) : (f.updateQueue = null, f.memoizedState = null);
           }
-          var v = Ca(s);
-          if (v !== null) {
-            v.flags &= -257, za(v, s, a, l, t), v.mode & 1 && Sa(l, c, t), t = v, d = c;
-            var w = t.updateQueue;
-            if (w === null) {
-              var f = /* @__PURE__ */ new Set();
-              f.add(d), t.updateQueue = f;
-            } else w.add(d);
+          var w = Ca(s);
+          if (w !== null) {
+            w.flags &= -257, za(w, s, a, l, t), w.mode & 1 && Sa(l, u, t), t = w, d = u;
+            var x = t.updateQueue;
+            if (x === null) {
+              var h = /* @__PURE__ */ new Set();
+              h.add(d), t.updateQueue = h;
+            } else x.add(d);
             break e;
           } else {
             if (!(t & 1)) {
-              Sa(l, c, t), ws();
+              Sa(l, u, t), ws();
               break e;
             }
             d = Error(z(426));
@@ -4890,10 +4890,10 @@ function nu(e, t) {
             case 1:
               a = d;
               var g = l.type, y = l.stateNode;
-              if (!(l.flags & 128) && (typeof g.getDerivedStateFromError == "function" || y !== null && typeof y.componentDidCatch == "function" && (Mt === null || !Mt.has(y)))) {
+              if (!(l.flags & 128) && (typeof g.getDerivedStateFromError == "function" || y !== null && typeof y.componentDidCatch == "function" && ($t === null || !$t.has(y)))) {
                 l.flags |= 65536, t &= -t, l.lanes |= t;
-                var x = Oc(l, a, t);
-                xa(l, x);
+                var v = Oc(l, a, t);
+                xa(l, v);
                 break e;
               }
           }
@@ -4909,33 +4909,33 @@ function nu(e, t) {
   } while (!0);
 }
 function ru() {
-  var e = $i.current;
-  return $i.current = Ii, e === null ? Ii : e;
+  var e = Mi.current;
+  return Mi.current = Ii, e === null ? Ii : e;
 }
 function ws() {
-  (de === 0 || de === 3 || de === 2) && (de = 4), pe === null || !(Jt & 268435455) && !(Yi & 268435455) || St(pe, he);
+  (de === 0 || de === 3 || de === 2) && (de = 4), fe === null || !(Jt & 268435455) && !(Yi & 268435455) || St(fe, he);
 }
 function Ei(e, t) {
   var n = W;
   W |= 2;
   var i = ru();
-  (pe !== e || he !== t) && (ct = null, Qt(e, t));
+  (fe !== e || he !== t) && (ct = null, Qt(e, t));
   do
     try {
-      Lf();
+      Lp();
       break;
     } catch (o) {
       nu(e, o);
     }
   while (!0);
-  if (ns(), W = n, $i.current = i, oe !== null) throw Error(z(261));
-  return pe = null, he = 0, de;
+  if (ns(), W = n, Mi.current = i, oe !== null) throw Error(z(261));
+  return fe = null, he = 0, de;
 }
-function Lf() {
+function Lp() {
   for (; oe !== null; ) iu(oe);
 }
-function Af() {
-  for (; oe !== null && !dp(); ) iu(oe);
+function Ap() {
+  for (; oe !== null && !cf(); ) iu(oe);
 }
 function iu(e) {
   var t = su(e.alternate, e, Ee);
@@ -4946,7 +4946,7 @@ function ou(e) {
   do {
     var n = t.alternate;
     if (e = t.return, t.flags & 32768) {
-      if (n = Mf(n, t), n !== null) {
+      if (n = $p(n, t), n !== null) {
         n.flags &= 32767, oe = n;
         return;
       }
@@ -4955,7 +4955,7 @@ function ou(e) {
         de = 6, oe = null;
         return;
       }
-    } else if (n = $f(n, t, Ee), n !== null) {
+    } else if (n = Mp(n, t, Ee), n !== null) {
       oe = n;
       return;
     }
@@ -4970,13 +4970,13 @@ function ou(e) {
 function Ht(e, t, n) {
   var i = V, o = Qe.transition;
   try {
-    Qe.transition = null, V = 1, Of(e, t, n, i);
+    Qe.transition = null, V = 1, Op(e, t, n, i);
   } finally {
     Qe.transition = o, V = i;
   }
   return null;
 }
-function Of(e, t, n, i) {
+function Op(e, t, n, i) {
   do
     jn();
   while (zt !== null);
@@ -4987,17 +4987,17 @@ function Of(e, t, n, i) {
   if (e.finishedWork = null, e.finishedLanes = 0, n === e.current) throw Error(z(177));
   e.callbackNode = null, e.callbackPriority = 0;
   var l = n.lanes | n.childLanes;
-  if (vp(e, l), e === pe && (oe = pe = null, he = 0), !(n.subtreeFlags & 2064) && !(n.flags & 2064) || Yr || (Yr = !0, au(gi, function() {
+  if (wf(e, l), e === fe && (oe = fe = null, he = 0), !(n.subtreeFlags & 2064) && !(n.flags & 2064) || Yr || (Yr = !0, au(gi, function() {
     return jn(), null;
   })), l = (n.flags & 15990) !== 0, n.subtreeFlags & 15990 || l) {
     l = Qe.transition, Qe.transition = null;
     var s = V;
     V = 1;
     var a = W;
-    W |= 4, gs.current = null, Ef(e, n), Zc(n, e), lf(Zo), yi = !!Jo, Zo = Jo = null, e.current = n, Pf(n), cp(), W = a, V = s, Qe.transition = l;
+    W |= 4, gs.current = null, Ep(e, n), Zc(n, e), lp(Zo), yi = !!Jo, Zo = Jo = null, e.current = n, Pp(n), uf(), W = a, V = s, Qe.transition = l;
   } else e.current = n;
-  if (Yr && (Yr = !1, zt = e, Fi = o), l = e.pendingLanes, l === 0 && (Mt = null), fp(n.stateNode), Me(e, re()), t !== null) for (i = e.onRecoverableError, n = 0; n < t.length; n++) o = t[n], i(o.value, { componentStack: o.stack, digest: o.digest });
-  if (Mi) throw Mi = !1, e = vl, vl = null, e;
+  if (Yr && (Yr = !1, zt = e, Fi = o), l = e.pendingLanes, l === 0 && ($t = null), hf(n.stateNode), $e(e, re()), t !== null) for (i = e.onRecoverableError, n = 0; n < t.length; n++) o = t[n], i(o.value, { componentStack: o.stack, digest: o.digest });
+  if ($i) throw $i = !1, e = vl, vl = null, e;
   return Fi & 1 && e.tag !== 0 && jn(), l = e.pendingLanes, l & 1 ? e === wl ? sr++ : (sr = 0, wl = e) : sr = 0, At(), null;
 }
 function jn() {
@@ -5008,55 +5008,55 @@ function jn() {
       else {
         if (e = zt, zt = null, Fi = 0, W & 6) throw Error(z(331));
         var o = W;
-        for (W |= 4, M = e.current; M !== null; ) {
-          var l = M, s = l.child;
-          if (M.flags & 16) {
+        for (W |= 4, $ = e.current; $ !== null; ) {
+          var l = $, s = l.child;
+          if ($.flags & 16) {
             var a = l.deletions;
             if (a !== null) {
               for (var d = 0; d < a.length; d++) {
-                var c = a[d];
-                for (M = c; M !== null; ) {
-                  var p = M;
-                  switch (p.tag) {
+                var u = a[d];
+                for ($ = u; $ !== null; ) {
+                  var f = $;
+                  switch (f.tag) {
                     case 0:
                     case 11:
                     case 15:
-                      or(8, p, l);
+                      or(8, f, l);
                   }
-                  var u = p.child;
-                  if (u !== null) u.return = p, M = u;
-                  else for (; M !== null; ) {
-                    p = M;
-                    var h = p.sibling, v = p.return;
-                    if (Xc(p), p === c) {
-                      M = null;
+                  var c = f.child;
+                  if (c !== null) c.return = f, $ = c;
+                  else for (; $ !== null; ) {
+                    f = $;
+                    var p = f.sibling, w = f.return;
+                    if (Xc(f), f === u) {
+                      $ = null;
                       break;
                     }
-                    if (h !== null) {
-                      h.return = v, M = h;
+                    if (p !== null) {
+                      p.return = w, $ = p;
                       break;
                     }
-                    M = v;
+                    $ = w;
                   }
                 }
               }
-              var w = l.alternate;
-              if (w !== null) {
-                var f = w.child;
-                if (f !== null) {
-                  w.child = null;
+              var x = l.alternate;
+              if (x !== null) {
+                var h = x.child;
+                if (h !== null) {
+                  x.child = null;
                   do {
-                    var k = f.sibling;
-                    f.sibling = null, f = k;
-                  } while (f !== null);
+                    var k = h.sibling;
+                    h.sibling = null, h = k;
+                  } while (h !== null);
                 }
               }
-              M = l;
+              $ = l;
             }
           }
-          if (l.subtreeFlags & 2064 && s !== null) s.return = l, M = s;
-          else e: for (; M !== null; ) {
-            if (l = M, l.flags & 2048) switch (l.tag) {
+          if (l.subtreeFlags & 2064 && s !== null) s.return = l, $ = s;
+          else e: for (; $ !== null; ) {
+            if (l = $, l.flags & 2048) switch (l.tag) {
               case 0:
               case 11:
               case 15:
@@ -5064,19 +5064,19 @@ function jn() {
             }
             var m = l.sibling;
             if (m !== null) {
-              m.return = l.return, M = m;
+              m.return = l.return, $ = m;
               break e;
             }
-            M = l.return;
+            $ = l.return;
           }
         }
         var g = e.current;
-        for (M = g; M !== null; ) {
-          s = M;
+        for ($ = g; $ !== null; ) {
+          s = $;
           var y = s.child;
-          if (s.subtreeFlags & 2064 && y !== null) y.return = s, M = y;
-          else e: for (s = g; M !== null; ) {
-            if (a = M, a.flags & 2048) try {
+          if (s.subtreeFlags & 2064 && y !== null) y.return = s, $ = y;
+          else e: for (s = g; $ !== null; ) {
+            if (a = $, a.flags & 2048) try {
               switch (a.tag) {
                 case 0:
                 case 11:
@@ -5087,15 +5087,15 @@ function jn() {
               ne(a, a.return, b);
             }
             if (a === s) {
-              M = null;
+              $ = null;
               break e;
             }
-            var x = a.sibling;
-            if (x !== null) {
-              x.return = a.return, M = x;
+            var v = a.sibling;
+            if (v !== null) {
+              v.return = a.return, $ = v;
               break e;
             }
-            M = a.return;
+            $ = a.return;
           }
         }
         if (W = o, At(), st && typeof st.onPostCommitFiberRoot == "function") try {
@@ -5112,7 +5112,7 @@ function jn() {
   return !1;
 }
 function Aa(e, t, n) {
-  t = Rn(n, t), t = Ac(e, t, 1), e = $t(e, t, 1), t = Se(), e !== null && (zr(e, 1, t), Me(e, t));
+  t = Rn(n, t), t = Ac(e, t, 1), e = Mt(e, t, 1), t = Se(), e !== null && (zr(e, 1, t), $e(e, t));
 }
 function ne(e, t, n) {
   if (e.tag === 3) Aa(e, e, n);
@@ -5122,28 +5122,28 @@ function ne(e, t, n) {
       break;
     } else if (t.tag === 1) {
       var i = t.stateNode;
-      if (typeof t.type.getDerivedStateFromError == "function" || typeof i.componentDidCatch == "function" && (Mt === null || !Mt.has(i))) {
-        e = Rn(n, e), e = Oc(t, e, 1), t = $t(t, e, 1), e = Se(), t !== null && (zr(t, 1, e), Me(t, e));
+      if (typeof t.type.getDerivedStateFromError == "function" || typeof i.componentDidCatch == "function" && ($t === null || !$t.has(i))) {
+        e = Rn(n, e), e = Oc(t, e, 1), t = Mt(t, e, 1), e = Se(), t !== null && (zr(t, 1, e), $e(t, e));
         break;
       }
     }
     t = t.return;
   }
 }
-function Wf(e, t, n) {
+function Wp(e, t, n) {
   var i = e.pingCache;
-  i !== null && i.delete(t), t = Se(), e.pingedLanes |= e.suspendedLanes & n, pe === e && (he & n) === n && (de === 4 || de === 3 && (he & 130023424) === he && 500 > re() - ys ? Qt(e, 0) : ms |= n), Me(e, t);
+  i !== null && i.delete(t), t = Se(), e.pingedLanes |= e.suspendedLanes & n, fe === e && (he & n) === n && (de === 4 || de === 3 && (he & 130023424) === he && 500 > re() - ys ? Qt(e, 0) : ms |= n), $e(e, t);
 }
 function lu(e, t) {
   t === 0 && (e.mode & 1 ? (t = Lr, Lr <<= 1, !(Lr & 130023424) && (Lr = 4194304)) : t = 1);
   var n = Se();
-  e = yt(e, t), e !== null && (zr(e, t, n), Me(e, n));
+  e = yt(e, t), e !== null && (zr(e, t, n), $e(e, n));
 }
-function Hf(e) {
+function Hp(e) {
   var t = e.memoizedState, n = 0;
   t !== null && (n = t.retryLane), lu(e, n);
 }
-function Bf(e, t) {
+function Bp(e, t) {
   var n = 0;
   switch (e.tag) {
     case 13:
@@ -5162,7 +5162,7 @@ var su;
 su = function(e, t, n) {
   if (e !== null) if (e.memoizedProps !== t.pendingProps || Ie.current) Re = !0;
   else {
-    if (!(e.lanes & n) && !(t.flags & 128)) return Re = !1, If(e, t, n);
+    if (!(e.lanes & n) && !(t.flags & 128)) return Re = !1, Ip(e, t, n);
     Re = !!(e.flags & 131072);
   }
   else Re = !1, X && t.flags & 1048576 && uc(t, Si, t.index);
@@ -5173,11 +5173,11 @@ su = function(e, t, n) {
       var o = Cn(t, be.current);
       bn(t, n), o = cs(null, t, i, e, o, n);
       var l = us();
-      return t.flags |= 1, typeof o == "object" && o !== null && typeof o.render == "function" && o.$$typeof === void 0 ? (t.tag = 1, t.memoizedState = null, t.updateQueue = null, $e(i) ? (l = !0, bi(t)) : l = !1, t.memoizedState = o.state !== null && o.state !== void 0 ? o.state : null, os(t), o.updater = Gi, t.stateNode = o, o._reactInternals = t, al(t, i, e, n), t = ul(null, t, i, !0, l, n)) : (t.tag = 0, X && l && Jl(t), je(null, t, o, n), t = t.child), t;
+      return t.flags |= 1, typeof o == "object" && o !== null && typeof o.render == "function" && o.$$typeof === void 0 ? (t.tag = 1, t.memoizedState = null, t.updateQueue = null, Me(i) ? (l = !0, bi(t)) : l = !1, t.memoizedState = o.state !== null && o.state !== void 0 ? o.state : null, os(t), o.updater = Gi, t.stateNode = o, o._reactInternals = t, al(t, i, e, n), t = ul(null, t, i, !0, l, n)) : (t.tag = 0, X && l && Jl(t), je(null, t, o, n), t = t.child), t;
     case 16:
       i = t.elementType;
       e: {
-        switch (si(e, t), e = t.pendingProps, o = i._init, i = o(i._payload), t.type = i, o = t.tag = Uf(i), e = qe(i, e), o) {
+        switch (si(e, t), e = t.pendingProps, o = i._init, i = o(i._payload), t.type = i, o = t.tag = Up(i), e = qe(i, e), o) {
           case 0:
             t = cl(null, t, i, e, n);
             break e;
@@ -5255,11 +5255,11 @@ su = function(e, t, n) {
               if (d.context === i) {
                 if (l.tag === 1) {
                   d = ht(-1, n & -n), d.tag = 2;
-                  var c = l.updateQueue;
-                  if (c !== null) {
-                    c = c.shared;
-                    var p = c.pending;
-                    p === null ? d.next = d : (d.next = p.next, p.next = d), c.pending = d;
+                  var u = l.updateQueue;
+                  if (u !== null) {
+                    u = u.shared;
+                    var f = u.pending;
+                    f === null ? d.next = d : (d.next = f.next, f.next = d), u.pending = d;
                   }
                 }
                 l.lanes |= n, d = l.alternate, d !== null && (d.lanes |= n), ll(
@@ -5300,7 +5300,7 @@ su = function(e, t, n) {
     case 15:
       return Wc(e, t, t.type, t.pendingProps, n);
     case 17:
-      return i = t.type, o = t.pendingProps, o = t.elementType === i ? o : qe(i, o), si(e, t), t.tag = 1, $e(i) ? (e = !0, bi(t)) : e = !1, bn(t, n), Lc(t, i, o), al(t, i, o, n), ul(null, t, i, !0, e, n);
+      return i = t.type, o = t.pendingProps, o = t.elementType === i ? o : qe(i, o), si(e, t), t.tag = 1, Me(i) ? (e = !0, bi(t)) : e = !1, bn(t, n), Lc(t, i, o), al(t, i, o, n), ul(null, t, i, !0, e, n);
     case 19:
       return Gc(e, t, n);
     case 22:
@@ -5311,16 +5311,16 @@ su = function(e, t, n) {
 function au(e, t) {
   return Pd(e, t);
 }
-function Vf(e, t, n, i) {
+function Vp(e, t, n, i) {
   this.tag = e, this.key = n, this.sibling = this.child = this.return = this.stateNode = this.type = this.elementType = null, this.index = 0, this.ref = null, this.pendingProps = t, this.dependencies = this.memoizedState = this.updateQueue = this.memoizedProps = null, this.mode = i, this.subtreeFlags = this.flags = 0, this.deletions = null, this.childLanes = this.lanes = 0, this.alternate = null;
 }
 function Ue(e, t, n, i) {
-  return new Vf(e, t, n, i);
+  return new Vp(e, t, n, i);
 }
 function ks(e) {
   return e = e.prototype, !(!e || !e.isReactComponent);
 }
-function Uf(e) {
+function Up(e) {
   if (typeof e == "function") return ks(e) ? 1 : 0;
   if (e != null) {
     if (e = e.$$typeof, e === Ol) return 11;
@@ -5342,8 +5342,8 @@ function ci(e, t, n, i, o, l) {
     case Al:
       s = 8, o |= 8;
       break;
-    case Mo:
-      return e = Ue(12, n, t, o | 2), e.elementType = Mo, e.lanes = l, e;
+    case $o:
+      return e = Ue(12, n, t, o | 2), e.elementType = $o, e.lanes = l, e;
     case Fo:
       return e = Ue(13, n, t, o), e.elementType = Fo, e.lanes = l, e;
     case Eo:
@@ -5384,13 +5384,13 @@ function zo(e, t, n) {
 function To(e, t, n) {
   return t = Ue(4, e.children !== null ? e.children : [], e.key, t), t.lanes = n, t.stateNode = { containerInfo: e.containerInfo, pendingChildren: null, implementation: e.implementation }, t;
 }
-function Gf(e, t, n, i, o) {
+function Gp(e, t, n, i, o) {
   this.tag = t, this.containerInfo = e, this.finishedWork = this.pingCache = this.current = this.pendingChildren = null, this.timeoutHandle = -1, this.callbackNode = this.pendingContext = this.context = null, this.callbackPriority = 0, this.eventTimes = lo(0), this.expirationTimes = lo(-1), this.entangledLanes = this.finishedLanes = this.mutableReadLanes = this.expiredLanes = this.pingedLanes = this.suspendedLanes = this.pendingLanes = 0, this.entanglements = lo(0), this.identifierPrefix = i, this.onRecoverableError = o, this.mutableSourceEagerHydrationData = null;
 }
 function bs(e, t, n, i, o, l, s, a, d) {
-  return e = new Gf(e, t, n, a, d), t === 1 ? (t = 1, l === !0 && (t |= 8)) : t = 0, l = Ue(3, null, null, t), e.current = l, l.stateNode = e, l.memoizedState = { element: i, isDehydrated: n, cache: null, transitions: null, pendingSuspenseBoundaries: null }, os(l), e;
+  return e = new Gp(e, t, n, a, d), t === 1 ? (t = 1, l === !0 && (t |= 8)) : t = 0, l = Ue(3, null, null, t), e.current = l, l.stateNode = e, l.memoizedState = { element: i, isDehydrated: n, cache: null, transitions: null, pendingSuspenseBoundaries: null }, os(l), e;
 }
-function Qf(e, t, n) {
+function Qp(e, t, n) {
   var i = 3 < arguments.length && arguments[3] !== void 0 ? arguments[3] : null;
   return { $$typeof: on, key: i == null ? null : "" + i, children: e, containerInfo: t, implementation: n };
 }
@@ -5406,7 +5406,7 @@ function du(e) {
           t = t.stateNode.context;
           break e;
         case 1:
-          if ($e(t.type)) {
+          if (Me(t.type)) {
             t = t.stateNode.__reactInternalMemoizedMergedChildContext;
             break e;
           }
@@ -5417,16 +5417,16 @@ function du(e) {
   }
   if (e.tag === 1) {
     var n = e.type;
-    if ($e(n)) return dc(e, n, t);
+    if (Me(n)) return dc(e, n, t);
   }
   return t;
 }
 function cu(e, t, n, i, o, l, s, a, d) {
-  return e = bs(n, i, !0, e, o, l, s, a, d), e.context = du(null), n = e.current, i = Se(), o = Ft(n), l = ht(i, o), l.callback = t ?? null, $t(n, l, o), e.current.lanes = o, zr(e, o, i), Me(e, i), e;
+  return e = bs(n, i, !0, e, o, l, s, a, d), e.context = du(null), n = e.current, i = Se(), o = Ft(n), l = ht(i, o), l.callback = t ?? null, Mt(n, l, o), e.current.lanes = o, zr(e, o, i), $e(e, i), e;
 }
 function Xi(e, t, n, i) {
   var o = t.current, l = Se(), s = Ft(o);
-  return n = du(n), t.context === null ? t.context = n : t.pendingContext = n, t = ht(l, s), t.payload = { element: e }, i = i === void 0 ? null : i, i !== null && (t.callback = i), e = $t(o, t, s), e !== null && (tt(e, o, s, l), ii(e, o, s)), s;
+  return n = du(n), t.context === null ? t.context = n : t.pendingContext = n, t = ht(l, s), t.payload = { element: e }, i = i === void 0 ? null : i, i !== null && (t.callback = i), e = Mt(o, t, s), e !== null && (tt(e, o, s, l), ii(e, o, s)), s;
 }
 function Pi(e) {
   if (e = e.current, !e.child) return null;
@@ -5446,7 +5446,7 @@ function Oa(e, t) {
 function js(e, t) {
   Oa(e, t), (e = e.alternate) && Oa(e, t);
 }
-function Yf() {
+function Yp() {
   return null;
 }
 var uu = typeof reportError == "function" ? reportError : function(e) {
@@ -5489,13 +5489,13 @@ function Ji(e) {
 }
 function Wa() {
 }
-function Kf(e, t, n, i, o) {
+function Kp(e, t, n, i, o) {
   if (o) {
     if (typeof i == "function") {
       var l = i;
       i = function() {
-        var c = Pi(s);
-        l.call(c);
+        var u = Pi(s);
+        l.call(u);
       };
     }
     var s = cu(t, i, e, 0, null, !1, !1, "", Wa);
@@ -5505,8 +5505,8 @@ function Kf(e, t, n, i, o) {
   if (typeof i == "function") {
     var a = i;
     i = function() {
-      var c = Pi(d);
-      a.call(c);
+      var u = Pi(d);
+      a.call(u);
     };
   }
   var d = bs(e, 0, !1, null, null, !1, !1, "", Wa);
@@ -5526,7 +5526,7 @@ function Zi(e, t, n, i, o) {
       };
     }
     Xi(t, s, e, o);
-  } else s = Kf(n, t, e, o, i);
+  } else s = Kp(n, t, e, o, i);
   return Pi(s);
 }
 Od = function(e) {
@@ -5535,7 +5535,7 @@ Od = function(e) {
       var t = e.stateNode;
       if (t.current.memoizedState.isDehydrated) {
         var n = qn(t.pendingLanes);
-        n !== 0 && (Vl(t, n | 1), Me(t, re()), !(W & 6) && (In = re() + 500, At()));
+        n !== 0 && (Vl(t, n | 1), $e(t, re()), !(W & 6) && (In = re() + 500, At()));
       }
       break;
     case 13:
@@ -5603,21 +5603,21 @@ Vo = function(e, t, n) {
 };
 Rd = xs;
 Id = Zt;
-var Xf = { usingClientEntryPoint: !1, Events: [_r, cn, Bi, Td, _d, xs] }, Un = { findFiberByHostInstance: Vt, bundleType: 0, version: "18.3.1", rendererPackageName: "react-dom" }, qf = { bundleType: Un.bundleType, version: Un.version, rendererPackageName: Un.rendererPackageName, rendererConfig: Un.rendererConfig, overrideHookState: null, overrideHookStateDeletePath: null, overrideHookStateRenamePath: null, overrideProps: null, overridePropsDeletePath: null, overridePropsRenamePath: null, setErrorHandler: null, setSuspenseHandler: null, scheduleUpdate: null, currentDispatcherRef: vt.ReactCurrentDispatcher, findHostInstanceByFiber: function(e) {
+var Xp = { usingClientEntryPoint: !1, Events: [_r, cn, Bi, Td, _d, xs] }, Un = { findFiberByHostInstance: Vt, bundleType: 0, version: "18.3.1", rendererPackageName: "react-dom" }, qp = { bundleType: Un.bundleType, version: Un.version, rendererPackageName: Un.rendererPackageName, rendererConfig: Un.rendererConfig, overrideHookState: null, overrideHookStateDeletePath: null, overrideHookStateRenamePath: null, overrideProps: null, overridePropsDeletePath: null, overridePropsRenamePath: null, setErrorHandler: null, setSuspenseHandler: null, scheduleUpdate: null, currentDispatcherRef: vt.ReactCurrentDispatcher, findHostInstanceByFiber: function(e) {
   return e = Fd(e), e === null ? null : e.stateNode;
-}, findFiberByHostInstance: Un.findFiberByHostInstance || Yf, findHostInstancesForRefresh: null, scheduleRefresh: null, scheduleRoot: null, setRefreshHandler: null, getCurrentFiber: null, reconcilerVersion: "18.3.1-next-f1338f8080-20240426" };
+}, findFiberByHostInstance: Un.findFiberByHostInstance || Yp, findHostInstancesForRefresh: null, scheduleRefresh: null, scheduleRoot: null, setRefreshHandler: null, getCurrentFiber: null, reconcilerVersion: "18.3.1-next-f1338f8080-20240426" };
 if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u") {
   var Kr = __REACT_DEVTOOLS_GLOBAL_HOOK__;
   if (!Kr.isDisabled && Kr.supportsFiber) try {
-    Ai = Kr.inject(qf), st = Kr;
+    Ai = Kr.inject(qp), st = Kr;
   } catch {
   }
 }
-Le.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = Xf;
+Le.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = Xp;
 Le.createPortal = function(e, t) {
   var n = 2 < arguments.length && arguments[2] !== void 0 ? arguments[2] : null;
   if (!Cs(t)) throw Error(z(200));
-  return Qf(e, t, null, n);
+  return Qp(e, t, null, n);
 };
 Le.createRoot = function(e, t) {
   if (!Cs(e)) throw Error(z(299));
@@ -5667,17 +5667,17 @@ Le.unstable_renderSubtreeIntoContainer = function(e, t, n, i) {
   return Zi(e, t, n, !1, i);
 };
 Le.version = "18.3.1-next-f1338f8080-20240426";
-function pu() {
+function fu() {
   if (!(typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ > "u" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE != "function"))
     try {
-      __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE(pu);
+      __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE(fu);
     } catch (e) {
       console.error(e);
     }
 }
-pu(), pd.exports = Le;
-var Jf = pd.exports, fu, Ha = Jf;
-fu = Ha.createRoot, Ha.hydrateRoot;
+fu(), fd.exports = Le;
+var Jp = fd.exports, pu, Ha = Jp;
+pu = Ha.createRoot, Ha.hydrateRoot;
 const Ir = se.createContext(null);
 var hu = { exports: {} }, eo = {};
 /**
@@ -5689,7 +5689,7 @@ var hu = { exports: {} }, eo = {};
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-var Zf = Pl, eh = Symbol.for("react.element"), th = Symbol.for("react.fragment"), nh = Object.prototype.hasOwnProperty, rh = Zf.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner, ih = { key: !0, ref: !0, __self: !0, __source: !0 };
+var Zp = Pl, eh = Symbol.for("react.element"), th = Symbol.for("react.fragment"), nh = Object.prototype.hasOwnProperty, rh = Zp.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner, ih = { key: !0, ref: !0, __self: !0, __source: !0 };
 function gu(e, t, n) {
   var i, o = {}, l = null, s = null;
   n !== void 0 && (l = "" + n), t.key !== void 0 && (l = "" + t.key), t.ref !== void 0 && (s = t.ref);
@@ -5828,40 +5828,40 @@ function sh({ title: e = "Tweaks", noDeckControls: t = !1, children: n }) {
     } catch {
       return !0;
     }
-  }), c = (f) => {
-    d(f), window.postMessage({ type: "__deck_rail_visible", on: f }, "*");
-  }, p = React.useRef({ x: 16, y: 16 }), u = 16, h = React.useCallback(() => {
-    const f = l.current;
-    if (!f) return;
-    const k = f.offsetWidth, m = f.offsetHeight, g = Math.max(u, window.innerWidth - k - u), y = Math.max(u, window.innerHeight - m - u);
-    p.current = {
-      x: Math.min(g, Math.max(u, p.current.x)),
-      y: Math.min(y, Math.max(u, p.current.y))
-    }, f.style.right = p.current.x + "px", f.style.bottom = p.current.y + "px";
+  }), u = (h) => {
+    d(h), window.postMessage({ type: "__deck_rail_visible", on: h }, "*");
+  }, f = React.useRef({ x: 16, y: 16 }), c = 16, p = React.useCallback(() => {
+    const h = l.current;
+    if (!h) return;
+    const k = h.offsetWidth, m = h.offsetHeight, g = Math.max(c, window.innerWidth - k - c), y = Math.max(c, window.innerHeight - m - c);
+    f.current = {
+      x: Math.min(g, Math.max(c, f.current.x)),
+      y: Math.min(y, Math.max(c, f.current.y))
+    }, h.style.right = f.current.x + "px", h.style.bottom = f.current.y + "px";
   }, []);
   React.useEffect(() => {
     if (!i) return;
-    if (h(), typeof ResizeObserver > "u")
-      return window.addEventListener("resize", h), () => window.removeEventListener("resize", h);
-    const f = new ResizeObserver(h);
-    return f.observe(document.documentElement), () => f.disconnect();
-  }, [i, h]), React.useEffect(() => {
-    const f = (k) => {
+    if (p(), typeof ResizeObserver > "u")
+      return window.addEventListener("resize", p), () => window.removeEventListener("resize", p);
+    const h = new ResizeObserver(p);
+    return h.observe(document.documentElement), () => h.disconnect();
+  }, [i, p]), React.useEffect(() => {
+    const h = (k) => {
       const m = k?.data?.type;
       m === "__activate_edit_mode" ? o(!0) : m === "__deactivate_edit_mode" && o(!1);
     };
-    return window.addEventListener("message", f), window.parent.postMessage({ type: "__edit_mode_available" }, "*"), () => window.removeEventListener("message", f);
+    return window.addEventListener("message", h), window.parent.postMessage({ type: "__edit_mode_available" }, "*"), () => window.removeEventListener("message", h);
   }, []);
-  const v = () => {
+  const w = () => {
     o(!1), window.parent.postMessage({ type: "__edit_mode_dismissed" }, "*");
-  }, w = (f) => {
+  }, x = (h) => {
     const k = l.current;
     if (!k) return;
-    const m = k.getBoundingClientRect(), g = f.clientX, y = f.clientY, x = window.innerWidth - m.right, b = window.innerHeight - m.bottom, j = (C) => {
-      p.current = {
-        x: x - (C.clientX - g),
+    const m = k.getBoundingClientRect(), g = h.clientX, y = h.clientY, v = window.innerWidth - m.right, b = window.innerHeight - m.bottom, j = (C) => {
+      f.current = {
+        x: v - (C.clientX - g),
         y: b - (C.clientY - y)
-      }, h();
+      }, p();
     }, S = () => {
       window.removeEventListener("mousemove", j), window.removeEventListener("mouseup", S);
     };
@@ -5875,23 +5875,23 @@ function sh({ title: e = "Tweaks", noDeckControls: t = !1, children: n }) {
         ref: l,
         className: "twk-panel",
         "data-noncommentable": "",
-        style: { right: p.current.x, bottom: p.current.y },
+        style: { right: f.current.x, bottom: f.current.y },
         children: [
-          /* @__PURE__ */ r.jsxs("div", { className: "twk-hd", onMouseDown: w, children: [
+          /* @__PURE__ */ r.jsxs("div", { className: "twk-hd", onMouseDown: x, children: [
             /* @__PURE__ */ r.jsx("b", { children: e }),
             /* @__PURE__ */ r.jsx(
               "button",
               {
                 className: "twk-x",
                 "aria-label": "Close tweaks",
-                onMouseDown: (f) => f.stopPropagation(),
-                onClick: v,
+                onMouseDown: (h) => h.stopPropagation(),
+                onClick: w,
                 children: "✕"
               }
             )
           ] }),
           /* @__PURE__ */ r.jsxs("div", { className: "twk-body", children: [
-            s && !t && /* @__PURE__ */ r.jsx(mu, { label: "Deck", children: /* @__PURE__ */ r.jsx(yu, { label: "Thumbnail rail", value: a, onChange: c }) }),
+            s && !t && /* @__PURE__ */ r.jsx(mu, { label: "Deck", children: /* @__PURE__ */ r.jsx(yu, { label: "Thumbnail rail", value: a, onChange: u }) }),
             n
           ] })
         ]
@@ -5964,16 +5964,16 @@ function dh({ label: e, value: t, options: n, onChange: i }) {
       }
     );
   }
-  const u = n.map((k) => typeof k == "object" ? k : { value: k, label: k }), h = Math.max(0, u.findIndex((k) => k.value === t)), v = u.length, w = (k) => {
-    const m = o.current.getBoundingClientRect(), g = m.width - 4, y = Math.floor((k - m.left - 2) / g * v);
-    return u[Math.max(0, Math.min(v - 1, y))].value;
-  }, f = (k) => {
+  const c = n.map((k) => typeof k == "object" ? k : { value: k, label: k }), p = Math.max(0, c.findIndex((k) => k.value === t)), w = c.length, x = (k) => {
+    const m = o.current.getBoundingClientRect(), g = m.width - 4, y = Math.floor((k - m.left - 2) / g * w);
+    return c[Math.max(0, Math.min(w - 1, y))].value;
+  }, h = (k) => {
     s(!0);
-    const m = w(k.clientX);
+    const m = x(k.clientX);
     m !== a.current && i(m);
-    const g = (x) => {
+    const g = (v) => {
       if (!o.current) return;
-      const b = w(x.clientX);
+      const b = x(v.clientX);
       b !== a.current && i(b);
     }, y = () => {
       s(!1), window.removeEventListener("pointermove", g), window.removeEventListener("pointerup", y);
@@ -5985,7 +5985,7 @@ function dh({ label: e, value: t, options: n, onChange: i }) {
     {
       ref: o,
       role: "radiogroup",
-      onPointerDown: f,
+      onPointerDown: h,
       className: l ? "twk-seg dragging" : "twk-seg",
       children: [
         /* @__PURE__ */ r.jsx(
@@ -5993,12 +5993,12 @@ function dh({ label: e, value: t, options: n, onChange: i }) {
           {
             className: "twk-seg-thumb",
             style: {
-              left: `calc(2px + ${h} * (100% - 4px) / ${v})`,
-              width: `calc((100% - 4px) / ${v})`
+              left: `calc(2px + ${p} * (100% - 4px) / ${w})`,
+              width: `calc((100% - 4px) / ${w})`
             }
           }
         ),
-        u.map((k) => /* @__PURE__ */ r.jsx("button", { type: "button", role: "radio", "aria-checked": k.value === t, children: k.label }, k.value))
+        c.map((k) => /* @__PURE__ */ r.jsx("button", { type: "button", role: "radio", "aria-checked": k.value === t, children: k.label }, k.value))
       ]
     }
   ) });
@@ -6022,18 +6022,18 @@ function ch({ label: e, value: t, placeholder: n, onChange: i }) {
   ) });
 }
 function uh({ label: e, value: t, min: n, max: i, step: o = 1, unit: l = "", onChange: s }) {
-  const a = (p) => n != null && p < n ? n : i != null && p > i ? i : p, d = React.useRef({ x: 0, val: 0 }), c = (p) => {
-    p.preventDefault(), d.current = { x: p.clientX, val: t };
-    const u = (String(o).split(".")[1] || "").length, h = (w) => {
-      const f = w.clientX - d.current.x, k = d.current.val + f * o, m = Math.round(k / o) * o;
-      s(a(Number(m.toFixed(u))));
-    }, v = () => {
-      window.removeEventListener("pointermove", h), window.removeEventListener("pointerup", v);
+  const a = (f) => n != null && f < n ? n : i != null && f > i ? i : f, d = React.useRef({ x: 0, val: 0 }), u = (f) => {
+    f.preventDefault(), d.current = { x: f.clientX, val: t };
+    const c = (String(o).split(".")[1] || "").length, p = (x) => {
+      const h = x.clientX - d.current.x, k = d.current.val + h * o, m = Math.round(k / o) * o;
+      s(a(Number(m.toFixed(c))));
+    }, w = () => {
+      window.removeEventListener("pointermove", p), window.removeEventListener("pointerup", w);
     };
-    window.addEventListener("pointermove", h), window.addEventListener("pointerup", v);
+    window.addEventListener("pointermove", p), window.addEventListener("pointerup", w);
   };
   return /* @__PURE__ */ r.jsxs("div", { className: "twk-num", children: [
-    /* @__PURE__ */ r.jsx("span", { className: "twk-num-lbl", onPointerDown: c, children: e }),
+    /* @__PURE__ */ r.jsx("span", { className: "twk-num-lbl", onPointerDown: u, children: e }),
     /* @__PURE__ */ r.jsx(
       "input",
       {
@@ -6042,19 +6042,19 @@ function uh({ label: e, value: t, min: n, max: i, step: o = 1, unit: l = "", onC
         min: n,
         max: i,
         step: o,
-        onChange: (p) => s(a(Number(p.target.value)))
+        onChange: (f) => s(a(Number(f.target.value)))
       }
     ),
     l && /* @__PURE__ */ r.jsx("span", { className: "twk-num-unit", children: l })
   ] });
 }
-function ph(e) {
+function fh(e) {
   const t = String(e).replace("#", ""), n = t.length === 3 ? t.replace(/./g, (a) => a + a) : t.padEnd(6, "0"), i = parseInt(n.slice(0, 6), 16);
   if (Number.isNaN(i)) return !0;
   const o = i >> 16 & 255, l = i >> 8 & 255, s = i & 255;
   return o * 299 + l * 587 + s * 114 > 148e3;
 }
-const fh = ({ light: e }) => /* @__PURE__ */ r.jsx("svg", { viewBox: "0 0 14 14", "aria-hidden": "true", children: /* @__PURE__ */ r.jsx(
+const ph = ({ light: e }) => /* @__PURE__ */ r.jsx("svg", { viewBox: "0 0 14 14", "aria-hidden": "true", children: /* @__PURE__ */ r.jsx(
   "path",
   {
     d: "M3 7.2 5.8 10 11 4.2",
@@ -6081,22 +6081,22 @@ function hh({ label: e, value: t, options: n, onChange: i }) {
     ] });
   const o = (s) => String(JSON.stringify(s)).toLowerCase(), l = o(t);
   return /* @__PURE__ */ r.jsx(Pn, { label: e, children: /* @__PURE__ */ r.jsx("div", { className: "twk-chips", role: "radiogroup", children: n.map((s, a) => {
-    const d = Array.isArray(s) ? s : [s], [c, ...p] = d, u = p.slice(0, 4), h = o(s) === l;
+    const d = Array.isArray(s) ? s : [s], [u, ...f] = d, c = f.slice(0, 4), p = o(s) === l;
     return /* @__PURE__ */ r.jsxs(
       "button",
       {
         type: "button",
         className: "twk-chip",
         role: "radio",
-        "aria-checked": h,
-        "data-on": h ? "1" : "0",
+        "aria-checked": p,
+        "data-on": p ? "1" : "0",
         "aria-label": d.join(", "),
         title: d.join(" · "),
-        style: { background: c },
+        style: { background: u },
         onClick: () => i(s),
         children: [
-          u.length > 0 && /* @__PURE__ */ r.jsx("span", { children: u.map((v, w) => /* @__PURE__ */ r.jsx("i", { style: { background: v } }, w)) }),
-          h && /* @__PURE__ */ r.jsx(fh, { light: ph(c) })
+          c.length > 0 && /* @__PURE__ */ r.jsx("span", { children: c.map((w, x) => /* @__PURE__ */ r.jsx("i", { style: { background: w } }, x)) }),
+          p && /* @__PURE__ */ r.jsx(ph, { light: fh(u) })
         ]
       },
       a
@@ -6540,20 +6540,20 @@ function xh(e, t, n) {
   if (!i) return null;
   const o = i.toLowerCase(), l = ku(i, t);
   if (l)
-    return n((f) => ({ ...f, automations: [...f.automations, l] })), `Saved automation: "${l.name}". ${l.desc} You can edit it under Automations.`;
+    return n((h) => ({ ...h, automations: [...h.automations, l] })), `Saved automation: "${l.name}". ${l.desc} You can edit it under Automations.`;
   const s = o.match(/(?:set|make|put|change).*(?:thermostat|temp(?:erature)?|nest|heat|cool|ac).*?(\d{2})/i) || o.match(/(?:thermostat|temp(?:erature)?|nest).*?(\d{2})/i) || o.match(/(\d{2})\s*(?:degrees?|°)/i);
   if (s && /thermostat|temp|nest|degree|°|warmer|colder|heat|cool|ac/i.test(o)) {
-    const f = Math.max(50, Math.min(90, +s[1]));
-    return n((k) => ({ ...k, thermostat: { ...k.thermostat, target: f } })), `Set the Nest to ${f}°.`;
+    const h = Math.max(50, Math.min(90, +s[1]));
+    return n((k) => ({ ...k, thermostat: { ...k.thermostat, target: h } })), `Set the Nest to ${h}°.`;
   }
   if (/warmer|hotter|heat up/i.test(o))
-    return n((f) => ({ ...f, thermostat: { ...f.thermostat, target: Math.min(83, f.thermostat.target + 2) } })), "Bumped the thermostat up 2°.";
+    return n((h) => ({ ...h, thermostat: { ...h.thermostat, target: Math.min(83, h.thermostat.target + 2) } })), "Bumped the thermostat up 2°.";
   if (/colder|cooler|cool (it )?down/i.test(o))
-    return n((f) => ({ ...f, thermostat: { ...f.thermostat, target: Math.max(60, f.thermostat.target - 2) } })), "Cooled it down 2°.";
+    return n((h) => ({ ...h, thermostat: { ...h.thermostat, target: Math.max(60, h.thermostat.target - 2) } })), "Cooled it down 2°.";
   const a = o.match(/(?:thermostat|nest|mode).*?(cool|heat|auto|off)/i) || o.match(/^(cool|heat|auto)\s*(?:mode|the house)?$/i);
   if (a) {
-    const f = a[1].toLowerCase();
-    return n((k) => ({ ...k, thermostat: { ...k.thermostat, mode: f } })), `Thermostat set to ${f}.`;
+    const h = a[1].toLowerCase();
+    return n((k) => ({ ...k, thermostat: { ...k.thermostat, mode: h } })), `Thermostat set to ${h}.`;
   }
   const d = [
     { match: /(movie|film|cinema)/i, id: "movie", reply: "Setting up movie night. Dimming the living room, switching to Apple TV." },
@@ -6563,90 +6563,90 @@ function xh(e, t, n) {
     { match: /(away|leaving|out)/i, id: "away", reply: "Away mode. Doors locked, sentry armed, lights off." },
     { match: /dinner party/i, id: "dinner", reply: "Dinner party scene running." }
   ];
-  for (const f of d)
-    if (f.match.test(i))
+  for (const h of d)
+    if (h.match.test(i))
       return n((k) => {
-        const m = { ...k, scenes: k.scenes.map((g) => ({ ...g, active: g.id === f.id })) };
-        return f.id === "movie" && (m.lights = k.lights.map((g) => g.room === "living" ? { ...g, on: !0, brightness: 12 } : g)), f.id === "sleep" && (m.lights = k.lights.map((g) => ({ ...g, on: !1 })), m.locks = k.locks.map((g) => ({ ...g, locked: !0 }))), f.id === "morning" && (m.lights = k.lights.map((g) => g.room === "kitchen" ? { ...g, on: !0, brightness: 85 } : g)), f.id === "away" && (m.locks = k.locks.map((g) => ({ ...g, locked: !0 })), m.lights = k.lights.map((g) => ({ ...g, on: !1 }))), m;
-      }), f.reply;
-  const c = o.match(/\b(living|kitchen|bedroom|office|outdoor|porch)\b/i), p = c ? c[1].toLowerCase() === "porch" ? "outdoor" : c[1].toLowerCase() : null, u = o.match(/(\d{1,3})\s*%/), h = u ? Math.max(1, Math.min(100, +u[1])) : null;
+        const m = { ...k, scenes: k.scenes.map((g) => ({ ...g, active: g.id === h.id })) };
+        return h.id === "movie" && (m.lights = k.lights.map((g) => g.room === "living" ? { ...g, on: !0, brightness: 12 } : g)), h.id === "sleep" && (m.lights = k.lights.map((g) => ({ ...g, on: !1 })), m.locks = k.locks.map((g) => ({ ...g, locked: !0 }))), h.id === "morning" && (m.lights = k.lights.map((g) => g.room === "kitchen" ? { ...g, on: !0, brightness: 85 } : g)), h.id === "away" && (m.locks = k.locks.map((g) => ({ ...g, locked: !0 })), m.lights = k.lights.map((g) => ({ ...g, on: !1 }))), m;
+      }), h.reply;
+  const u = o.match(/\b(living|kitchen|bedroom|office|outdoor|porch)\b/i), f = u ? u[1].toLowerCase() === "porch" ? "outdoor" : u[1].toLowerCase() : null, c = o.match(/(\d{1,3})\s*%/), p = c ? Math.max(1, Math.min(100, +c[1])) : null;
   if (/turn (?:on|up)|lights? on|brighten/i.test(o) && /light/i.test(o))
-    return n((f) => ({ ...f, lights: f.lights.map((k) => !p || k.room === p ? { ...k, on: !0, brightness: h ?? k.brightness } : k) })), p ? `${ui(p)} lights on${h ? ` at ${h}%` : ""}.` : `Lights on${h ? ` at ${h}%` : ""}.`;
+    return n((h) => ({ ...h, lights: h.lights.map((k) => !f || k.room === f ? { ...k, on: !0, brightness: p ?? k.brightness } : k) })), f ? `${ui(f)} lights on${p ? ` at ${p}%` : ""}.` : `Lights on${p ? ` at ${p}%` : ""}.`;
   if (/turn (?:off|down)|lights? off/i.test(o) && /light/i.test(o))
-    return n((f) => ({ ...f, lights: f.lights.map((k) => !p || k.room === p ? { ...k, on: !1 } : k) })), p ? `${ui(p)} lights off.` : "Lights off.";
+    return n((h) => ({ ...h, lights: h.lights.map((k) => !f || k.room === f ? { ...k, on: !1 } : k) })), f ? `${ui(f)} lights off.` : "Lights off.";
   if (/(dim|lower).*light/i.test(o))
-    return n((f) => ({ ...f, lights: f.lights.map((k) => !p || k.room === p ? { ...k, on: !0, brightness: h ?? 30 } : k) })), `Dimmed${p ? ` the ${p}` : ""} to ${h ?? 30}%.`;
+    return n((h) => ({ ...h, lights: h.lights.map((k) => !f || k.room === f ? { ...k, on: !0, brightness: p ?? 30 } : k) })), `Dimmed${f ? ` the ${f}` : ""} to ${p ?? 30}%.`;
   if (/lock (?:up|the house|all|everything|doors)/i.test(o) || /^lock$/i.test(o.trim()))
-    return n((f) => ({ ...f, locks: f.locks.map((k) => ({ ...k, locked: !0 })) })), "All doors locked. Sentry armed on the Tesla.";
-  const v = o.match(/(?:set|put|switch|change|arm|disarm).*?ring.*?(disarm(?:ed)?|home|away|stay|night)/i) || o.match(/ring.*?(disarm(?:ed)?|home|away|stay|night).*?mode/i) || o.match(/^(?:arm|disarm)(?:\s+(?:to\s+)?(home|away|stay|disarmed))?$/i) || o.match(/(?:arm|set).*?(?:alarm|system).*?(home|away|stay|night)/i) || o.match(/(disarm)(?:\s+(?:the\s+)?(?:alarm|ring|system))?$/i);
-  if (v) {
-    let f = (v[1] || "").toLowerCase();
-    if ((f === "stay" || f === "night") && (f = "home"), f.startsWith("disarm") && (f = "disarmed"), !f && /^arm/i.test(i.trim()) && (f = "away"), f === "disarmed" || f === "home" || f === "away")
+    return n((h) => ({ ...h, locks: h.locks.map((k) => ({ ...k, locked: !0 })) })), "All doors locked. Sentry armed on the Tesla.";
+  const w = o.match(/(?:set|put|switch|change|arm|disarm).*?ring.*?(disarm(?:ed)?|home|away|stay|night)/i) || o.match(/ring.*?(disarm(?:ed)?|home|away|stay|night).*?mode/i) || o.match(/^(?:arm|disarm)(?:\s+(?:to\s+)?(home|away|stay|disarmed))?$/i) || o.match(/(?:arm|set).*?(?:alarm|system).*?(home|away|stay|night)/i) || o.match(/(disarm)(?:\s+(?:the\s+)?(?:alarm|ring|system))?$/i);
+  if (w) {
+    let h = (w[1] || "").toLowerCase();
+    if ((h === "stay" || h === "night") && (h = "home"), h.startsWith("disarm") && (h = "disarmed"), !h && /^arm/i.test(i.trim()) && (h = "away"), h === "disarmed" || h === "home" || h === "away")
       return n((m) => ({
         ...m,
-        ring: { ...m.ring || {}, mode: f, lastChanged: (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), changedBy: "Voice" },
-        locks: f === "away" ? m.locks.map((g) => ({ ...g, locked: !0 })) : m.locks
+        ring: { ...m.ring || {}, mode: h, lastChanged: (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), changedBy: "Voice" },
+        locks: h === "away" ? m.locks.map((g) => ({ ...g, locked: !0 })) : m.locks
       })), {
         disarmed: "Ring disarmed. Sensors off.",
         home: "Ring set to Home. Perimeter armed, interior bypassed so you can move around.",
         away: "Ring armed Away. Doors locked, full system armed with a 30-second entry delay."
-      }[f];
+      }[h];
   }
   if (/unlock front/i.test(o))
-    return n((f) => ({ ...f, locks: f.locks.map((k) => k.id === "lk1" ? { ...k, locked: !1 } : k) })), "Unlocking the front door. I'll re-lock in five.";
+    return n((h) => ({ ...h, locks: h.locks.map((k) => k.id === "lk1" ? { ...k, locked: !1 } : k) })), "Unlocking the front door. I'll re-lock in five.";
   if (/unlock back/i.test(o))
-    return n((f) => ({ ...f, locks: f.locks.map((k) => k.id === "lk2" ? { ...k, locked: !1 } : k) })), "Back door unlocked.";
+    return n((h) => ({ ...h, locks: h.locks.map((k) => k.id === "lk2" ? { ...k, locked: !1 } : k) })), "Back door unlocked.";
   if (/(pause|stop) music/i.test(o))
-    return n((f) => ({ ...f, speakers: f.speakers.map((k) => ({ ...k, playing: !1 })) })), "Music paused everywhere.";
+    return n((h) => ({ ...h, speakers: h.speakers.map((k) => ({ ...k, playing: !1 })) })), "Music paused everywhere.";
   if (/skip|next track/i.test(o))
-    return n((f) => ({ ...f, speakers: f.speakers.map((k) => k.playing ? { ...k, trackId: vh(k.trackId), progress: 0 } : k) })), "Skipping to the next track.";
-  const w = o.match(/^(?:please\s+)?play\s+(.+?)(?:\s+(?:in|on|to)\s+(?:the\s+)?([a-z\s]+?))?$/i) || o.match(/^(?:put on|start)\s+(.+?)(?:\s+(?:in|on|to)\s+(?:the\s+)?([a-z\s]+?))?$/i);
-  if (w) {
-    const f = w[1].trim(), k = (w[2] || "").trim().toLowerCase(), m = /everywhere|whole house|all (rooms|speakers)|every room/i.test(i), g = { living: "living", "living room": "living", kitchen: "kitchen", bedroom: "bedroom", office: "office", outdoor: "outdoor", patio: "outdoor", porch: "outdoor" }, y = g[k] || k && Object.keys(g).find((x) => k.includes(x)) || null;
-    if (!/^(music|something|a song|tunes)$/i.test(f)) {
-      const x = f.toLowerCase();
-      let b = Te.find((C) => C.title.toLowerCase() === x) || Te.find((C) => C.title.toLowerCase().includes(x)) || Te.find((C) => C.album.toLowerCase().includes(x)) || Te.find((C) => C.artist.toLowerCase().includes(x)), j = null, S = "";
+    return n((h) => ({ ...h, speakers: h.speakers.map((k) => k.playing ? { ...k, trackId: vh(k.trackId), progress: 0 } : k) })), "Skipping to the next track.";
+  const x = o.match(/^(?:please\s+)?play\s+(.+?)(?:\s+(?:in|on|to)\s+(?:the\s+)?([a-z\s]+?))?$/i) || o.match(/^(?:put on|start)\s+(.+?)(?:\s+(?:in|on|to)\s+(?:the\s+)?([a-z\s]+?))?$/i);
+  if (x) {
+    const h = x[1].trim(), k = (x[2] || "").trim().toLowerCase(), m = /everywhere|whole house|all (rooms|speakers)|every room/i.test(i), g = { living: "living", "living room": "living", kitchen: "kitchen", bedroom: "bedroom", office: "office", outdoor: "outdoor", patio: "outdoor", porch: "outdoor" }, y = g[k] || k && Object.keys(g).find((v) => k.includes(v)) || null;
+    if (!/^(music|something|a song|tunes)$/i.test(h)) {
+      const v = h.toLowerCase();
+      let b = Te.find((C) => C.title.toLowerCase() === v) || Te.find((C) => C.title.toLowerCase().includes(v)) || Te.find((C) => C.album.toLowerCase().includes(v)) || Te.find((C) => C.artist.toLowerCase().includes(v)), j = null, S = "";
       if (b) {
-        const C = Te.filter((T) => T.id !== b.id && T.artist.toLowerCase() === b.artist.toLowerCase()), $ = Te.filter((T) => T.id !== b.id && !C.includes(T)).slice(0, 4);
-        j = [...C, ...$].slice(0, 6).map((T) => T.id), S = `${b.title} — ${b.artist}`;
+        const C = Te.filter((T) => T.id !== b.id && T.artist.toLowerCase() === b.artist.toLowerCase()), M = Te.filter((T) => T.id !== b.id && !C.includes(T)).slice(0, 4);
+        j = [...C, ...M].slice(0, 6).map((T) => T.id), S = `${b.title} — ${b.artist}`;
       } else {
-        const C = (t.playlists || vu).find(($) => $.name.toLowerCase().includes(x));
-        C && C.tracks.length && (b = Te.find(($) => $.id === C.tracks[0]), j = C.tracks.slice(1, 7), S = `playlist "${C.name}"`);
+        const C = (t.playlists || vu).find((M) => M.name.toLowerCase().includes(v));
+        C && C.tracks.length && (b = Te.find((M) => M.id === C.tracks[0]), j = C.tracks.slice(1, 7), S = `playlist "${C.name}"`);
       }
       if (b) {
         const C = m ? "all speakers" : y ? ui(y) : "the Living Room";
-        return n(($) => ({ ...$, speakers: $.speakers.map((T) => m || !y && T.room === "living" || y && T.room === y ? { ...T, trackId: b.id, progress: 0, playing: !0, queue: j || T.queue } : T) })), `Playing ${S} in ${C}.`;
+        return n((M) => ({ ...M, speakers: M.speakers.map((T) => m || !y && T.room === "living" || y && T.room === y ? { ...T, trackId: b.id, progress: 0, playing: !0, queue: j || T.queue } : T) })), `Playing ${S} in ${C}.`;
       }
     }
   }
   if (/(play|resume) music/i.test(o))
-    return n((f) => ({ ...f, speakers: f.speakers.map((k) => ({ ...k, playing: !0 })) })), "Music playing.";
+    return n((h) => ({ ...h, speakers: h.speakers.map((k) => ({ ...k, playing: !0 })) })), "Music playing.";
   if (/precondition|warm.*car|cool.*car|preheat/i.test(o))
-    return n((f) => ({ ...f, tesla: { ...f.tesla, climateOn: !0, target: 70 } })), "Preconditioning the Tesla to 70°.";
+    return n((h) => ({ ...h, tesla: { ...h.tesla, climateOn: !0, target: 70 } })), "Preconditioning the Tesla to 70°.";
   if (/charge|tesla|car/i.test(o) && /status|how/i.test(o)) return `Tesla is at ${t.tesla.chargePct}%, ${t.tesla.range} mi range, ${t.tesla.charging ? "charging" : t.tesla.pluggedIn ? "plugged in" : "unplugged"}.`;
   if (/lock.*car|sentry/i.test(o))
-    return n((f) => ({ ...f, tesla: { ...f.tesla, locked: !0, sentry: !0 } })), "Tesla locked, sentry on.";
+    return n((h) => ({ ...h, tesla: { ...h.tesla, locked: !0, sentry: !0 } })), "Tesla locked, sentry on.";
   if (/close.*garage|garage.*close/i.test(o))
-    return n((f) => ({ ...f, garage: { ...f.garage, doors: f.garage.doors.map((k) => ({ ...k, open: !1, lastChanged: "now" })) } })), "Closing all garage doors.";
+    return n((h) => ({ ...h, garage: { ...h.garage, doors: h.garage.doors.map((k) => ({ ...k, open: !1, lastChanged: "now" })) } })), "Closing all garage doors.";
   if (/open.*garage|garage.*open/i.test(o))
-    return n((f) => ({ ...f, garage: { ...f.garage, doors: f.garage.doors.map((k) => k.id === "g1" ? { ...k, open: !0, lastChanged: "now" } : k) } })), "Opening the main garage door.";
+    return n((h) => ({ ...h, garage: { ...h.garage, doors: h.garage.doors.map((k) => k.id === "g1" ? { ...k, open: !0, lastChanged: "now" } : k) } })), "Opening the main garage door.";
   if (/(vacuum|shark|roomba|clean.*house|start.*clean)/i.test(o) && /(start|clean|run|begin)/i.test(o)) {
-    const f = o.match(/\b(living|kitchen|bedroom|office|outdoor)\b/i);
-    return n((k) => ({ ...k, vacuum: { ...k.vacuum, state: "cleaning", mode: f ? "room" : "auto", currentRoom: f ? f[1].toLowerCase() : null } })), f ? `Sending the Shark to clean the ${f[1].toLowerCase()}.` : "Shark is starting a full-house clean.";
+    const h = o.match(/\b(living|kitchen|bedroom|office|outdoor)\b/i);
+    return n((k) => ({ ...k, vacuum: { ...k.vacuum, state: "cleaning", mode: h ? "room" : "auto", currentRoom: h ? h[1].toLowerCase() : null } })), h ? `Sending the Shark to clean the ${h[1].toLowerCase()}.` : "Shark is starting a full-house clean.";
   }
   if (/(stop|pause).*(vacuum|shark|clean)/i.test(o))
-    return n((f) => ({ ...f, vacuum: { ...f.vacuum, state: "paused" } })), "Vacuum paused.";
+    return n((h) => ({ ...h, vacuum: { ...h.vacuum, state: "paused" } })), "Vacuum paused.";
   if (/(dock|return).*(vacuum|shark)/i.test(o) || /send.*shark.*home/i.test(o))
-    return n((f) => ({ ...f, vacuum: { ...f.vacuum, state: "returning" } })), "Sending the Shark back to its dock.";
+    return n((h) => ({ ...h, vacuum: { ...h.vacuum, state: "returning" } })), "Sending the Shark back to its dock.";
   if (/weather/i.test(o)) return `It's ${t.weather.temp}° and ${t.weather.summary.toLowerCase()}. High of ${t.weather.high}° this afternoon.`;
   if (/alarm.*\d|wake.*\d/i.test(o)) {
-    const f = o.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
-    if (f) {
-      const k = +f[1], m = f[2] || "00", g = f[3] ? f[3].toUpperCase() : k < 8 ? "AM" : "PM", y = `${k}:${m} ${g}`;
-      return n((x) => ({ ...x, alarms: [{ id: "new" + Date.now(), label: "Tomorrow", time: y, days: "Once", on: !0 }, ...x.alarms] })), `Alarm set for ${y}.`;
+    const h = o.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+    if (h) {
+      const k = +h[1], m = h[2] || "00", g = h[3] ? h[3].toUpperCase() : k < 8 ? "AM" : "PM", y = `${k}:${m} ${g}`;
+      return n((v) => ({ ...v, alarms: [{ id: "new" + Date.now(), label: "Tomorrow", time: y, days: "Once", on: !0 }, ...v.alarms] })), `Alarm set for ${y}.`;
     }
   }
-  return /do not disturb|dnd/i.test(o) ? (n((f) => ({ ...f, dnd: { active: !0, until: "next meeting end", source: "agent" } })), "Do not disturb on until your next meeting ends.") : null;
+  return /do not disturb|dnd/i.test(o) ? (n((h) => ({ ...h, dnd: { active: !0, until: "next meeting end", source: "agent" } })), "Do not disturb on until your next meeting ends.") : null;
 }
 const ui = (e) => e && e.charAt(0).toUpperCase() + e.slice(1);
 function vh(e) {
@@ -6659,28 +6659,28 @@ function ku(e, t) {
   let i = null, o = "";
   const l = n.match(/motion (?:on|at|in front of|by|near)\s*(?:the\s*)?([a-z\s]+?)(?:\s*(?:cam(?:era)?|cam))?(?:[,]|\s+then|\s+turn|\s+do|\s+set|\s+lock|\s+open|\s+close|\s+run|$)/i);
   if (l || /motion/i.test(n)) {
-    const u = l?.[1]?.trim();
-    let h = t.cameras.find((v) => u && v.name.toLowerCase().includes(u));
-    h || (h = t.cameras.find((v) => /front/i.test(v.name)) || t.cameras[0]), i = { type: "motion", cameraId: h.id }, o = `motion at ${h.name}`;
+    const c = l?.[1]?.trim();
+    let p = t.cameras.find((w) => c && w.name.toLowerCase().includes(c));
+    p || (p = t.cameras.find((w) => /front/i.test(w.name)) || t.cameras[0]), i = { type: "motion", cameraId: p.id }, o = `motion at ${p.name}`;
   }
   const s = e.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
   if (!i && s) {
-    const u = +s[1], h = s[2] || "00", v = s[3].toUpperCase(), w = `${u}:${h} ${v}`;
-    i = { type: "time", at: w }, o = `${w}`;
+    const c = +s[1], p = s[2] || "00", w = s[3].toUpperCase(), x = `${c}:${p} ${w}`;
+    i = { type: "time", at: x }, o = `${x}`;
   }
   if (!i && /(?:i|we|someone)\s+(?:get home|arrive|come home)/i.test(n) && (i = { type: "arriveHome" }, o = "I arrive home"), !i && /(?:i|we|everyone)\s+(?:leave|go away)/i.test(n) && (i = { type: "leaveHome" }, o = "I leave home"), !i) return null;
-  const a = [], d = [], c = n.match(/turn (?:on|up)\s+(?:the\s+)?([a-z\s]+?)\s*(?:light|lights|lamp)/i);
-  if (c) {
-    const u = c[1].trim(), h = t.lights.find((v) => u && (v.name.toLowerCase().includes(u) || v.room.toLowerCase().includes(u)));
-    h ? (a.push({ type: "light", lightId: h.id, on: !0, brightness: 80 }), d.push(`turn on ${h.name}`)) : (a.push({ type: "allLights", on: !0 }), d.push("turn lights on"));
+  const a = [], d = [], u = n.match(/turn (?:on|up)\s+(?:the\s+)?([a-z\s]+?)\s*(?:light|lights|lamp)/i);
+  if (u) {
+    const c = u[1].trim(), p = t.lights.find((w) => c && (w.name.toLowerCase().includes(c) || w.room.toLowerCase().includes(c)));
+    p ? (a.push({ type: "light", lightId: p.id, on: !0, brightness: 80 }), d.push(`turn on ${p.name}`)) : (a.push({ type: "allLights", on: !0 }), d.push("turn lights on"));
   } else /turn (?:on|up).*light/i.test(n) && (a.push({ type: "allLights", on: !0 }), d.push("turn lights on"));
   if (/turn (?:off|down).*light|lights? off/i.test(n) && (a.push({ type: "allLights", on: !1 }), d.push("turn lights off")), /lock (?:up|the door|all|everything|doors)|lock the house/i.test(n) && (a.push({ type: "lockAll" }), d.push("lock everything")), /run\s+(?:the\s+)?(goodnight|sleep|movie|away|focus|morning|dinner)/i.test(n)) {
-    const u = n.match(/run\s+(?:the\s+)?(goodnight|sleep|movie|away|focus|morning|dinner)/i)[1], h = u === "goodnight" ? "sleep" : u;
-    a.push({ type: "scene", sceneId: h }), d.push(`run ${u}`);
+    const c = n.match(/run\s+(?:the\s+)?(goodnight|sleep|movie|away|focus|morning|dinner)/i)[1], p = c === "goodnight" ? "sleep" : c;
+    a.push({ type: "scene", sceneId: p }), d.push(`run ${c}`);
   }
   /precondition|warm.*car/i.test(n) && (a.push({ type: "precondition" }), d.push("precondition the Tesla")), /close.*garage/i.test(n) && (a.push({ type: "closeGarage" }), d.push("close the garage"));
-  const p = n.match(/(?:set|make).*(?:thermostat|nest|temp).*?(\d{2})/i);
-  return p && (a.push({ type: "thermostat", target: +p[1] }), d.push(`set thermostat to ${p[1]}°`)), a.length ? {
+  const f = n.match(/(?:set|make).*(?:thermostat|nest|temp).*?(\d{2})/i);
+  return f && (a.push({ type: "thermostat", target: +f[1] }), d.push(`set thermostat to ${f[1]}°`)), a.length ? {
     id: "au" + Date.now(),
     name: `${ui(o)} → ${d[0]}`,
     trigger: i,
@@ -6795,12 +6795,12 @@ function Rh(e) {
     return { ...t, ...Ba() };
   const n = Object.values(e);
   for (const l of n) {
-    const s = l.entity_id, a = s.split(".")[0], d = l.attributes?.friendly_name || s, c = Ch(d, l.attributes?.area_id);
+    const s = l.entity_id, a = s.split(".")[0], d = l.attributes?.friendly_name || s, u = Ch(d, l.attributes?.area_id);
     switch (a) {
       case "light":
         t.lights.push({
           id: s,
-          room: c,
+          room: u,
           name: d,
           on: zh(l),
           brightness: Th(l.attributes),
@@ -6808,30 +6808,30 @@ function Rh(e) {
         });
         break;
       case "media_player": {
-        const p = l.attributes?.device_class, u = p === "tv" || /\btv\b/i.test(d) || /apple\s*tv/i.test(d) || /chromecast/i.test(d) || /webos/i.test(d), h = l.state === "playing", v = typeof l.attributes?.volume_level == "number" ? Math.round(l.attributes.volume_level * 100) : 30;
-        u ? (t.tvs.push({
+        const f = l.attributes?.device_class, c = f === "tv" || /\btv\b/i.test(d) || /apple\s*tv/i.test(d) || /chromecast/i.test(d) || /webos/i.test(d), p = l.state === "playing", w = typeof l.attributes?.volume_level == "number" ? Math.round(l.attributes.volume_level * 100) : 30;
+        c ? (t.tvs.push({
           id: s,
           name: d,
-          brand: p === "tv" ? "tv" : "appletv",
+          brand: f === "tv" ? "tv" : "appletv",
           model: d,
-          room: c,
+          room: u,
           on: l.state !== "off" && l.state !== "unavailable",
           app: l.attributes?.app_name || "—",
           show: l.attributes?.media_title || "—",
           poster: "oklch(45% 0.10 280)",
-          playing: h,
+          playing: p,
           progress: l.attributes?.media_position || 0,
           dur: l.attributes?.media_duration || 0,
-          vol: v,
+          vol: w,
           mute: !!l.attributes?.is_volume_muted,
           input: l.attributes?.source || "—"
         }), t.tv.on === !1 && l.state !== "off" && l.state !== "unavailable" && (t.tv = { on: !0, source: l.attributes?.app_name || d, show: l.attributes?.media_title || "" })) : t.speakers.push({
           id: s,
-          room: c,
+          room: u,
           name: d,
           type: "sonos",
-          playing: h,
-          vol: v,
+          playing: p,
+          vol: w,
           group: l.attributes?.group_members?.[0] || null,
           trackId: null,
           // prototype expected an ID into TRACKS; we don't have that
@@ -6848,8 +6848,8 @@ function Rh(e) {
         t.locks.push({ id: s, name: d, locked: l.state === "locked" });
         break;
       case "cover": {
-        const p = l.attributes?.device_class;
-        (p === "garage" || p === "door" || /garage/i.test(d)) && t.garage.doors.push({
+        const f = l.attributes?.device_class;
+        (f === "garage" || f === "door" || /garage/i.test(d)) && t.garage.doors.push({
           id: s,
           name: d,
           open: l.state === "open" || l.state === "opening",
@@ -6888,14 +6888,14 @@ function Rh(e) {
           summary: (l.state || "Partly cloudy").replace(/-/g, " "),
           high: Math.round(l.attributes?.forecast?.[0]?.temperature ?? 71),
           low: Math.round(l.attributes?.forecast?.[0]?.templow ?? 52),
-          hourly: (l.attributes?.forecast || []).slice(0, 12).map((p) => Math.round(p.temperature || 65))
+          hourly: (l.attributes?.forecast || []).slice(0, 12).map((f) => Math.round(f.temperature || 65))
         });
         break;
       case "camera":
         t.cameras.push({
           id: s,
           name: d,
-          room: c,
+          room: u,
           online: l.state !== "unavailable",
           motion: !1,
           hue: "oklch(60% 0.10 200)"
@@ -6917,77 +6917,77 @@ function Rh(e) {
         break;
       case "alarm_control_panel":
         if (!t.ring) {
-          const p = { armed_home: "home", armed_away: "away", armed_night: "home", disarmed: "disarmed" };
+          const f = { armed_home: "home", armed_away: "away", armed_night: "home", disarmed: "disarmed" };
           t.ring = {
             id: s,
-            mode: p[l.state] || "disarmed",
+            mode: f[l.state] || "disarmed",
             lastChanged: Xr(l.last_changed),
             changedBy: "HA"
           };
         }
         break;
       case "todo": {
-        const p = parseInt(l.state, 10);
+        const f = parseInt(l.state, 10);
         t.todos.push({
           id: s,
           name: d,
-          count: Number.isFinite(p) ? p : 0
+          count: Number.isFinite(f) ? f : 0
         });
         break;
       }
       case "calendar":
         if (t.calendar.push({ id: s, name: d }), l.attributes?.message && (l.attributes?.start_time || l.attributes?.start)) {
-          const p = l.attributes.start_time || l.attributes.start, u = new Date(p), h = typeof p == "string" && /\d{2}:\d{2}/.test(p), v = l.attributes.all_day === !0 || typeof p == "string" && !h;
+          const f = l.attributes.start_time || l.attributes.start, c = new Date(f), p = typeof f == "string" && /\d{2}:\d{2}/.test(f), w = l.attributes.all_day === !0 || typeof f == "string" && !p;
           t.calendarEvents.push({
             id: `${s}-next`,
             title: l.attributes.message,
             where: l.attributes.location || "",
             kind: /birthday|bday/i.test(l.attributes.message) ? "birthday" : "event",
-            start: p,
-            isAllDay: v,
-            day: u.getDate(),
-            monthShort: u.toLocaleDateString([], { month: "short" }).toUpperCase(),
-            timeStr: v ? "All day" : u.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-            sortKey: u.getTime()
+            start: f,
+            isAllDay: w,
+            day: c.getDate(),
+            monthShort: c.toLocaleDateString([], { month: "short" }).toUpperCase(),
+            timeStr: w ? "All day" : c.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+            sortKey: c.getTime()
           });
         }
         break;
       case "sensor": {
-        const p = l.attributes || {};
-        if (p.team_homeaway && p.team_score !== void 0)
+        const f = l.attributes || {};
+        if (f.team_homeaway && f.team_score !== void 0)
           t.sports.push({
             id: s,
-            team: p.team_name || d,
-            opponent: p.opponent_name || "Opponent",
-            teamScore: p.team_score,
-            oppScore: p.opponent_score,
+            team: f.team_name || d,
+            opponent: f.opponent_name || "Opponent",
+            teamScore: f.team_score,
+            oppScore: f.opponent_score,
             state: l.state,
             live: l.state === "IN" || l.state === "in_progress"
           });
-        else if (p.team_abbr && p.opponent_abbr) {
-          const u = /^(IN|HALF|END)$/.test(l.state);
+        else if (f.team_abbr && f.opponent_abbr) {
+          const c = /^(IN|HALF|END)$/.test(l.state);
           t.sports.push({
             id: s,
-            team: p.team_abbr,
-            opponent: p.opponent_abbr,
-            teamScore: p.team_score,
-            oppScore: p.opponent_score,
-            state: u ? `${p.clock || ""} Q${p.quarter || ""}`.trim() : l.state || "",
-            live: u
+            team: f.team_abbr,
+            opponent: f.opponent_abbr,
+            teamScore: f.team_score,
+            oppScore: f.opponent_score,
+            state: c ? `${f.clock || ""} Q${f.quarter || ""}`.trim() : l.state || "",
+            live: c
           });
         }
         break;
       }
       case "event": {
         if (s.startsWith("event.feedreader") || /feedreader|rss/i.test(d)) {
-          const p = Array.isArray(l.attributes?.entries) ? l.attributes.entries : [];
-          for (const u of p.slice(0, 5))
+          const f = Array.isArray(l.attributes?.entries) ? l.attributes.entries : [];
+          for (const c of f.slice(0, 5))
             t.news.push({
-              id: `${s}-${u.id || u.link || u.title}`,
-              title: u.title || "Untitled",
-              url: u.link || "#",
+              id: `${s}-${c.id || c.link || c.title}`,
+              title: c.title || "Untitled",
+              url: c.link || "#",
               source: l.attributes?.feed_title || d,
-              timeAgo: Xr(u.published || u.updated || l.last_changed)
+              timeAgo: Xr(c.published || c.updated || l.last_changed)
             });
         }
         break;
@@ -7006,7 +7006,7 @@ function Rh(e) {
     return { ...l, motion: i.get(s) ?? l.motion };
   });
   const o = Ih(e);
-  return o && (t.tesla = Mh(e, o)), { ...t, ...Ba(t) };
+  return o && (t.tesla = $h(e, o)), { ...t, ...Ba(t) };
 }
 function Ih(e) {
   for (const t of Object.keys(e)) {
@@ -7017,7 +7017,7 @@ function Ih(e) {
   }
   return null;
 }
-function $h(e, t) {
+function Mh(e, t) {
   const n = [
     `lock.${t}`,
     `lock.${t}_doors`,
@@ -7028,17 +7028,17 @@ function $h(e, t) {
     if (i.startsWith("lock.") && i.includes(t)) return i;
   return null;
 }
-function Mh(e, t) {
-  const n = (v) => e[v], i = (v) => {
-    const w = n(v);
-    if (!w || w.state === "unknown" || w.state === "unavailable") return null;
-    const f = Number(w.state);
-    return Number.isFinite(f) ? f : null;
-  }, o = $h(e, t), l = o ? n(o) : null, s = n(`sensor.${t}_battery_level`), a = n(`sensor.${t}_battery_range`), d = n(`climate.${t}_climate`), c = n(`sensor.${t}_inside_temperature`), p = n(`sensor.${t}_odometer`), u = n(`device_tracker.${t}_location`), h = s?.attributes?.friendly_name?.replace(/ Battery level$/i, "") || a?.attributes?.friendly_name?.replace(/ Battery range$/i, "") || "Tesla";
+function $h(e, t) {
+  const n = (w) => e[w], i = (w) => {
+    const x = n(w);
+    if (!x || x.state === "unknown" || x.state === "unavailable") return null;
+    const h = Number(x.state);
+    return Number.isFinite(h) ? h : null;
+  }, o = Mh(e, t), l = o ? n(o) : null, s = n(`sensor.${t}_battery_level`), a = n(`sensor.${t}_battery_range`), d = n(`climate.${t}_climate`), u = n(`sensor.${t}_inside_temperature`), f = n(`sensor.${t}_odometer`), c = n(`device_tracker.${t}_location`), p = s?.attributes?.friendly_name?.replace(/ Battery level$/i, "") || a?.attributes?.friendly_name?.replace(/ Battery range$/i, "") || "Tesla";
   return {
     id: t,
     lockEntityId: o,
-    name: h,
+    name: p,
     locked: l?.state === "locked",
     chargePct: Math.round(i(`sensor.${t}_battery_level`) ?? 0),
     range: Math.round(i(`sensor.${t}_battery_range`) ?? 0),
@@ -7048,7 +7048,7 @@ function Mh(e, t) {
     pluggedIn: n(`binary_sensor.${t}_charge_cable`)?.state === "on",
     cabin: Math.round(i(`sensor.${t}_inside_temperature`) ?? 0),
     outside: Math.round(i(`sensor.${t}_outside_temperature`) ?? 0),
-    tempUnit: c?.attributes?.unit_of_measurement || "°F",
+    tempUnit: u?.attributes?.unit_of_measurement || "°F",
     target: Math.round(d?.attributes?.temperature ?? 70),
     targetMin: d?.attributes?.min_temp ?? 60,
     targetMax: d?.attributes?.max_temp ?? 82,
@@ -7057,9 +7057,9 @@ function Mh(e, t) {
     sentry: n(`switch.${t}_sentry_mode`)?.state === "on",
     valet: n(`switch.${t}_valet_mode`)?.state === "on",
     defrost: n(`switch.${t}_defrost`)?.state === "on",
-    location: u?.attributes?.friendly_name || (typeof u?.state == "string" && !/^[\d.\-,]+$/.test(u.state) ? u.state : "—"),
+    location: c?.attributes?.friendly_name || (typeof c?.state == "string" && !/^[\d.\-,]+$/.test(c.state) ? c.state : "—"),
     odometer: Math.round(i(`sensor.${t}_odometer`) ?? 0),
-    odometerUnit: p?.attributes?.unit_of_measurement || "mi",
+    odometerUnit: f?.attributes?.unit_of_measurement || "mi",
     frunk: n(`cover.${t}_frunk`)?.state === "open",
     trunk: n(`cover.${t}_trunk`)?.state === "open",
     chargePortOpen: n(`cover.${t}_charge_port_door`)?.state === "open",
@@ -7128,20 +7128,20 @@ function Eh(e, t, n) {
     return;
   }
   const i = (s, a, d) => {
-    const c = { ts: Date.now(), kind: "call", domain: s, service: a, data: d, status: "pending" };
-    lt(c), console.log(`[ha-bridge] → ${s}.${a}`, d);
+    const u = { ts: Date.now(), kind: "call", domain: s, service: a, data: d, status: "pending" };
+    lt(u), console.log(`[ha-bridge] → ${s}.${a}`, d);
     try {
-      const p = n.callService(s, a, d);
-      p && typeof p.then == "function" ? p.then(
+      const f = n.callService(s, a, d);
+      f && typeof f.then == "function" ? f.then(
         () => {
-          c.status = "ok", console.log(`[ha-bridge] ✓ ${s}.${a}`);
+          u.status = "ok", console.log(`[ha-bridge] ✓ ${s}.${a}`);
         },
-        (u) => {
-          c.status = "error", c.error = u?.message || String(u), console.warn(`[ha-bridge] ✗ ${s}.${a} rejected:`, u?.message || u, u);
+        (c) => {
+          u.status = "error", u.error = c?.message || String(c), console.warn(`[ha-bridge] ✗ ${s}.${a} rejected:`, c?.message || c, c);
         }
-      ) : c.status = "ok";
-    } catch (p) {
-      c.status = "error", c.error = p?.message || String(p), console.warn(`[ha-bridge] ✗ ${s}.${a} threw:`, p);
+      ) : u.status = "ok";
+    } catch (f) {
+      u.status = "error", u.error = f?.message || String(f), console.warn(`[ha-bridge] ✗ ${s}.${a} threw:`, f);
     }
   };
   for (const s of t.lights || []) {
@@ -7190,8 +7190,8 @@ function Eh(e, t, n) {
       a ? i("alarm_control_panel", a, { entity_id: t.ring.id }) : lt({ ts: Date.now(), kind: "skip", message: `Unknown ring mode: ${t.ring.mode}` });
     }
   if (t.tesla?.id && e.tesla?.id === t.tesla.id) {
-    const s = t.tesla, a = e.tesla, d = s.lockEntityId || `lock.${s.id}`, c = `climate.${s.id}_climate`, p = `cover.${s.id}_frunk`, u = `cover.${s.id}_trunk`, h = `switch.${s.id}_sentry_mode`, v = `switch.${s.id}_defrost`;
-    a.locked !== s.locked && i("lock", s.locked ? "lock" : "unlock", { entity_id: d }), a.climateOn !== s.climateOn && i("climate", s.climateOn ? "turn_on" : "turn_off", { entity_id: c }), a.target !== s.target && i("climate", "set_temperature", { entity_id: c, temperature: s.target }), a.frunk !== s.frunk && i("cover", s.frunk ? "open_cover" : "close_cover", { entity_id: p }), a.trunk !== s.trunk && i("cover", s.trunk ? "open_cover" : "close_cover", { entity_id: u }), a.sentry !== s.sentry && i("switch", s.sentry ? "turn_on" : "turn_off", { entity_id: h }), a.defrost !== s.defrost && i("switch", s.defrost ? "turn_on" : "turn_off", { entity_id: v });
+    const s = t.tesla, a = e.tesla, d = s.lockEntityId || `lock.${s.id}`, u = `climate.${s.id}_climate`, f = `cover.${s.id}_frunk`, c = `cover.${s.id}_trunk`, p = `switch.${s.id}_sentry_mode`, w = `switch.${s.id}_defrost`;
+    a.locked !== s.locked && i("lock", s.locked ? "lock" : "unlock", { entity_id: d }), a.climateOn !== s.climateOn && i("climate", s.climateOn ? "turn_on" : "turn_off", { entity_id: u }), a.target !== s.target && i("climate", "set_temperature", { entity_id: u, temperature: s.target }), a.frunk !== s.frunk && i("cover", s.frunk ? "open_cover" : "close_cover", { entity_id: f }), a.trunk !== s.trunk && i("cover", s.trunk ? "open_cover" : "close_cover", { entity_id: c }), a.sentry !== s.sentry && i("switch", s.sentry ? "turn_on" : "turn_off", { entity_id: p }), a.defrost !== s.defrost && i("switch", s.defrost ? "turn_on" : "turn_off", { entity_id: w });
   }
 }
 function Va() {
@@ -7199,88 +7199,88 @@ function Va() {
   se.useEffect(() => {
     if (i.current || !t) return;
     i.current = !0;
-    const u = {};
-    for (const v of Object.keys(t)) {
-      const w = v.split(".")[0];
-      u[w] = (u[w] || 0) + 1;
+    const c = {};
+    for (const w of Object.keys(t)) {
+      const x = w.split(".")[0];
+      c[x] = (c[x] || 0) + 1;
     }
-    const h = Object.entries(u).sort().map(([v, w]) => `${v}=${w}`).join(" ");
-    lt({ ts: Date.now(), kind: "info", message: `HA entity inventory: ${h || "none"}` }), u.climate || lt({ ts: Date.now(), kind: "info", message: "↑ no climate.* — thermostat tile will be read-only" }), u.alarm_control_panel || lt({ ts: Date.now(), kind: "info", message: "↑ no alarm_control_panel.* — Ring tile will be read-only" }), u.cover || lt({ ts: Date.now(), kind: "info", message: "↑ no cover.* — garage tile will be read-only" }), u.vacuum || lt({ ts: Date.now(), kind: "info", message: "↑ no vacuum.* — vacuum tile will be read-only" });
+    const p = Object.entries(c).sort().map(([w, x]) => `${w}=${x}`).join(" ");
+    lt({ ts: Date.now(), kind: "info", message: `HA entity inventory: ${p || "none"}` }), c.climate || lt({ ts: Date.now(), kind: "info", message: "↑ no climate.* — thermostat tile will be read-only" }), c.alarm_control_panel || lt({ ts: Date.now(), kind: "info", message: "↑ no alarm_control_panel.* — Ring tile will be read-only" }), c.cover || lt({ ts: Date.now(), kind: "info", message: "↑ no cover.* — garage tile will be read-only" }), c.vacuum || lt({ ts: Date.now(), kind: "info", message: "↑ no vacuum.* — vacuum tile will be read-only" });
   }, [t]);
-  const [o, l] = se.useState(null), s = o || n, a = se.useRef(null), d = se.useRef(null), c = se.useRef(null), p = se.useCallback((u) => {
-    l((h) => {
-      const v = h || n, w = typeof u == "function" ? u(v) : { ...v, ...u };
-      return c.current || (c.current = { base: v, hass: e }), c.current.next = w, clearTimeout(d.current), d.current = setTimeout(() => {
-        const f = c.current;
-        f && Eh(f.base, f.next, f.hass), c.current = null, d.current = null;
-      }, 400), w;
+  const [o, l] = se.useState(null), s = o || n, a = se.useRef(null), d = se.useRef(null), u = se.useRef(null), f = se.useCallback((c) => {
+    l((p) => {
+      const w = p || n, x = typeof c == "function" ? c(w) : { ...w, ...c };
+      return u.current || (u.current = { base: w, hass: e }), u.current.next = x, clearTimeout(d.current), d.current = setTimeout(() => {
+        const h = u.current;
+        h && Eh(h.base, h.next, h.hass), u.current = null, d.current = null;
+      }, 400), x;
     }), clearTimeout(a.current), a.current = setTimeout(() => l(null), 3e3);
   }, [e, n]);
   return se.useEffect(() => {
     if (!o) return;
-    const u = setTimeout(() => l(null), 3e3);
-    return () => clearTimeout(u);
-  }, [t]), [s, p];
+    const c = setTimeout(() => l(null), 3e3);
+    return () => clearTimeout(c);
+  }, [t]), [s, f];
 }
 typeof window < "u" && (window.useHomeState = Va, window.useHomeStateHA = Va, window.useHass = bu);
 const ju = { S: 2, M: 3, L: 6 }, Ph = { S: 2, M: 4, L: 4 }, Dh = ({ layout: e, onLayoutChange: t, render: n, editing: i, ctx: o, narrow: l }) => {
-  const { p: s, fonts: a } = o, d = l ? 4 : 6, c = l ? Ph : ju, [p, u] = React.useState(null), h = React.useRef(null), v = React.useRef(null), w = e?.items || [], f = (x, b, j) => {
-    if (!i || x.target.closest("[data-tile-resize]")) return;
-    x.preventDefault();
-    const S = x.currentTarget, C = S.getBoundingClientRect(), $ = v.current.getBoundingClientRect();
-    S.setPointerCapture?.(x.pointerId), u({
+  const { p: s, fonts: a } = o, d = l ? 4 : 6, u = l ? Ph : ju, [f, c] = React.useState(null), p = React.useRef(null), w = React.useRef(null), x = e?.items || [], h = (v, b, j) => {
+    if (!i || v.target.closest("[data-tile-resize]")) return;
+    v.preventDefault();
+    const S = v.currentTarget, C = S.getBoundingClientRect(), M = w.current.getBoundingClientRect();
+    S.setPointerCapture?.(v.pointerId), c({
       id: b,
       from: j,
-      pointerId: x.pointerId,
-      x: x.clientX - $.left,
-      y: x.clientY - $.top,
-      offsetX: x.clientX - C.left,
-      offsetY: x.clientY - C.top,
+      pointerId: v.pointerId,
+      x: v.clientX - M.left,
+      y: v.clientY - M.top,
+      offsetX: v.clientX - C.left,
+      offsetY: v.clientY - C.top,
       w: C.width,
       h: C.height,
       target: j
     }), navigator.vibrate && navigator.vibrate(8);
-  }, k = (x) => {
-    if (!p) return;
-    const b = v.current.getBoundingClientRect(), j = x.clientX - b.left, S = x.clientY - b.top;
-    u((T) => ({ ...T, x: j, y: S }));
-    const C = v.current.querySelectorAll("[data-tile-id]");
-    let $ = p.target;
+  }, k = (v) => {
+    if (!f) return;
+    const b = w.current.getBoundingClientRect(), j = v.clientX - b.left, S = v.clientY - b.top;
+    c((T) => ({ ...T, x: j, y: S }));
+    const C = w.current.querySelectorAll("[data-tile-id]");
+    let M = f.target;
     for (const T of C) {
       const _ = T.getBoundingClientRect();
-      if (x.clientX >= _.left && x.clientX <= _.right && x.clientY >= _.top && x.clientY <= _.bottom) {
+      if (v.clientX >= _.left && v.clientX <= _.right && v.clientY >= _.top && v.clientY <= _.bottom) {
         const E = T.getAttribute("data-tile-id");
-        if (E === p.id) continue;
-        $ = w.findIndex((H) => H.id === E);
+        if (E === f.id) continue;
+        M = x.findIndex((H) => H.id === E);
         break;
       }
     }
-    $ !== p.target && u((T) => ({ ...T, target: $ }));
-  }, m = (x) => {
-    if (p) {
-      if (p.target !== p.from) {
-        const b = [...w], [j] = b.splice(p.from, 1);
-        b.splice(p.target, 0, j), t({ ...e, items: b });
+    M !== f.target && c((T) => ({ ...T, target: M }));
+  }, m = (v) => {
+    if (f) {
+      if (f.target !== f.from) {
+        const b = [...x], [j] = b.splice(f.from, 1);
+        b.splice(f.target, 0, j), t({ ...e, items: b });
       }
-      u(null);
+      c(null);
     }
-  }, g = (x) => {
-    const b = ["S", "M", "L"], j = w.map((S) => S.id === x ? { ...S, size: b[(b.indexOf(S.size) + 1) % 3] } : S);
+  }, g = (v) => {
+    const b = ["S", "M", "L"], j = x.map((S) => S.id === v ? { ...S, size: b[(b.indexOf(S.size) + 1) % 3] } : S);
     t({ ...e, items: j });
   };
   React.useEffect(() => {
-    if (!p) return;
-    const x = (j) => k(j), b = (j) => m();
-    return window.addEventListener("pointermove", x), window.addEventListener("pointerup", b), window.addEventListener("pointercancel", b), () => {
-      window.removeEventListener("pointermove", x), window.removeEventListener("pointerup", b), window.removeEventListener("pointercancel", b);
+    if (!f) return;
+    const v = (j) => k(j), b = (j) => m();
+    return window.addEventListener("pointermove", v), window.addEventListener("pointerup", b), window.addEventListener("pointercancel", b), () => {
+      window.removeEventListener("pointermove", v), window.removeEventListener("pointerup", b), window.removeEventListener("pointercancel", b);
     };
-  }, [p]);
-  let y = w.map((x, b) => ({ ...x, _i: b }));
-  if (p) {
-    const x = [...y], [b] = x.splice(p.from, 1);
-    x.splice(p.target, 0, b), y = x;
+  }, [f]);
+  let y = x.map((v, b) => ({ ...v, _i: b }));
+  if (f) {
+    const v = [...y], [b] = v.splice(f.from, 1);
+    v.splice(f.target, 0, b), y = v;
   }
-  return /* @__PURE__ */ r.jsxs("div", { ref: v, style: {
+  return /* @__PURE__ */ r.jsxs("div", { ref: w, style: {
     position: "relative",
     display: "grid",
     gridTemplateColumns: `repeat(${d}, 1fr)`,
@@ -7289,32 +7289,32 @@ const ju = { S: 2, M: 3, L: 6 }, Ph = { S: 2, M: 4, L: 4 }, Dh = ({ layout: e, o
     gridAutoFlow: "dense",
     touchAction: i ? "none" : "auto"
   }, children: [
-    y.map((x) => {
-      const b = Math.min(c[x.size] || 2, d), j = p && p.id === x.id;
+    y.map((v) => {
+      const b = Math.min(u[v.size] || 2, d), j = f && f.id === v.id;
       return /* @__PURE__ */ r.jsxs(
         "div",
         {
-          "data-tile-id": x.id,
-          onPointerDown: i ? (S) => f(S, x.id, w.findIndex((C) => C.id === x.id)) : void 0,
+          "data-tile-id": v.id,
+          onPointerDown: i ? (S) => h(S, v.id, x.findIndex((C) => C.id === v.id)) : void 0,
           style: {
             gridColumn: `span ${b}`,
             position: "relative",
             opacity: j ? 0 : 1,
             cursor: i ? j ? "grabbing" : "grab" : "default",
-            transition: p ? "transform .25s cubic-bezier(.2,.7,.4,1)" : "none",
+            transition: f ? "transform .25s cubic-bezier(.2,.7,.4,1)" : "none",
             outline: i ? `1.5px dashed ${s.border2}` : "none",
             outlineOffset: i ? 4 : 0,
             borderRadius: 14
           },
           children: [
-            n(x.id, x.size, i),
+            n(v.id, v.size, i),
             i && /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
               /* @__PURE__ */ r.jsx(
                 "button",
                 {
                   "data-tile-resize": !0,
                   onPointerDown: (S) => S.stopPropagation(),
-                  onClick: () => g(x.id),
+                  onClick: () => g(v.id),
                   style: {
                     position: "absolute",
                     top: 8,
@@ -7334,8 +7334,8 @@ const ju = { S: 2, M: 3, L: 6 }, Ph = { S: 2, M: 4, L: 4 }, Dh = ({ layout: e, o
                     fontWeight: 500,
                     boxShadow: "0 4px 12px rgba(0,0,0,.18)"
                   },
-                  title: `Size: ${x.size} · click to cycle`,
-                  children: x.size
+                  title: `Size: ${v.size} · click to cycle`,
+                  children: v.size
                 }
               ),
               /* @__PURE__ */ r.jsx("div", { style: {
@@ -7356,22 +7356,22 @@ const ju = { S: 2, M: 3, L: 6 }, Ph = { S: 2, M: 4, L: 4 }, Dh = ({ layout: e, o
             ] })
           ]
         },
-        x.id
+        v.id
       );
     }),
-    p && /* @__PURE__ */ r.jsx("div", { ref: h, style: {
+    f && /* @__PURE__ */ r.jsx("div", { ref: p, style: {
       position: "absolute",
       pointerEvents: "none",
-      left: p.x - p.offsetX,
-      top: p.y - p.offsetY,
-      width: p.w,
-      height: p.h,
+      left: f.x - f.offsetX,
+      top: f.y - f.offsetY,
+      width: f.w,
+      height: f.h,
       transform: "rotate(-1deg) scale(1.02)",
       boxShadow: "0 24px 60px rgba(0,0,0,.45)",
       borderRadius: 14,
       zIndex: 100,
       opacity: 0.95
-    }, children: n(p.id, w.find((x) => x.id === p.id)?.size, !0) })
+    }, children: n(f.id, x.find((v) => v.id === f.id)?.size, !0) })
   ] });
 };
 setTimeout(() => {
@@ -7531,9 +7531,9 @@ function Kh() {
     } catch {
     }
 }
-const Xh = ({ dark: e, density: t, accent: n, agentTone: i, fontPair: o, bgImage: l, visibleDevices: s, settings: a, setSetting: d, user: c, patchUser: p, doLogout: u, narrow: h, openBrowser: v }) => {
-  const w = React.useContext(Ir), [f, k] = window.useHomeState(), [m, g] = React.useState("home"), [y, x] = React.useState("living"), [b, j] = React.useState(!1), [S, C] = React.useState(!1), [$, T] = React.useState(0), [_, E] = React.useState(!1), [H, P] = React.useState([
-    { who: "agent", text: `Hi ${c?.firstName || "there"} — ask me anything about your home, or tell me to do something. Try "set the mood for dinner" or "open Esfand on Twitch".`, t: "now" }
+const Xh = ({ dark: e, density: t, accent: n, agentTone: i, fontPair: o, bgImage: l, visibleDevices: s, settings: a, setSetting: d, user: u, patchUser: f, doLogout: c, narrow: p, openBrowser: w }) => {
+  const x = React.useContext(Ir), [h, k] = window.useHomeState(), [m, g] = React.useState("home"), [y, v] = React.useState("living"), [b, j] = React.useState(!1), [S, C] = React.useState(!1), [M, T] = React.useState(0), [_, E] = React.useState(!1), [H, P] = React.useState([
+    { who: "agent", text: `Hi ${u?.firstName || "there"} — ask me anything about your home, or tell me to do something. Try "set the mood for dinner" or "open Esfand on Twitch".`, t: "now" }
   ]), [D, B] = React.useState(""), U = Su(e, n), I = Sl[o] || Sl.editorial, R = Cl[t] || Cl.regular, F = a?.ttsAgent !== !1, N = (L) => {
     !F || !L || (Kh(), Yh(L, { rate: 1, pitch: 1 }));
   }, O = async (L) => {
@@ -7541,8 +7541,8 @@ const Xh = ({ dark: e, density: t, accent: n, agentTone: i, fontPair: o, bgImage
     const le = { who: "user", text: L, t: "now" };
     P((ee) => [...ee, le]), B("");
     const ce = Uh(L);
-    if (ce?.type === "open_url" && v) {
-      v(ce.url, ce.label);
+    if (ce?.type === "open_url" && w) {
+      w(ce.url, ce.label);
       const ee = `Opening ${ce.label || ce.url}.`;
       P((We) => [...We, { who: "agent", text: ee, t: "now" }]), N(ee), S || T((We) => We + 1);
       return;
@@ -7553,10 +7553,10 @@ const Xh = ({ dark: e, density: t, accent: n, agentTone: i, fontPair: o, bgImage
     }
     E(!0);
     let Oe = null;
-    w && (Oe = (await Nh(w, L))?.speech || null), Oe || (Oe = window.runAgent(L, f, k)), Oe || (Oe = "I'm here, but no conversation agent is configured yet — set one up in HA → Settings → Voice Assistants and I'll get smarter."), E(!1), P((ee) => [...ee, { who: "agent", text: Oe, t: "now" }]), N(Oe), S || T((ee) => ee + 1);
+    x && (Oe = (await Nh(x, L))?.speech || null), Oe || (Oe = window.runAgent(L, h, k)), Oe || (Oe = "I'm here, but no conversation agent is configured yet — set one up in HA → Settings → Voice Assistants and I'll get smarter."), E(!1), P((ee) => [...ee, { who: "agent", text: Oe, t: "now" }]), N(Oe), S || T((ee) => ee + 1);
   }, me = () => {
     C(!0), T(0);
-  }, G = { p: U, fonts: I, dens: R, state: f, setState: k, room: y, setRoom: x, page: m, setPage: g, visible: s || { lights: !0, music: !0, cameras: !0, climate: !0, locks: !0, scenes: !0, calendar: !0, weather: !0, alarms: !0, tv: !0 }, accent: n, dark: e, settings: a, setSetting: d, user: c, patchUser: p, doLogout: u, narrow: h };
+  }, G = { p: U, fonts: I, dens: R, state: h, setState: k, room: y, setRoom: v, page: m, setPage: g, visible: s || { lights: !0, music: !0, cameras: !0, climate: !0, locks: !0, scenes: !0, calendar: !0, weather: !0, alarms: !0, tv: !0 }, accent: n, dark: e, settings: a, setSetting: d, user: u, patchUser: f, doLogout: c, narrow: p };
   return /* @__PURE__ */ r.jsxs("div", { "data-screen-label": "HomeCNTRD", style: {
     width: "100%",
     height: "100%",
@@ -7570,31 +7570,30 @@ const Xh = ({ dark: e, density: t, accent: n, agentTone: i, fontPair: o, bgImage
     backgroundPosition: "center"
   }, children: [
     l && /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", inset: 0, background: e ? "rgba(20,15,12,.78)" : "rgba(248,243,235,.84)", backdropFilter: "blur(2px)" } }),
-    f.dnd.active && /* @__PURE__ */ r.jsx(ig, { ctx: G }),
+    h.dnd.active && /* @__PURE__ */ r.jsx(ig, { ctx: G }),
     /* @__PURE__ */ r.jsxs("div", { style: {
       position: "relative",
       display: "grid",
-      gridTemplateColumns: h || m === "home" ? "1fr" : "232px 1fr",
-      gridTemplateRows: h ? "1fr 64px" : "1fr",
+      gridTemplateColumns: p || m === "home" ? "1fr" : "232px 1fr",
+      gridTemplateRows: p ? "1fr 64px" : "1fr",
       height: "100%"
     }, children: [
-      !h && m !== "home" && /* @__PURE__ */ r.jsx(Ga, { ctx: G }),
-      /* @__PURE__ */ r.jsxs("main", { style: { overflowY: "auto", overflowX: "hidden", minWidth: 0, padding: h ? "16px 14px 14px" : m === "home" ? 0 : R.pad, display: "flex", flexDirection: "column", gap: R.gap, paddingBottom: h ? 80 : void 0 }, children: [
-        h && /* @__PURE__ */ r.jsx(qh, { ctx: G }),
+      !p && m !== "home" && /* @__PURE__ */ r.jsx(Ga, { ctx: G }),
+      /* @__PURE__ */ r.jsxs("main", { style: { overflowY: "auto", overflowX: "hidden", minWidth: 0, padding: p ? "16px 14px 14px" : m === "home" ? 0 : R.pad, display: "flex", flexDirection: "column", gap: R.gap, paddingBottom: p ? 80 : void 0 }, children: [
+        p && /* @__PURE__ */ r.jsx(qh, { ctx: G }),
         m === "home" && /* @__PURE__ */ r.jsx(window.PersonalDashboard, { ctx: G, onOpenMenu: () => j(!0) }),
         m === "dashboard" && /* @__PURE__ */ r.jsx(window.HomeView, { ctx: G }),
         m === "music" && /* @__PURE__ */ r.jsx(window.MusicView, { ctx: G }),
         m === "cameras" && /* @__PURE__ */ r.jsx(window.CamerasView, { ctx: G }),
         m === "calendar" && /* @__PURE__ */ r.jsx(window.CalendarView, { ctx: G }),
         m === "car" && /* @__PURE__ */ r.jsx(window.CarView, { ctx: G }),
-        m === "garage" && /* @__PURE__ */ r.jsx(window.GarageView, { ctx: G }),
         m === "devices" && /* @__PURE__ */ r.jsx(window.DevicesView, { ctx: G }),
         m === "automations" && /* @__PURE__ */ r.jsx(window.AutomationsView, { ctx: G }),
         m === "settings" && /* @__PURE__ */ r.jsx(window.SettingsView, { ctx: G })
       ] }),
-      h && /* @__PURE__ */ r.jsx(Jh, { ctx: G })
+      p && /* @__PURE__ */ r.jsx(Jh, { ctx: G })
     ] }),
-    !h && m === "home" && b && /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
+    !p && m === "home" && b && /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
       /* @__PURE__ */ r.jsx("div", { onClick: () => j(!1), style: {
         position: "fixed",
         inset: 0,
@@ -7622,7 +7621,7 @@ const Xh = ({ dark: e, density: t, accent: n, agentTone: i, fontPair: o, bgImage
         ctx: G,
         open: S,
         setOpen: C,
-        unread: $,
+        unread: M,
         messages: H,
         thinking: _,
         draft: D,
@@ -7686,7 +7685,7 @@ const Sl = {
   regular: { pad: "24px 32px", gap: 18, tilePad: 18, tileGap: 14, h1: 38, h2: 15 },
   comfy: { pad: "32px 40px", gap: 24, tilePad: 22, tileGap: 18, h1: 46, h2: 16 }
 }, Ga = ({ ctx: e }) => {
-  const { p: t, fonts: n, page: i, setPage: o, room: l, setRoom: s, state: a, user: d } = e, c = ({ children: f }) => /* @__PURE__ */ r.jsx("div", { style: { padding: "10px 14px 4px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: t.fg3, fontWeight: 500 }, children: f }), p = ({ active: f, onClick: k, icon: m, label: g, count: y, badge: x }) => /* @__PURE__ */ r.jsxs("button", { onClick: k, style: {
+  const { p: t, fonts: n, page: i, setPage: o, room: l, setRoom: s, state: a, user: d } = e, u = ({ children: x }) => /* @__PURE__ */ r.jsx("div", { style: { padding: "10px 14px 4px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: t.fg3, fontWeight: 500 }, children: x }), f = ({ active: x, onClick: h, icon: k, label: m, count: g, badge: y }) => /* @__PURE__ */ r.jsxs("button", { onClick: h, style: {
     display: "flex",
     alignItems: "center",
     gap: 11,
@@ -7696,19 +7695,19 @@ const Sl = {
     borderRadius: 8,
     border: 0,
     cursor: "pointer",
-    background: f ? t.warm : "transparent",
-    color: f ? t.fg : t.fg2,
+    background: x ? t.warm : "transparent",
+    color: x ? t.fg : t.fg2,
     fontFamily: n.body,
     fontSize: 13.5,
     textAlign: "left",
-    fontWeight: f ? 500 : 400,
-    borderLeft: f ? `2px solid ${t.accent}` : "2px solid transparent"
+    fontWeight: x ? 500 : 400,
+    borderLeft: x ? `2px solid ${t.accent}` : "2px solid transparent"
   }, children: [
-    /* @__PURE__ */ r.jsx(window.Icon, { name: m, size: 16, stroke: 1.5 }),
-    /* @__PURE__ */ r.jsx("span", { style: { flex: 1 }, children: g }),
-    y !== void 0 && y !== "" && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: y }),
-    x && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 9, padding: "2px 6px", borderRadius: 999, background: t.accent, color: "#fff", fontWeight: 600 }, children: x })
-  ] }), u = a.cameras.filter((f) => f.online).length, h = a.speakers.filter((f) => f.playing).length, v = a.calendar.length, w = a.garage.doors.filter((f) => f.open).length;
+    /* @__PURE__ */ r.jsx(window.Icon, { name: k, size: 16, stroke: 1.5 }),
+    /* @__PURE__ */ r.jsx("span", { style: { flex: 1 }, children: m }),
+    g !== void 0 && g !== "" && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: g }),
+    y && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 9, padding: "2px 6px", borderRadius: 999, background: t.accent, color: "#fff", fontWeight: 600 }, children: y })
+  ] }), c = a.cameras.filter((x) => x.online).length, p = a.speakers.filter((x) => x.playing).length, w = a.calendar.length;
   return /* @__PURE__ */ r.jsxs("aside", { style: { borderRight: `.5px solid ${t.border}`, background: t.surface, display: "flex", flexDirection: "column", minHeight: 0 }, children: [
     /* @__PURE__ */ r.jsxs("div", { style: { padding: "20px 22px 16px", borderBottom: `.5px solid ${t.border}` }, children: [
       /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 22, fontStyle: "italic", color: t.accent, lineHeight: 1 }, children: "HomeCNTRD" }),
@@ -7727,28 +7726,27 @@ const Sl = {
       ] })
     ] }) }),
     /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, overflow: "auto", paddingBottom: 14, marginTop: 6 }, children: [
-      /* @__PURE__ */ r.jsx(c, { children: "View" }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "home", onClick: () => o("home"), icon: "home", label: "Home" }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "dashboard", onClick: () => o("dashboard"), icon: "grid", label: "Dashboard" }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "music", onClick: () => o("music"), icon: "music", label: "Music", count: h ? `${h} playing` : "" }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "cameras", onClick: () => o("cameras"), icon: "cam", label: "Cameras", count: `${u}/${a.cameras.length}` }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "calendar", onClick: () => o("calendar"), icon: "cal", label: "Calendar", count: v }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "car", onClick: () => o("car"), icon: "car", label: "Car", count: `${a.tesla.chargePct}%` }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "garage", onClick: () => o("garage"), icon: "garage", label: "Garage", badge: w ? "OPEN" : "" }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "devices", onClick: () => o("devices"), icon: "grid", label: "Devices", count: a.integrations.filter((f) => f.status === "connected").length }),
-      /* @__PURE__ */ r.jsx(p, { active: i === "automations", onClick: () => o("automations"), icon: "sparkle", label: "Automations", count: a.automations.filter((f) => f.enabled).length }),
+      /* @__PURE__ */ r.jsx(u, { children: "View" }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "home", onClick: () => o("home"), icon: "home", label: "Home" }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "dashboard", onClick: () => o("dashboard"), icon: "grid", label: "Dashboard" }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "music", onClick: () => o("music"), icon: "music", label: "Music", count: p ? `${p} playing` : "" }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "cameras", onClick: () => o("cameras"), icon: "cam", label: "Cameras", count: `${c}/${a.cameras.length}` }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "calendar", onClick: () => o("calendar"), icon: "cal", label: "Calendar", count: w }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "car", onClick: () => o("car"), icon: "car", label: "Car", count: `${a.tesla.chargePct}%` }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "devices", onClick: () => o("devices"), icon: "grid", label: "Devices", count: a.integrations.filter((x) => x.status === "connected").length }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "automations", onClick: () => o("automations"), icon: "sparkle", label: "Automations", count: a.automations.filter((x) => x.enabled).length }),
       i === "dashboard" && /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
-        /* @__PURE__ */ r.jsx(c, { children: "Rooms" }),
-        window.ROOMS.map((f) => {
-          const k = a.lights.filter((m) => m.room === f.id && m.on).length;
-          return /* @__PURE__ */ r.jsx(p, { active: l === f.id, onClick: () => s(f.id), icon: f.icon, label: f.name, count: k > 0 ? k : "" }, f.id);
+        /* @__PURE__ */ r.jsx(u, { children: "Rooms" }),
+        window.ROOMS.map((x) => {
+          const h = a.lights.filter((k) => k.room === x.id && k.on).length;
+          return /* @__PURE__ */ r.jsx(f, { active: l === x.id, onClick: () => s(x.id), icon: x.icon, label: x.name, count: h > 0 ? h : "" }, x.id);
         }),
-        /* @__PURE__ */ r.jsx(c, { children: "Quick scenes" }),
-        a.scenes.slice(0, 4).map((f) => /* @__PURE__ */ r.jsx(p, { icon: f.icon, label: f.name, active: f.active }, f.id))
+        /* @__PURE__ */ r.jsx(u, { children: "Quick scenes" }),
+        a.scenes.slice(0, 4).map((x) => /* @__PURE__ */ r.jsx(f, { icon: x.icon, label: x.name, active: x.active }, x.id))
       ] })
     ] }),
     /* @__PURE__ */ r.jsxs("div", { style: { borderTop: `.5px solid ${t.border}`, padding: 8 }, children: [
-      /* @__PURE__ */ r.jsx(p, { active: i === "settings", onClick: () => o("settings"), icon: "settings", label: "Settings" }),
+      /* @__PURE__ */ r.jsx(f, { active: i === "settings", onClick: () => o("settings"), icon: "settings", label: "Settings" }),
       /* @__PURE__ */ r.jsxs("div", { style: { padding: "10px 14px 4px", display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: t.fg2 }, children: [
         /* @__PURE__ */ r.jsx("div", { style: { width: 8, height: 8, borderRadius: "50%", background: "oklch(60% 0.15 145)" } }),
         /* @__PURE__ */ r.jsx("span", { children: "32 devices · all online" })
@@ -7926,39 +7924,39 @@ const Sl = {
       cursor: "pointer"
     }, children: "End now" })
   ] });
-}, og = ({ ctx: e, open: t, setOpen: n, unread: i, messages: o, thinking: l, draft: s, setDraft: a, send: d, openAgent: c, agentTone: p }) => {
-  const { p: u, fonts: h, narrow: v } = e, w = React.useRef(null), f = React.useRef(null), [k, m] = React.useState(null);
+}, og = ({ ctx: e, open: t, setOpen: n, unread: i, messages: o, thinking: l, draft: s, setDraft: a, send: d, openAgent: u, agentTone: f }) => {
+  const { p: c, fonts: p, narrow: w } = e, x = React.useRef(null), h = React.useRef(null), [k, m] = React.useState(null);
   React.useEffect(() => {
-    t && w.current && w.current.focus();
+    t && x.current && x.current.focus();
   }, [t]), React.useEffect(() => {
-    f.current && (f.current.scrollTop = f.current.scrollHeight);
+    h.current && (h.current.scrollTop = h.current.scrollHeight);
   }, [o, l]);
-  const g = v ? 84 : 24, y = v ? 152 : 92, x = [
+  const g = w ? 84 : 24, y = w ? 152 : 92, v = [
     "Find me a chocolate chip cookie recipe",
     "Set up movie night",
     "Lock the house",
     "Precondition the Tesla",
     "Best Italian recipes for tonight"
-  ], b = { jarvis: "Jarvis", terse: "CTRL", playful: "Pip" }[p] || "Jarvis";
+  ], b = { jarvis: "Jarvis", terse: "CTRL", playful: "Pip" }[f] || "Jarvis";
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
-    /* @__PURE__ */ r.jsxs("button", { onClick: () => t ? n(!1) : c(), style: {
+    /* @__PURE__ */ r.jsxs("button", { onClick: () => t ? n(!1) : u(), style: {
       position: "absolute",
       right: 24,
       bottom: g,
       width: 56,
       height: 56,
       borderRadius: "50%",
-      background: t ? u.surface2 : u.accent,
-      color: t ? u.fg : "#fff",
-      border: `.5px solid ${u.border}`,
+      background: t ? c.surface2 : c.accent,
+      color: t ? c.fg : "#fff",
+      border: `.5px solid ${c.border}`,
       cursor: "pointer",
       display: "grid",
       placeItems: "center",
-      boxShadow: t ? "0 4px 16px rgba(0,0,0,.15)" : `0 8px 28px ${u.accent}66, 0 1px 0 rgba(255,255,255,.3) inset`,
+      boxShadow: t ? "0 4px 16px rgba(0,0,0,.15)" : `0 8px 28px ${c.accent}66, 0 1px 0 rgba(255,255,255,.3) inset`,
       zIndex: 50
     }, children: [
       /* @__PURE__ */ r.jsx(window.Icon, { name: t ? "chevron" : "sparkle", size: 20, stroke: 1.6 }),
-      !t && i > 0 && /* @__PURE__ */ r.jsx("span", { style: { position: "absolute", top: -4, right: -4, minWidth: 20, height: 20, padding: "0 6px", borderRadius: 999, background: "#fff", color: u.accent, fontSize: 11, fontWeight: 600, display: "grid", placeItems: "center" }, children: i })
+      !t && i > 0 && /* @__PURE__ */ r.jsx("span", { style: { position: "absolute", top: -4, right: -4, minWidth: 20, height: 20, padding: "0 6px", borderRadius: 999, background: "#fff", color: c.accent, fontSize: 11, fontWeight: 600, display: "grid", placeItems: "center" }, children: i })
     ] }),
     t && /* @__PURE__ */ r.jsxs("div", { style: {
       position: "absolute",
@@ -7966,8 +7964,8 @@ const Sl = {
       bottom: y,
       width: 380,
       maxHeight: "min(560px, calc(100% - 180px))",
-      background: u.surface2,
-      border: `.5px solid ${u.border}`,
+      background: c.surface2,
+      border: `.5px solid ${c.border}`,
       borderRadius: 18,
       boxShadow: "0 24px 64px rgba(0,0,0,.18), 0 1px 0 rgba(255,255,255,.4) inset",
       display: "flex",
@@ -7975,48 +7973,48 @@ const Sl = {
       zIndex: 50,
       overflow: "hidden"
     }, children: [
-      /* @__PURE__ */ r.jsxs("div", { style: { padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `.5px solid ${u.border}` }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { width: 32, height: 32, borderRadius: "50%", background: `radial-gradient(circle at 30% 30%, ${u.accent}, oklch(40% 0.1 25))`, display: "grid", placeItems: "center", color: "#fff" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "sparkle", size: 14 }) }),
+      /* @__PURE__ */ r.jsxs("div", { style: { padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `.5px solid ${c.border}` }, children: [
+        /* @__PURE__ */ r.jsx("div", { style: { width: 32, height: 32, borderRadius: "50%", background: `radial-gradient(circle at 30% 30%, ${c.accent}, oklch(40% 0.1 25))`, display: "grid", placeItems: "center", color: "#fff" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "sparkle", size: 14 }) }),
         /* @__PURE__ */ r.jsxs("div", { style: { flex: 1 }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { fontFamily: h.display, fontSize: 15, color: u.fg, fontWeight: 500 }, children: b }),
-          /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: u.fg3 }, children: [
+          /* @__PURE__ */ r.jsx("div", { style: { fontFamily: p.display, fontSize: 15, color: c.fg, fontWeight: 500 }, children: b }),
+          /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: c.fg3 }, children: [
             /* @__PURE__ */ r.jsx("span", { style: { color: "oklch(60% 0.13 145)" }, children: "●" }),
             " Listening · everything online"
           ] })
         ] }),
-        /* @__PURE__ */ r.jsx("button", { onClick: () => n(!1), style: { border: 0, background: "transparent", color: u.fg3, cursor: "pointer", padding: 6, fontSize: 18 }, children: "×" })
+        /* @__PURE__ */ r.jsx("button", { onClick: () => n(!1), style: { border: 0, background: "transparent", color: c.fg3, cursor: "pointer", padding: 6, fontSize: 18 }, children: "×" })
       ] }),
-      /* @__PURE__ */ r.jsxs("div", { ref: f, style: { flex: 1, overflow: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }, children: [
-        o.map((j, S) => /* @__PURE__ */ r.jsx(lg, { m: j, p: u, fonts: h, onOpen: (C, $) => m({ url: C, title: $ }) }, S)),
-        l && /* @__PURE__ */ r.jsx(ag, { p: u, fonts: h })
+      /* @__PURE__ */ r.jsxs("div", { ref: h, style: { flex: 1, overflow: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }, children: [
+        o.map((j, S) => /* @__PURE__ */ r.jsx(lg, { m: j, p: c, fonts: p, onOpen: (C, M) => m({ url: C, title: M }) }, S)),
+        l && /* @__PURE__ */ r.jsx(ag, { p: c, fonts: p })
       ] }),
-      o.length <= 1 && /* @__PURE__ */ r.jsx("div", { style: { padding: "0 16px 8px", display: "flex", flexWrap: "wrap", gap: 6 }, children: x.map((j) => /* @__PURE__ */ r.jsx("button", { onClick: () => d(j), style: { padding: "5px 10px", borderRadius: 999, border: `.5px solid ${u.border2}`, background: "transparent", color: u.fg2, fontSize: 11, cursor: "pointer", fontFamily: h.body }, children: j }, j)) }),
+      o.length <= 1 && /* @__PURE__ */ r.jsx("div", { style: { padding: "0 16px 8px", display: "flex", flexWrap: "wrap", gap: 6 }, children: v.map((j) => /* @__PURE__ */ r.jsx("button", { onClick: () => d(j), style: { padding: "5px 10px", borderRadius: 999, border: `.5px solid ${c.border2}`, background: "transparent", color: c.fg2, fontSize: 11, cursor: "pointer", fontFamily: p.body }, children: j }, j)) }),
       /* @__PURE__ */ r.jsxs("form", { onSubmit: (j) => {
         j.preventDefault(), d(s);
-      }, style: { padding: 12, borderTop: `.5px solid ${u.border}`, display: "flex", alignItems: "center", gap: 8 }, children: [
-        /* @__PURE__ */ r.jsx("input", { ref: w, value: s, onChange: (j) => a(j.target.value), placeholder: `Ask ${b} anything…`, style: {
+      }, style: { padding: 12, borderTop: `.5px solid ${c.border}`, display: "flex", alignItems: "center", gap: 8 }, children: [
+        /* @__PURE__ */ r.jsx("input", { ref: x, value: s, onChange: (j) => a(j.target.value), placeholder: `Ask ${b} anything…`, style: {
           flex: 1,
           padding: "10px 12px",
           borderRadius: 10,
-          border: `.5px solid ${u.border2}`,
-          background: u.surface,
-          color: u.fg,
+          border: `.5px solid ${c.border2}`,
+          background: c.surface,
+          color: c.fg,
           fontSize: 13,
-          fontFamily: h.body,
+          fontFamily: p.body,
           outline: "none"
         } }),
-        /* @__PURE__ */ r.jsx("button", { type: "button", style: { width: 36, height: 36, borderRadius: 9, background: "transparent", border: `.5px solid ${u.border2}`, color: u.fg2, cursor: "pointer", display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "mic", size: 16 }) }),
-        /* @__PURE__ */ r.jsx("button", { type: "submit", style: { width: 36, height: 36, borderRadius: 9, background: u.accent, border: 0, color: "#fff", cursor: "pointer", display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "send", size: 15 }) })
+        /* @__PURE__ */ r.jsx("button", { type: "button", style: { width: 36, height: 36, borderRadius: 9, background: "transparent", border: `.5px solid ${c.border2}`, color: c.fg2, cursor: "pointer", display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "mic", size: 16 }) }),
+        /* @__PURE__ */ r.jsx("button", { type: "submit", style: { width: 36, height: 36, borderRadius: 9, background: c.accent, border: 0, color: "#fff", cursor: "pointer", display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "send", size: 15 }) })
       ] })
     ] }),
-    k && /* @__PURE__ */ r.jsx(sg, { p: u, fonts: h, url: k.url, title: k.title, onClose: () => m(null) })
+    k && /* @__PURE__ */ r.jsx(sg, { p: c, fonts: p, url: k.url, title: k.title, onClose: () => m(null) })
   ] });
 }, lg = ({ m: e, p: t, fonts: n, onOpen: i }) => {
   const o = e.who === "user", l = (e.text || "").split(`
 `), s = [], a = [];
-  for (const c of l) {
-    const p = c.match(/^\s*LINK:\s*(.+?)\s*\|\s*(https?:\/\/\S+)\s*$/i);
-    p ? s.push({ title: p[1], url: p[2] }) : a.push(c);
+  for (const u of l) {
+    const f = u.match(/^\s*LINK:\s*(.+?)\s*\|\s*(https?:\/\/\S+)\s*$/i);
+    f ? s.push({ title: f[1], url: f[2] }) : a.push(u);
   }
   const d = a.join(`
 `).trim();
@@ -8033,7 +8031,7 @@ const Sl = {
       borderBottomRightRadius: o ? 4 : 14,
       borderBottomLeftRadius: o ? 14 : 4
     }, children: d }),
-    s.length > 0 && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 5, width: "100%" }, children: s.map((c, p) => /* @__PURE__ */ r.jsxs("button", { onClick: () => i?.(c.url, c.title), style: {
+    s.length > 0 && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 5, width: "100%" }, children: s.map((u, f) => /* @__PURE__ */ r.jsxs("button", { onClick: () => i?.(u.url, u.title), style: {
       padding: "8px 11px",
       borderRadius: 9,
       border: `.5px solid ${t.border2}`,
@@ -8048,11 +8046,11 @@ const Sl = {
     }, children: [
       /* @__PURE__ */ r.jsx(window.Icon, { name: "search", size: 11, style: { color: t.accent, flex: "none" } }),
       /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: t.fg, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: c.title }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: t.fg3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: (c.url || "").replace(/^https?:\/\//, "").replace(/\/.*/, "") })
+        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: t.fg, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: u.title }),
+        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: t.fg3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: (u.url || "").replace(/^https?:\/\//, "").replace(/\/.*/, "") })
       ] }),
       /* @__PURE__ */ r.jsx(window.Icon, { name: "arrowR", size: 11, style: { color: t.fg3, flex: "none" } })
-    ] }, p)) }),
+    ] }, f)) }),
     /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: t.fg3 }, children: e.t })
   ] });
 }, sg = ({ p: e, fonts: t, url: n, title: i, onClose: o }) => /* @__PURE__ */ r.jsxs("div", { style: { position: "absolute", inset: 0, zIndex: 70, background: e.bg, display: "flex", flexDirection: "column" }, children: [
@@ -8104,14 +8102,14 @@ function ug() {
   }
   return dg;
 }
-function pg(e) {
+function fg(e) {
   return e.league ? `https://site.api.espn.com/apis/site/v2/sports/${e.sport}/${e.league}/scoreboard` : `https://site.api.espn.com/apis/site/v2/sports/${e.sport}/scoreboard`;
 }
-function fg(e) {
+function pg(e) {
   return [e?.displayName, e?.shortDisplayName, e?.name, e?.location, e?.abbreviation, e?.nickname].filter(Boolean).map((t) => String(t).toLowerCase()).join(" | ");
 }
 function Tl(e, t, n) {
-  const i = e?.team || e?.athlete || {}, o = fg(i);
+  const i = e?.team || e?.athlete || {}, o = pg(i);
   return n.some((l) => l.leagues && !l.leagues.includes(t) ? !1 : o.includes(String(l.name || "").toLowerCase()));
 }
 function Cu(e) {
@@ -8142,7 +8140,7 @@ function gg(e, t, n) {
   if (!i) return null;
   const o = i.competitors || [];
   if (o.length < 2) return null;
-  const l = o.find((p) => p.homeAway === "home") || o[0], s = o.find((p) => p.homeAway === "away") || o[1], a = Cu(e.status || i.status), d = Tl(l, t.id, n) || Tl(s, t.id, n), c = e.date ? new Date(e.date) : null;
+  const l = o.find((f) => f.homeAway === "home") || o[0], s = o.find((f) => f.homeAway === "away") || o[1], a = Cu(e.status || i.status), d = Tl(l, t.id, n) || Tl(s, t.id, n), u = e.date ? new Date(e.date) : null;
   return {
     id: `${t.id}:${e.id}`,
     league: t.name,
@@ -8151,7 +8149,7 @@ function gg(e, t, n) {
     teamA: Di(s),
     teamB: Di(l),
     status: a,
-    startTime: c,
+    startTime: u,
     isFavorite: d
   };
 }
@@ -8161,11 +8159,11 @@ function mg(e, t, n) {
   const o = i[0], l = o.competitors || [];
   if (l.length < 2) return null;
   const s = Cu(o.status || e.status), a = i.some(
-    (p) => (p.competitors || []).some((u) => Tl(u, t.id, n))
-  ), d = o.date || e.date ? new Date(o.date || e.date) : null, c = e.shortName || e.name || "";
+    (f) => (f.competitors || []).some((c) => Tl(c, t.id, n))
+  ), d = o.date || e.date ? new Date(o.date || e.date) : null, u = e.shortName || e.name || "";
   return {
     id: `${t.id}:${e.id}`,
-    league: c ? `${t.name} · ${c}` : t.name,
+    league: u ? `${t.name} · ${u}` : t.name,
     leagueId: t.id,
     kind: "combat",
     teamA: Di(l[0]),
@@ -8179,12 +8177,12 @@ async function yg({ favorites: e = ug(), signal: t } = {}) {
   const n = [];
   await Promise.all(zl.map(async (o) => {
     try {
-      const l = await fetch(pg(o), { signal: t, cache: "no-store" });
+      const l = await fetch(fg(o), { signal: t, cache: "no-store" });
       if (!l.ok) return;
       const a = (await l.json()).events || [];
       for (const d of a) {
-        const c = o.kind === "team" ? gg(d, o, e) : mg(d, o, e);
-        c && n.push(c);
+        const u = o.kind === "team" ? gg(d, o, e) : mg(d, o, e);
+        u && n.push(u);
       }
     } catch {
     }
@@ -8193,8 +8191,8 @@ async function yg({ favorites: e = ug(), signal: t } = {}) {
   return n.sort((o, l) => {
     const s = i(o), a = i(l);
     if (s !== a) return s - a;
-    const d = o.startTime?.getTime() || 0, c = l.startTime?.getTime() || 0;
-    return d - c;
+    const d = o.startTime?.getTime() || 0, u = l.startTime?.getTime() || 0;
+    return d - u;
   }), n;
 }
 const zu = {
@@ -8275,7 +8273,7 @@ function Qa(e, t, n) {
   return nn(e).map((i) => i.id === t ? { ...i, hidden: !!n } : i);
 }
 const zg = ({ ctx: e, onOpenMenu: t }) => {
-  const { p: n, fonts: i, state: o, user: l, narrow: s, setPage: a } = e, d = React.useContext(Ir), c = n.accent, p = "#1a1612", u = "#221d18", h = "#f1ead9", v = "rgba(241,234,217,0.7)", w = "rgba(241,234,217,0.42)", f = "rgba(241,234,217,0.1)", k = i.display, m = i.body, g = /* @__PURE__ */ new Date(), y = g.toLocaleDateString([], { weekday: "long" }), x = g.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }), [b, j] = React.useState([]), S = (o.calendar || []).map((R) => R.id).join(",");
+  const { p: n, fonts: i, state: o, user: l, narrow: s, setPage: a } = e, d = React.useContext(Ir), u = n.accent, f = "#1a1612", c = "#221d18", p = "#f1ead9", w = "rgba(241,234,217,0.7)", x = "rgba(241,234,217,0.42)", h = "rgba(241,234,217,0.1)", k = i.display, m = i.body, g = /* @__PURE__ */ new Date(), y = g.toLocaleDateString([], { weekday: "long" }), v = g.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }), [b, j] = React.useState([]), S = (o.calendar || []).map((R) => R.id).join(",");
   React.useEffect(() => {
     if (!d || !S) {
       j([]);
@@ -8301,11 +8299,11 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           }
           Oe += Dn.length, N({ ts: Date.now(), kind: "info", message: `calendar ${ee}: fetched ${Dn.length} event(s) over 14 days` });
           for (const xe of Dn) {
-            const Nn = xe.start && (xe.start.dateTime || xe.start.date) || xe.start, Ms = xe.end && (xe.end.dateTime || xe.end.date) || xe.end;
+            const Nn = xe.start && (xe.start.dateTime || xe.start.date) || xe.start, $s = xe.end && (xe.end.dateTime || xe.end.date) || xe.end;
             if (!Nn) continue;
-            let Mr;
-            xe.start && typeof xe.start == "object" ? Mr = !xe.start.dateTime && !!xe.start.date : typeof Nn == "string" ? Mr = !/\d{2}:\d{2}/.test(Nn) : Mr = !1;
-            const Fs = new Date(Nn), Iu = Ms ? new Date(Ms) : null;
+            let $r;
+            xe.start && typeof xe.start == "object" ? $r = !xe.start.dateTime && !!xe.start.date : typeof Nn == "string" ? $r = !/\d{2}:\d{2}/.test(Nn) : $r = !1;
+            const Fs = new Date(Nn), Iu = $s ? new Date($s) : null;
             ce.push({
               id: `${ee}-${Nn}-${xe.summary || ""}`,
               title: xe.summary || "(untitled)",
@@ -8313,7 +8311,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
               kind: /birthday|bday/i.test(xe.summary || "") ? "birthday" : "event",
               start: Fs,
               end: Iu,
-              isAllDay: Mr,
+              isAllDay: $r,
               sortKey: Fs.getTime()
             });
           }
@@ -8332,7 +8330,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
     ...R,
     start: R.start ? new Date(R.start) : null,
     end: null
-  })), $ = () => {
+  })), M = () => {
     const R = g.getHours();
     return R < 5 ? "Working late" : R < 12 ? "Good morning" : R < 17 ? "Good afternoon" : R < 21 ? "Good evening" : "Good night";
   }, [T, _] = React.useState(() => vg()), [E, H] = React.useState(!1), P = (R) => {
@@ -8340,10 +8338,10 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
   }, D = () => H(!1), B = () => {
     const R = kg();
     _(R);
-  }, U = { accent: c, fonts: i, surface: p, surface2: u, fg: h, fg2: v, fg3: w, border: f, narrow: s }, I = (R) => {
+  }, U = { accent: u, fonts: i, surface: f, surface2: c, fg: p, fg2: w, fg3: x, border: h, narrow: s }, I = (R) => {
     switch (R) {
       case "weather":
-        return /* @__PURE__ */ r.jsx(Mg, { weather: o.weather, hass: d, ...U });
+        return /* @__PURE__ */ r.jsx($g, { weather: o.weather, hass: d, ...U });
       case "car":
         return /* @__PURE__ */ r.jsx(Fg, { hass: d, ...U });
       case "sports":
@@ -8360,7 +8358,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
   };
   return /* @__PURE__ */ r.jsx("div", { style: {
     background: "#0d0b09",
-    color: h,
+    color: p,
     fontFamily: m,
     minHeight: "100%",
     // Safe-area aware so the status bar / home indicator don't clip
@@ -8381,15 +8379,15 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
   }, children: [
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, marginBottom: s ? 24 : 36 }, children: [
       /* @__PURE__ */ r.jsxs("div", { children: [
-        /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: w, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 6 }, children: [
+        /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: x, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 6 }, children: [
           y,
           " · ",
-          x
+          v
         ] }),
-        /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: k, fontSize: s ? 30 : 40, lineHeight: 1.05, color: h, fontWeight: 500 }, children: [
-          $(),
+        /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: k, fontSize: s ? 30 : 40, lineHeight: 1.05, color: p, fontWeight: 500 }, children: [
+          M(),
           ", ",
-          /* @__PURE__ */ r.jsxs("em", { style: { fontStyle: "italic", color: c, fontWeight: 400 }, children: [
+          /* @__PURE__ */ r.jsxs("em", { style: { fontStyle: "italic", color: u, fontWeight: 400 }, children: [
             l?.firstName || "there",
             "."
           ] })
@@ -8406,9 +8404,9 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
               borderRadius: 10,
               flex: "none",
               padding: "0 14px",
-              background: E ? c : p,
-              border: `.5px solid ${E ? c : f}`,
-              color: E ? "#fff" : h,
+              background: E ? u : f,
+              border: `.5px solid ${E ? u : h}`,
+              color: E ? "#fff" : p,
               cursor: "pointer",
               fontFamily: "inherit",
               fontSize: 12,
@@ -8427,9 +8425,9 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           height: 42,
           borderRadius: 10,
           flex: "none",
-          background: p,
-          border: `.5px solid ${f}`,
-          color: h,
+          background: f,
+          border: `.5px solid ${h}`,
+          color: p,
           cursor: "pointer",
           display: "grid",
           placeItems: "center"
@@ -8455,14 +8453,14 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
               {
                 calendar: o.calendar,
                 events: C,
-                accent: c,
+                accent: u,
                 fonts: i,
-                surface: p,
-                surface2: u,
-                fg: h,
-                fg2: v,
-                fg3: w,
-                border: f
+                surface: f,
+                surface2: c,
+                fg: p,
+                fg2: w,
+                fg3: x,
+                border: h
               }
             ) : null
           }
@@ -8472,12 +8470,12 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           {
             onReset: B,
             onDone: D,
-            accent: c,
+            accent: u,
             fonts: i,
-            surface: p,
-            border: f,
-            fg: h,
-            fg3: w
+            surface: f,
+            border: h,
+            fg: p,
+            fg3: x
           }
         )
       ] }),
@@ -8486,21 +8484,21 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
         {
           calendar: o.calendar,
           events: C,
-          accent: c,
+          accent: u,
           fonts: i,
-          surface: p,
-          surface2: u,
-          fg: h,
-          fg2: v,
-          fg3: w,
-          border: f
+          surface: f,
+          surface2: c,
+          fg: p,
+          fg2: w,
+          fg3: x,
+          border: h
         }
       )
     ] }),
     /* @__PURE__ */ r.jsx("div", { style: { height: 80 } })
   ] }) });
 }, Tg = ({ layout: e, updateLayout: t, editMode: n, renderTile: i, theme: o, injectAfterFirst: l }) => {
-  const { narrow: s, accent: a, border: d, surface: c, fg: p, fg2: u, fg3: h, fonts: v } = o, w = e.filter((j) => !j.hidden), f = e.filter((j) => j.hidden), [k, m] = React.useState(null), g = (j, S) => {
+  const { narrow: s, accent: a, border: d, surface: u, fg: f, fg2: c, fg3: p, fonts: w } = o, x = e.filter((j) => !j.hidden), h = e.filter((j) => j.hidden), [k, m] = React.useState(null), g = (j, S) => {
     m(j);
     try {
       S.dataTransfer.effectAllowed = "move";
@@ -8512,7 +8510,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
     }
   }, y = (j) => {
     j.preventDefault();
-  }, x = (j, S) => {
+  }, v = (j, S) => {
     S.preventDefault();
     const C = k || S.dataTransfer && S.dataTransfer.getData("text/plain");
     C && C !== j && t(bg(e, C, j)), m(null);
@@ -8523,21 +8521,21 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
       gridTemplateColumns: s ? "1fr" : "repeat(2, minmax(0, 1fr))",
       gap: s ? 14 : 18,
       alignItems: "start"
-    }, children: w.map((j, S) => /* @__PURE__ */ r.jsxs(React.Fragment, { children: [
+    }, children: x.map((j, S) => /* @__PURE__ */ r.jsxs(React.Fragment, { children: [
       /* @__PURE__ */ r.jsx(
         _g,
         {
           tile: j,
           index: S,
           isFirst: S === 0,
-          isLast: S === w.length - 1,
+          isLast: S === x.length - 1,
           editMode: n,
           isDragging: k === j.id,
           narrow: s,
           theme: o,
           onDragStart: g,
           onDragOver: y,
-          onDrop: x,
+          onDrop: v,
           onDragEnd: b,
           onMoveUp: () => t(jg(e, j.id)),
           onMoveDown: () => t(Sg(e, j.id)),
@@ -8548,24 +8546,24 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
       ),
       S === 0 && l && /* @__PURE__ */ r.jsx("div", { style: { gridColumn: "1 / -1" }, children: l })
     ] }, j.id)) }),
-    n && f.length > 0 && /* @__PURE__ */ r.jsxs("div", { style: {
+    n && h.length > 0 && /* @__PURE__ */ r.jsxs("div", { style: {
       marginTop: 22,
       padding: "14px 16px",
       borderRadius: 12,
       border: `.5px dashed ${d}`,
       background: "rgba(241,234,217,0.02)"
     }, children: [
-      /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: h, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }, children: "Hidden tiles" }),
-      /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 }, children: f.map((j) => /* @__PURE__ */ r.jsxs(
+      /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: p, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 10 }, children: "Hidden tiles" }),
+      /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 }, children: h.map((j) => /* @__PURE__ */ r.jsxs(
         "button",
         {
           onClick: () => t(Qa(e, j.id, !1)),
           style: {
             padding: "7px 12px",
             borderRadius: 8,
-            background: c,
+            background: u,
             border: `.5px solid ${d}`,
-            color: u,
+            color: c,
             fontSize: 12,
             fontFamily: "inherit",
             cursor: "pointer",
@@ -8592,23 +8590,23 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
   theme: s,
   onDragStart: a,
   onDragOver: d,
-  onDrop: c,
-  onDragEnd: p,
-  onMoveUp: u,
-  onMoveDown: h,
-  onResize: v,
-  onHide: w,
-  children: f
+  onDrop: u,
+  onDragEnd: f,
+  onMoveUp: c,
+  onMoveDown: p,
+  onResize: w,
+  onHide: x,
+  children: h
 }) => {
-  const { accent: k, border: m, surface: g, fg: y, fg2: x, fg3: b } = s, j = l ? 1 : e.colSpan;
+  const { accent: k, border: m, surface: g, fg: y, fg2: v, fg3: b } = s, j = l ? 1 : e.colSpan;
   return /* @__PURE__ */ r.jsxs(
     "div",
     {
       draggable: i,
       onDragStart: (S) => i && a(e.id, S),
       onDragOver: i ? d : void 0,
-      onDrop: (S) => i && c(e.id, S),
-      onDragEnd: i ? p : void 0,
+      onDrop: (S) => i && u(e.id, S),
+      onDragEnd: i ? f : void 0,
       style: {
         position: "relative",
         gridColumn: `span ${j}`,
@@ -8635,17 +8633,17 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           border: `.5px solid ${m}`,
           boxShadow: "0 4px 12px rgba(0,0,0,0.4)"
         }, children: [
-          /* @__PURE__ */ r.jsx(Qn, { onClick: u, disabled: t, title: "Move up", border: m, fg: x, children: "↑" }),
-          /* @__PURE__ */ r.jsx(Qn, { onClick: h, disabled: n, title: "Move down", border: m, fg: x, children: "↓" }),
+          /* @__PURE__ */ r.jsx(Qn, { onClick: c, disabled: t, title: "Move up", border: m, fg: v, children: "↑" }),
+          /* @__PURE__ */ r.jsx(Qn, { onClick: p, disabled: n, title: "Move down", border: m, fg: v, children: "↓" }),
           !l && /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
             /* @__PURE__ */ r.jsx(
               Qn,
               {
-                onClick: () => v(1),
+                onClick: () => w(1),
                 active: e.colSpan === 1,
                 title: "Half width",
                 border: m,
-                fg: x,
+                fg: v,
                 accent: k,
                 children: "▭"
               }
@@ -8653,17 +8651,17 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
             /* @__PURE__ */ r.jsx(
               Qn,
               {
-                onClick: () => v(2),
+                onClick: () => w(2),
                 active: e.colSpan === 2,
                 title: "Full width",
                 border: m,
-                fg: x,
+                fg: v,
                 accent: k,
                 children: "▬"
               }
             )
           ] }),
-          /* @__PURE__ */ r.jsx(Qn, { onClick: w, title: "Hide", border: m, fg: x, children: "×" })
+          /* @__PURE__ */ r.jsx(Qn, { onClick: x, title: "Hide", border: m, fg: v, children: "×" })
         ] }),
         i && /* @__PURE__ */ r.jsxs("div", { style: {
           position: "absolute",
@@ -8694,7 +8692,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           ] }),
           "Drag"
         ] }),
-        f
+        h
       ]
     }
   );
@@ -8781,25 +8779,25 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
   "windy-variant": "💨",
   hail: "🌨️",
   exceptional: "⚠️"
-}, Ya = (e) => Ig[e] || "☁️", $g = (e) => (e || "unknown").replace(/-/g, " ").replace(/\b\w/g, (t) => t.toUpperCase()), Mg = ({ weather: e, hass: t, accent: n, fonts: i, surface: o, surface2: l, fg: s, fg2: a, fg3: d, border: c, narrow: p }) => {
-  const [u, h] = React.useState([]), v = e?.id;
+}, Ya = (e) => Ig[e] || "☁️", Mg = (e) => (e || "unknown").replace(/-/g, " ").replace(/\b\w/g, (t) => t.toUpperCase()), $g = ({ weather: e, hass: t, accent: n, fonts: i, surface: o, surface2: l, fg: s, fg2: a, fg3: d, border: u, narrow: f }) => {
+  const [c, p] = React.useState([]), w = e?.id;
   if (React.useEffect(() => {
-    if (!t || !v) return;
+    if (!t || !w) return;
     let k = !0;
     const m = async () => {
       try {
-        const x = (await t.connection.sendMessagePromise({
+        const v = (await t.connection.sendMessagePromise({
           type: "call_service",
           domain: "weather",
           service: "get_forecasts",
           service_data: { type: "daily" },
-          target: { entity_id: v },
+          target: { entity_id: w },
           return_response: !0
-        }))?.response?.[v]?.forecast;
-        k && Array.isArray(x) && h(x.slice(0, 4));
+        }))?.response?.[w]?.forecast;
+        k && Array.isArray(v) && p(v.slice(0, 4));
       } catch {
-        const y = t.states?.[v]?.attributes;
-        k && Array.isArray(y?.forecast) && h(y.forecast.slice(0, 4));
+        const y = t.states?.[w]?.attributes;
+        k && Array.isArray(y?.forecast) && p(y.forecast.slice(0, 4));
       }
     };
     m();
@@ -8807,30 +8805,30 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
     return () => {
       k = !1, clearInterval(g);
     };
-  }, [t, v]), !e || e.summary === "Unavailable")
-    return /* @__PURE__ */ r.jsx(_s, { title: "Weather", hint: "Add a Weather integration in HA → Devices & Services. Pirate Weather and Met.no are both free.", surface: o, fg: s, fg2: a, fg3: d, border: c, fonts: i, accent: n });
-  const w = yn(/* @__PURE__ */ new Date()), f = u.map((k) => ({ ...k, _date: new Date(k.datetime || k.date || Date.now()) })).filter((k) => yn(k._date) !== w).slice(0, 3);
+  }, [t, w]), !e || e.summary === "Unavailable")
+    return /* @__PURE__ */ r.jsx(_s, { title: "Weather", hint: "Add a Weather integration in HA → Devices & Services. Pirate Weather and Met.no are both free.", surface: o, fg: s, fg2: a, fg3: d, border: u, fonts: i, accent: n });
+  const x = yn(/* @__PURE__ */ new Date()), h = c.map((k) => ({ ...k, _date: new Date(k.datetime || k.date || Date.now()) })).filter((k) => yn(k._date) !== x).slice(0, 3);
   return /* @__PURE__ */ r.jsxs("div", { style: {
-    padding: p ? "20px 18px" : "24px 28px",
+    padding: f ? "20px 18px" : "24px 28px",
     borderRadius: 16,
     background: o,
-    border: `.5px solid ${c}`
+    border: `.5px solid ${u}`
   }, children: [
-    /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: d, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: p ? 12 : 16 }, children: "Weather" }),
+    /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: d, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: f ? 12 : 16 }, children: "Weather" }),
     /* @__PURE__ */ r.jsxs("div", { style: {
       display: "flex",
       alignItems: "center",
-      gap: p ? 14 : 28,
-      flexWrap: p ? "wrap" : "nowrap"
+      gap: f ? 14 : 28,
+      flexWrap: f ? "wrap" : "nowrap"
     }, children: [
-      /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: p ? 12 : 18, flex: "none" }, children: [
-        /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: i.display, fontSize: p ? 52 : 64, lineHeight: 1, color: s, fontWeight: 400, fontVariantNumeric: "tabular-nums" }, children: [
+      /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: f ? 12 : 18, flex: "none" }, children: [
+        /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: i.display, fontSize: f ? 52 : 64, lineHeight: 1, color: s, fontWeight: 400, fontVariantNumeric: "tabular-nums" }, children: [
           e.temp,
           "°"
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 2 }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { fontSize: p ? 32 : 40, lineHeight: 1 }, children: Ya(e.condition) }),
-          /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: a, marginTop: 4 }, children: $g(e.condition) }),
+          /* @__PURE__ */ r.jsx("div", { style: { fontSize: f ? 32 : 40, lineHeight: 1 }, children: Ya(e.condition) }),
+          /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: a, marginTop: 4 }, children: Mg(e.condition) }),
           /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: d, fontVariantNumeric: "tabular-nums" }, children: [
             "H ",
             e.high,
@@ -8840,14 +8838,14 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           ] })
         ] })
       ] }),
-      f.length > 0 && /* @__PURE__ */ r.jsx("div", { style: {
+      h.length > 0 && /* @__PURE__ */ r.jsx("div", { style: {
         flex: 1,
         minWidth: 0,
         display: "grid",
-        gridTemplateColumns: `repeat(${f.length}, 1fr)`,
-        gap: p ? 8 : 14
-      }, children: f.map((k, m) => {
-        const g = k._date.toLocaleDateString([], { weekday: "short" }), y = Math.round(k.temperature ?? k.temp ?? 0), x = Math.round(k.templow ?? k.temp_low ?? k.temp_min ?? 0);
+        gridTemplateColumns: `repeat(${h.length}, 1fr)`,
+        gap: f ? 8 : 14
+      }, children: h.map((k, m) => {
+        const g = k._date.toLocaleDateString([], { weekday: "short" }), y = Math.round(k.temperature ?? k.temp ?? 0), v = Math.round(k.templow ?? k.temp_low ?? k.temp_min ?? 0);
         return /* @__PURE__ */ r.jsxs("div", { style: {
           display: "flex",
           flexDirection: "column",
@@ -8856,13 +8854,13 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           textAlign: "center"
         }, children: [
           /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: d, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 500 }, children: g }),
-          /* @__PURE__ */ r.jsx("div", { style: { fontSize: p ? 26 : 30, lineHeight: 1 }, children: Ya(k.condition) }),
+          /* @__PURE__ */ r.jsx("div", { style: { fontSize: f ? 26 : 30, lineHeight: 1 }, children: Ya(k.condition) }),
           /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: i.display, fontSize: 15, color: s, fontWeight: 500, fontVariantNumeric: "tabular-nums" }, children: [
             y,
             "° ",
             /* @__PURE__ */ r.jsxs("span", { style: { color: d, fontWeight: 400 }, children: [
               "/ ",
-              x,
+              v,
               "°"
             ] })
           ] })
@@ -8870,36 +8868,36 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
       }) })
     ] })
   ] });
-}, te = "tone", Fg = ({ hass: e, accent: t, fonts: n, surface: i, surface2: o, fg: l, fg2: s, fg3: a, border: d, narrow: c }) => {
-  const [, p] = React.useReducer((L) => L + 1, 0);
+}, te = "tone", Fg = ({ hass: e, accent: t, fonts: n, surface: i, surface2: o, fg: l, fg2: s, fg3: a, border: d, narrow: u }) => {
+  const [, f] = React.useReducer((L) => L + 1, 0);
   React.useEffect(() => {
     if (!e) return;
-    const L = setInterval(p, 5e3);
+    const L = setInterval(f, 5e3);
     return () => clearInterval(L);
   }, [e]);
-  const u = (L) => e?.states?.[L], h = (L) => u(L)?.state ?? null, v = (L) => {
-    const le = h(L);
+  const c = (L) => e?.states?.[L], p = (L) => c(L)?.state ?? null, w = (L) => {
+    const le = p(L);
     if (le == null || le === "unavailable" || le === "unknown") return null;
     const ce = Number(le);
     return Number.isFinite(ce) ? ce : null;
-  }, w = (L, le) => u(L)?.attributes?.[le], f = (L) => !!u(L), k = async (L, le, ce = {}) => {
+  }, x = (L, le) => c(L)?.attributes?.[le], h = (L) => !!c(L), k = async (L, le, ce = {}) => {
     if (e?.callService)
       try {
         await e.callService(L, le, ce);
       } catch (Oe) {
         console.error(`[car] ${L}.${le} failed:`, Oe);
       }
-  }, m = v(`sensor.${te}_battery_level`), g = v(`sensor.${te}_battery_range`), y = w(`sensor.${te}_battery_range`, "unit_of_measurement") || "mi", b = h(`sensor.${te}_charging`) === "Charging", j = v(`sensor.${te}_time_to_full_charge`), S = v(`sensor.${te}_inside_temperature`), C = v(`sensor.${te}_outside_temperature`), $ = w(`sensor.${te}_inside_temperature`, "unit_of_measurement") || "°F", T = `lock.${te}`, E = h(T) === "locked", H = `climate.${te}_climate`, P = h(H), D = P && P !== "off" && P !== "unavailable" && P !== "unknown", B = w(H, "temperature"), U = w(H, "min_temp") ?? 60, I = w(H, "max_temp") ?? 82, R = `cover.${te}_frunk`, F = `cover.${te}_trunk`, N = `cover.${te}_charge_port_door`, O = `switch.${te}_sentry_mode`, me = `switch.${te}_defrost`;
-  if (!e || !f(`sensor.${te}_battery_level`))
+  }, m = w(`sensor.${te}_battery_level`), g = w(`sensor.${te}_battery_range`), y = x(`sensor.${te}_battery_range`, "unit_of_measurement") || "mi", b = p(`sensor.${te}_charging`) === "Charging", j = w(`sensor.${te}_time_to_full_charge`), S = w(`sensor.${te}_inside_temperature`), C = w(`sensor.${te}_outside_temperature`), M = x(`sensor.${te}_inside_temperature`, "unit_of_measurement") || "°F", T = `lock.${te}`, E = p(T) === "locked", H = `climate.${te}_climate`, P = p(H), D = P && P !== "off" && P !== "unavailable" && P !== "unknown", B = x(H, "temperature"), U = x(H, "min_temp") ?? 60, I = x(H, "max_temp") ?? 82, R = `cover.${te}_frunk`, F = `cover.${te}_trunk`, N = `cover.${te}_charge_port_door`, O = `switch.${te}_sentry_mode`, me = `switch.${te}_defrost`;
+  if (!e || !h(`sensor.${te}_battery_level`))
     return /* @__PURE__ */ r.jsxs(Ge, { surface: i, border: d, children: [
-      /* @__PURE__ */ r.jsx($r, { title: "Car", right: null, fonts: n, fg: l, fg3: a, accent: t }),
+      /* @__PURE__ */ r.jsx(Mr, { title: "Car", right: null, fonts: n, fg: l, fg3: a, accent: t }),
       /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: a, lineHeight: 1.5 }, children: [
         "Waiting for Tessie data. If this persists, check that the Tessie integration is active in HA and that the car name's slug is ",
         /* @__PURE__ */ r.jsx("code", { style: { color: s }, children: te }),
         "."
       ] })
     ] });
-  const ye = w(`sensor.${te}_battery_level`, "friendly_name")?.replace(/ Battery level$/i, "") || "Tone", G = m === null ? a : m <= 20 ? "#c14d36" : m <= 40 ? "#d8843e" : t;
+  const ye = x(`sensor.${te}_battery_level`, "friendly_name")?.replace(/ Battery level$/i, "") || "Tone", G = m === null ? a : m <= 20 ? "#c14d36" : m <= 40 ? "#d8843e" : t;
   return /* @__PURE__ */ r.jsxs(Ge, { surface: i, border: d, children: [
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14, gap: 8 }, children: [
       /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 18, color: l, fontWeight: 500 }, children: ye }),
@@ -8917,10 +8915,10 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
         /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, color: E ? s : "#d8843e" }, children: E ? "Locked" : "Unlocked" })
       ] })
     ] }),
-    /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: c ? 14 : 22, marginBottom: 16, flexWrap: "wrap" }, children: [
+    /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: u ? 14 : 22, marginBottom: 16, flexWrap: "wrap" }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 200 }, children: [
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: c ? 36 : 44, lineHeight: 1, color: l, fontWeight: 400, fontVariantNumeric: "tabular-nums" }, children: m !== null ? `${Math.round(m)}%` : "—" }),
+          /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: u ? 36 : 44, lineHeight: 1, color: l, fontWeight: 400, fontVariantNumeric: "tabular-nums" }, children: m !== null ? `${Math.round(m)}%` : "—" }),
           g !== null && /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 13, color: a, fontVariantNumeric: "tabular-nums" }, children: [
             "· ",
             Math.round(g),
@@ -8940,8 +8938,8 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
         ] })
       ] }),
       (S !== null || C !== null) && /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 14, flex: "none" }, children: [
-        S !== null && /* @__PURE__ */ r.jsx(Ka, { label: "Inside", value: `${Math.round(S)}${$}`, fonts: n, fg: l, fg3: a }),
-        C !== null && /* @__PURE__ */ r.jsx(Ka, { label: "Outside", value: `${Math.round(C)}${$}`, fonts: n, fg: l, fg3: a })
+        S !== null && /* @__PURE__ */ r.jsx(Ka, { label: "Inside", value: `${Math.round(S)}${M}`, fonts: n, fg: l, fg3: a }),
+        C !== null && /* @__PURE__ */ r.jsx(Ka, { label: "Outside", value: `${Math.round(C)}${M}`, fonts: n, fg: l, fg3: a })
       ] })
     ] }),
     D && B !== void 0 && B !== null && /* @__PURE__ */ r.jsxs("div", { style: {
@@ -8959,7 +8957,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
         /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: t, letterSpacing: ".06em", textTransform: "uppercase", fontWeight: 600, marginBottom: 2 }, children: "Climate target" }),
         /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: n.display, fontSize: 22, color: l, fontVariantNumeric: "tabular-nums" }, children: [
           Math.round(B),
-          $
+          M
         ] })
       ] }),
       /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 6 }, children: [
@@ -8969,10 +8967,10 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
     ] }),
     /* @__PURE__ */ r.jsxs("div", { style: {
       display: "grid",
-      gridTemplateColumns: `repeat(${c ? 2 : 3}, 1fr)`,
+      gridTemplateColumns: `repeat(${u ? 2 : 3}, 1fr)`,
       gap: 8
     }, children: [
-      f(T) && /* @__PURE__ */ r.jsx(
+      h(T) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: E ? "Unlock" : "Lock",
@@ -8986,7 +8984,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(H) && /* @__PURE__ */ r.jsx(
+      h(H) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: D ? "Climate off" : "Climate on",
@@ -9000,14 +8998,14 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(R) && /* @__PURE__ */ r.jsx(
+      h(R) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: "Frunk",
-          sub: h(R) === "open" ? "Open" : "Closed",
+          sub: p(R) === "open" ? "Open" : "Closed",
           icon: "🚗",
-          active: h(R) === "open",
-          onClick: () => k("cover", h(R) === "open" ? "close_cover" : "open_cover", { entity_id: R }),
+          active: p(R) === "open",
+          onClick: () => k("cover", p(R) === "open" ? "close_cover" : "open_cover", { entity_id: R }),
           accent: t,
           surface: o,
           border: d,
@@ -9015,14 +9013,14 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(F) && /* @__PURE__ */ r.jsx(
+      h(F) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: "Trunk",
-          sub: h(F) === "open" ? "Open" : "Closed",
+          sub: p(F) === "open" ? "Open" : "Closed",
           icon: "🧳",
-          active: h(F) === "open",
-          onClick: () => k("cover", h(F) === "open" ? "close_cover" : "open_cover", { entity_id: F }),
+          active: p(F) === "open",
+          onClick: () => k("cover", p(F) === "open" ? "close_cover" : "open_cover", { entity_id: F }),
           accent: t,
           surface: o,
           border: d,
@@ -9030,14 +9028,14 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(N) && /* @__PURE__ */ r.jsx(
+      h(N) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: "Charge port",
-          sub: h(N) === "open" ? "Open" : "Closed",
+          sub: p(N) === "open" ? "Open" : "Closed",
           icon: "🔌",
-          active: h(N) === "open",
-          onClick: () => k("cover", h(N) === "open" ? "close_cover" : "open_cover", { entity_id: N }),
+          active: p(N) === "open",
+          onClick: () => k("cover", p(N) === "open" ? "close_cover" : "open_cover", { entity_id: N }),
           accent: t,
           surface: o,
           border: d,
@@ -9045,14 +9043,14 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(O) && /* @__PURE__ */ r.jsx(
+      h(O) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: "Sentry",
-          sub: h(O) === "on" ? "On" : "Off",
+          sub: p(O) === "on" ? "On" : "Off",
           icon: "👁️",
-          active: h(O) === "on",
-          onClick: () => k("switch", h(O) === "on" ? "turn_off" : "turn_on", { entity_id: O }),
+          active: p(O) === "on",
+          onClick: () => k("switch", p(O) === "on" ? "turn_off" : "turn_on", { entity_id: O }),
           accent: t,
           surface: o,
           border: d,
@@ -9060,14 +9058,14 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(me) && /* @__PURE__ */ r.jsx(
+      h(me) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: "Defrost",
-          sub: h(me) === "on" ? "On" : "Off",
+          sub: p(me) === "on" ? "On" : "Off",
           icon: "❄️",
-          active: h(me) === "on",
-          onClick: () => k("switch", h(me) === "on" ? "turn_off" : "turn_on", { entity_id: me }),
+          active: p(me) === "on",
+          onClick: () => k("switch", p(me) === "on" ? "turn_off" : "turn_on", { entity_id: me }),
           accent: t,
           surface: o,
           border: d,
@@ -9075,7 +9073,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(`button.${te}_flash_lights`) && /* @__PURE__ */ r.jsx(
+      h(`button.${te}_flash_lights`) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: "Flash",
@@ -9088,7 +9086,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
           fg3: a
         }
       ),
-      f(`button.${te}_honk_horn`) && /* @__PURE__ */ r.jsx(
+      h(`button.${te}_honk_horn`) && /* @__PURE__ */ r.jsx(
         dt,
         {
           label: "Honk",
@@ -9119,7 +9117,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center"
-}, children: e }), dt = ({ label: e, sub: t, icon: n, active: i, onClick: o, accent: l, surface: s, border: a, fg: d, fg3: c }) => /* @__PURE__ */ r.jsxs("button", { onClick: o, style: {
+}, children: e }), dt = ({ label: e, sub: t, icon: n, active: i, onClick: o, accent: l, surface: s, border: a, fg: d, fg3: u }) => /* @__PURE__ */ r.jsxs("button", { onClick: o, style: {
   padding: "12px 10px",
   borderRadius: 10,
   background: i ? `${l}1a` : s,
@@ -9135,7 +9133,7 @@ const zg = ({ ctx: e, onOpenMenu: t }) => {
 }, children: [
   /* @__PURE__ */ r.jsx("span", { style: { fontSize: 18, lineHeight: 1 }, children: n }),
   /* @__PURE__ */ r.jsx("span", { style: { fontSize: 12, fontWeight: 500, color: d }, children: e }),
-  t && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 10, color: i ? l : c, letterSpacing: ".04em", textTransform: "uppercase" }, children: t })
+  t && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 10, color: i ? l : u, letterSpacing: ".04em", textTransform: "uppercase" }, children: t })
 ] });
 function Eg(e) {
   if (!e || e <= 0) return "";
@@ -9143,8 +9141,8 @@ function Eg(e) {
   return t === 0 ? `${n}m` : n === 0 ? `${t}h` : `${t}h ${n}m`;
 }
 const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, border: a }) => !e || !e.length ? /* @__PURE__ */ r.jsx(_s, { title: "To-do", hint: "Add a To-do list in HA: Settings → Devices & Services → + Add Integration → Local To-do.", surface: i, fg: o, fg2: l, fg3: s, border: a, fonts: n, accent: t }) : /* @__PURE__ */ r.jsxs(Ge, { surface: i, border: a, children: [
-  /* @__PURE__ */ r.jsx($r, { title: "To-do", right: /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 11, color: s }, children: [
-    e.reduce((d, c) => d + (c.count || 0), 0),
+  /* @__PURE__ */ r.jsx(Mr, { title: "To-do", right: /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 11, color: s }, children: [
+    e.reduce((d, u) => d + (u.count || 0), 0),
     " open"
   ] }), fonts: n, fg: o, fg3: s, accent: t }),
   /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: e.slice(0, 5).map((d) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: `.5px solid ${a}` }, children: [
@@ -9159,43 +9157,43 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
     /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, color: s, fontVariantNumeric: "tabular-nums" }, children: d.count ?? 0 })
   ] }, d.id)) })
 ] }), Dg = ({ accent: e, fonts: t, surface: n, fg: i, fg2: o, fg3: l, border: s }) => {
-  const [a, d] = React.useState(null), [c, p] = React.useState(null), [u, h] = React.useState(!1), [v, w] = React.useState("all");
+  const [a, d] = React.useState(null), [u, f] = React.useState(null), [c, p] = React.useState(!1), [w, x] = React.useState("all");
   React.useEffect(() => {
     let g = !0;
-    const y = typeof AbortController < "u" ? new AbortController() : null, x = async () => {
+    const y = typeof AbortController < "u" ? new AbortController() : null, v = async () => {
       try {
         const j = await yg({ signal: y?.signal });
-        g && (d(j), p(null));
+        g && (d(j), f(null));
       } catch (j) {
-        g && j?.name !== "AbortError" && p(j?.message || String(j));
+        g && j?.name !== "AbortError" && f(j?.message || String(j));
       }
     };
-    x();
-    const b = setInterval(x, 60 * 1e3);
+    v();
+    const b = setInterval(v, 60 * 1e3);
     return () => {
       g = !1, clearInterval(b), y?.abort();
     };
   }, []);
-  const { visible: f, hiddenCount: k } = React.useMemo(() => {
+  const { visible: h, hiddenCount: k } = React.useMemo(() => {
     if (!a || !a.length) return { visible: [], hiddenCount: 0 };
-    if (v !== "all") {
-      const x = a.filter((j) => j.leagueId === v), b = u ? x.length : 6;
-      return { visible: x.slice(0, b), hiddenCount: Math.max(0, x.length - b) };
+    if (w !== "all") {
+      const v = a.filter((j) => j.leagueId === w), b = c ? v.length : 6;
+      return { visible: v.slice(0, b), hiddenCount: Math.max(0, v.length - b) };
     }
-    if (u)
+    if (c)
       return { visible: a.slice(0, 12), hiddenCount: Math.max(0, a.length - 12) };
-    const g = a.filter((x) => x.isFavorite);
+    const g = a.filter((v) => v.isFavorite);
     let y;
     if (g.length >= 3)
       y = g;
     else {
-      const x = a.filter(
+      const v = a.filter(
         (b) => !b.isFavorite && (b.status.state === "in" || b.status.state === "pre")
       );
-      y = [...g, ...x].slice(0, Math.max(3, g.length));
+      y = [...g, ...v].slice(0, Math.max(3, g.length));
     }
     return { visible: y, hiddenCount: Math.max(0, a.length - y.length) };
-  }, [a, v, u]), m = React.useMemo(() => {
+  }, [a, w, c]), m = React.useMemo(() => {
     if (!a) return [];
     const g = new Set(a.map((y) => y.leagueId));
     return zl.filter((y) => g.has(y.id));
@@ -9204,12 +9202,12 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
     /* @__PURE__ */ r.jsx(Jr, { fonts: t, fg: i, fg2: o, border: s, availableLeagues: [], leagueFilter: "all", setLeagueFilter: () => {
     } }),
     /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: l }, children: "Pulling scores from ESPN…" })
-  ] }) : c && !a.length ? /* @__PURE__ */ r.jsxs(Ge, { surface: n, border: s, children: [
+  ] }) : u && !a.length ? /* @__PURE__ */ r.jsxs(Ge, { surface: n, border: s, children: [
     /* @__PURE__ */ r.jsx(Jr, { fonts: t, fg: i, fg2: o, border: s, availableLeagues: [], leagueFilter: "all", setLeagueFilter: () => {
     } }),
     /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: l }, children: [
       "Couldn't reach ESPN: ",
-      c
+      u
     ] })
   ] }) : a.length ? /* @__PURE__ */ r.jsxs(Ge, { surface: n, border: s, children: [
     /* @__PURE__ */ r.jsx(
@@ -9220,14 +9218,14 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
         fg2: o,
         border: s,
         availableLeagues: m,
-        leagueFilter: v,
+        leagueFilter: w,
         setLeagueFilter: (g) => {
-          w(g), h(!1);
+          x(g), p(!1);
         }
       }
     ),
-    f.length > 0 ? /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: f.map((g) => /* @__PURE__ */ r.jsx(Ng, { g, accent: e, fonts: t, fg: i, fg2: o, fg3: l, border: s }, g.id)) }) : /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: l, padding: "8px 0" }, children: v === "all" ? "No favorite or upcoming games right now." : `No ${zl.find((g) => g.id === v)?.name || ""} games today.` }),
-    (k > 0 || u) && /* @__PURE__ */ r.jsx("button", { onClick: () => h((g) => !g), style: {
+    h.length > 0 ? /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: h.map((g) => /* @__PURE__ */ r.jsx(Ng, { g, accent: e, fonts: t, fg: i, fg2: o, fg3: l, border: s }, g.id)) }) : /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: l, padding: "8px 0" }, children: w === "all" ? "No favorite or upcoming games right now." : `No ${zl.find((g) => g.id === w)?.name || ""} games today.` }),
+    (k > 0 || c) && /* @__PURE__ */ r.jsx("button", { onClick: () => p((g) => !g), style: {
       marginTop: 10,
       width: "100%",
       padding: "7px 10px",
@@ -9240,7 +9238,7 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
       fontFamily: "inherit",
       letterSpacing: ".04em",
       textTransform: "uppercase"
-    }, children: u ? "Show less" : `Show more${k ? ` (${k})` : ""}` })
+    }, children: c ? "Show less" : `Show more${k ? ` (${k})` : ""}` })
   ] }) : /* @__PURE__ */ r.jsxs(Ge, { surface: n, border: s, children: [
     /* @__PURE__ */ r.jsx(Jr, { fonts: t, fg: i, fg2: o, border: s, availableLeagues: [], leagueFilter: "all", setLeagueFilter: () => {
     } }),
@@ -9271,7 +9269,7 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
     }
   )
 ] }), Ng = ({ g: e, accent: t, fonts: n, fg: i, fg2: o, fg3: l, border: s }) => {
-  const a = e.status.state === "in", d = e.status.state === "pre", c = e.status.state === "post", p = e.startTime ? `${e.startTime.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · ${e.startTime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "", u = d ? p : e.status.label || (c ? "Final" : ""), h = !d, v = c && Number(e.teamA.score) < Number(e.teamB.score), w = c && Number(e.teamB.score) < Number(e.teamA.score);
+  const a = e.status.state === "in", d = e.status.state === "pre", u = e.status.state === "post", f = e.startTime ? `${e.startTime.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · ${e.startTime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "", c = d ? f : e.status.label || (u ? "Final" : ""), p = !d, w = u && Number(e.teamA.score) < Number(e.teamB.score), x = u && Number(e.teamB.score) < Number(e.teamA.score);
   return /* @__PURE__ */ r.jsxs("div", { style: {
     padding: "9px 11px",
     borderRadius: 9,
@@ -9283,21 +9281,21 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
       a && /* @__PURE__ */ r.jsx("span", { style: { flex: "none", fontSize: 9, padding: "2px 6px", borderRadius: 999, background: "#c14d36", color: "#fff", fontWeight: 600, letterSpacing: ".04em" }, children: "LIVE" })
     ] }),
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 3 }, children: [
-      /* @__PURE__ */ r.jsx(qa, { c: e.teamA, fg: i, fg3: l, fonts: n, dim: v, showScore: h }),
-      /* @__PURE__ */ r.jsx(qa, { c: e.teamB, fg: i, fg3: l, fonts: n, dim: w, showScore: h })
+      /* @__PURE__ */ r.jsx(qa, { c: e.teamA, fg: i, fg3: l, fonts: n, dim: w, showScore: p }),
+      /* @__PURE__ */ r.jsx(qa, { c: e.teamB, fg: i, fg3: l, fonts: n, dim: x, showScore: p })
     ] }),
-    /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10.5, color: l, marginTop: 5, textAlign: "right", fontVariantNumeric: "tabular-nums" }, children: u })
+    /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10.5, color: l, marginTop: 5, textAlign: "right", fontVariantNumeric: "tabular-nums" }, children: c })
   ] });
 }, qa = ({ c: e, fg: t, fg3: n, fonts: i, dim: o, showScore: l }) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, opacity: o ? 0.55 : 1 }, children: [
   e.logo ? /* @__PURE__ */ r.jsx("img", { src: e.logo, alt: "", width: "18", height: "18", style: { flex: "none", objectFit: "contain" }, loading: "lazy" }) : /* @__PURE__ */ r.jsx("span", { style: { flex: "none", width: 18, height: 18, borderRadius: "50%", background: "rgba(241,234,217,0.06)" } }),
   /* @__PURE__ */ r.jsx("span", { style: { flex: 1, minWidth: 0, fontSize: 12.5, color: t, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: e.name }),
   l && e.score !== "" && /* @__PURE__ */ r.jsx("span", { style: { fontFamily: i.display, fontSize: 15, color: t, fontVariantNumeric: "tabular-nums", fontWeight: e.winner ? 600 : 400 }, children: e.score })
 ] }), Lg = ({ news: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, border: a }) => !e || !e.length ? /* @__PURE__ */ r.jsx(_s, { title: "Breaking news", hint: "Add Feedreader in configuration.yaml with your favourite RSS URLs (NYT, BBC, etc.). I can wire this up if you want.", surface: i, fg: o, fg2: l, fg3: s, border: a, fonts: n, accent: t }) : /* @__PURE__ */ r.jsxs(Ge, { surface: i, border: a, children: [
-  /* @__PURE__ */ r.jsx($r, { title: "Breaking news", right: /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 11, color: s }, children: [
+  /* @__PURE__ */ r.jsx(Mr, { title: "Breaking news", right: /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 11, color: s }, children: [
     e.length,
     " headlines"
   ] }), fonts: n, fg: o, fg3: s, accent: t }),
-  /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 10 }, children: e.slice(0, 5).map((d, c) => /* @__PURE__ */ r.jsxs("a", { href: d.url || "#", target: "_blank", rel: "noopener noreferrer", style: {
+  /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 10 }, children: e.slice(0, 5).map((d, u) => /* @__PURE__ */ r.jsxs("a", { href: d.url || "#", target: "_blank", rel: "noopener noreferrer", style: {
     padding: "8px 0",
     borderBottom: `.5px solid ${a}`,
     textDecoration: "none",
@@ -9309,7 +9307,7 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
       " · ",
       d.timeAgo
     ] })
-  ] }, c)) })
+  ] }, u)) })
 ] }), Ja = "homecntrd_notes_v1", _o = "homecntrd_drawing_v1", Za = "homecntrd_notes_mode_v1", Ag = ({ accent: e, fonts: t, surface: n, fg: i, fg2: o, fg3: l, border: s }) => {
   const [a, d] = React.useState(() => {
     try {
@@ -9317,10 +9315,10 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
     } catch {
       return "text";
     }
-  }), c = (p) => {
-    d(p);
+  }), u = (f) => {
+    d(f);
     try {
-      localStorage.setItem(Za, p);
+      localStorage.setItem(Za, f);
     } catch {
     }
   };
@@ -9328,8 +9326,8 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 }, children: [
       /* @__PURE__ */ r.jsx("div", { style: { fontFamily: t.display, fontSize: 15, color: i, fontWeight: 500 }, children: "Notes" }),
       /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 4, padding: 3, borderRadius: 8, background: "rgba(241,234,217,0.04)", border: `.5px solid ${s}` }, children: [
-        /* @__PURE__ */ r.jsx("button", { onClick: () => c("text"), style: Ni(a === "text", e, o), children: "Text" }),
-        /* @__PURE__ */ r.jsx("button", { onClick: () => c("draw"), style: Ni(a === "draw", e, o), children: "Draw" })
+        /* @__PURE__ */ r.jsx("button", { onClick: () => u("text"), style: Ni(a === "text", e, o), children: "Text" }),
+        /* @__PURE__ */ r.jsx("button", { onClick: () => u("draw"), style: Ni(a === "draw", e, o), children: "Draw" })
       ] })
     ] }),
     a === "text" && /* @__PURE__ */ r.jsx(Og, { fg: i, border: s, fonts: t }),
@@ -9383,38 +9381,38 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
     }
   );
 }, Wg = ({ accent: e, fg: t, fg3: n, border: i, fonts: o }) => {
-  const l = React.useRef(null), s = React.useRef(null), a = React.useRef(!1), d = React.useRef({ x: 0, y: 0 }), [c, p] = React.useState("pen"), u = React.useCallback(() => {
+  const l = React.useRef(null), s = React.useRef(null), a = React.useRef(!1), d = React.useRef({ x: 0, y: 0 }), [u, f] = React.useState("pen"), c = React.useCallback(() => {
     const m = l.current, g = s.current;
     if (!m || !g) return;
-    const y = window.devicePixelRatio || 1, x = g.clientWidth, b = 240;
-    m.width = x * y, m.height = b * y, m.style.width = `${x}px`, m.style.height = `${b}px`;
+    const y = window.devicePixelRatio || 1, v = g.clientWidth, b = 240;
+    m.width = v * y, m.height = b * y, m.style.width = `${v}px`, m.style.height = `${b}px`;
     const j = m.getContext("2d");
     j.setTransform(y, 0, 0, y, 0, 0), j.lineCap = "round", j.lineJoin = "round";
     try {
       const S = localStorage.getItem(_o);
       if (S) {
         const C = new Image();
-        C.onload = () => j.drawImage(C, 0, 0, x, b), C.src = S;
+        C.onload = () => j.drawImage(C, 0, 0, v, b), C.src = S;
       }
     } catch {
     }
   }, []);
   React.useEffect(() => {
-    if (u(), typeof ResizeObserver > "u") return;
-    const m = new ResizeObserver(u);
+    if (c(), typeof ResizeObserver > "u") return;
+    const m = new ResizeObserver(c);
     return s.current && m.observe(s.current), () => m.disconnect();
-  }, [u]);
-  const h = (m) => {
+  }, [c]);
+  const p = (m) => {
     const g = l.current.getBoundingClientRect();
     return { x: m.clientX - g.left, y: m.clientY - g.top };
-  }, v = (m) => {
-    m.preventDefault(), l.current.setPointerCapture?.(m.pointerId), a.current = !0, d.current = h(m);
   }, w = (m) => {
+    m.preventDefault(), l.current.setPointerCapture?.(m.pointerId), a.current = !0, d.current = p(m);
+  }, x = (m) => {
     if (!a.current) return;
     m.preventDefault();
-    const g = l.current.getContext("2d"), { x: y, y: x } = h(m);
-    g.beginPath(), g.moveTo(d.current.x, d.current.y), g.lineTo(y, x), g.lineWidth = c === "eraser" ? 18 : 2.5, g.strokeStyle = c === "eraser" ? "rgba(0,0,0,1)" : "#f1ead9", g.globalCompositeOperation = c === "eraser" ? "destination-out" : "source-over", g.stroke(), d.current = { x: y, y: x };
-  }, f = () => {
+    const g = l.current.getContext("2d"), { x: y, y: v } = p(m);
+    g.beginPath(), g.moveTo(d.current.x, d.current.y), g.lineTo(y, v), g.lineWidth = u === "eraser" ? 18 : 2.5, g.strokeStyle = u === "eraser" ? "rgba(0,0,0,1)" : "#f1ead9", g.globalCompositeOperation = u === "eraser" ? "destination-out" : "source-over", g.stroke(), d.current = { x: y, y: v };
+  }, h = () => {
     if (a.current) {
       a.current = !1;
       try {
@@ -9433,8 +9431,8 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
   return /* @__PURE__ */ r.jsxs("div", { children: [
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 4, padding: 3, borderRadius: 7, background: "rgba(241,234,217,0.03)", border: `.5px solid ${i}` }, children: [
-        /* @__PURE__ */ r.jsx("button", { onClick: () => p("pen"), style: Ni(c === "pen", e, n), children: "Pen" }),
-        /* @__PURE__ */ r.jsx("button", { onClick: () => p("eraser"), style: Ni(c === "eraser", e, n), children: "Eraser" })
+        /* @__PURE__ */ r.jsx("button", { onClick: () => f("pen"), style: Ni(u === "pen", e, n), children: "Pen" }),
+        /* @__PURE__ */ r.jsx("button", { onClick: () => f("eraser"), style: Ni(u === "eraser", e, n), children: "Eraser" })
       ] }),
       /* @__PURE__ */ r.jsx("button", { onClick: k, style: {
         padding: "5px 10px",
@@ -9456,27 +9454,27 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
       "canvas",
       {
         ref: l,
-        onPointerDown: v,
-        onPointerMove: w,
-        onPointerUp: f,
-        onPointerCancel: f,
-        onPointerLeave: f,
+        onPointerDown: w,
+        onPointerMove: x,
+        onPointerUp: h,
+        onPointerCancel: h,
+        onPointerLeave: h,
         style: {
           display: "block",
           width: "100%",
           height: 240,
           touchAction: "none",
           // critical: stops the page from scrolling while you draw with a finger or stylus
-          cursor: c === "eraser" ? "cell" : "crosshair"
+          cursor: u === "eraser" ? "cell" : "crosshair"
         }
       }
     ) }),
     /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10.5, color: n, marginTop: 6, lineHeight: 1.4 }, children: "Use Apple Pencil, stylus, or finger. Drawings save automatically per device." })
   ] });
-}, ed = ({ calendar: e, events: t, accent: n, fonts: i, surface: o, surface2: l, fg: s, fg2: a, fg3: d, border: c }) => {
-  const p = /* @__PURE__ */ new Date(), u = yn(p), [h, v] = React.useState(() => new Date(p.getFullYear(), p.getMonth(), 1)), [w, f] = React.useState(null), k = h.getMonth(), m = h.getFullYear(), g = h.toLocaleDateString([], { month: "long", year: "numeric" }), y = new Date(m, k, 1).getDay(), x = new Date(m, k + 1, 0).getDate(), b = [];
+}, ed = ({ calendar: e, events: t, accent: n, fonts: i, surface: o, surface2: l, fg: s, fg2: a, fg3: d, border: u }) => {
+  const f = /* @__PURE__ */ new Date(), c = yn(f), [p, w] = React.useState(() => new Date(f.getFullYear(), f.getMonth(), 1)), [x, h] = React.useState(null), k = p.getMonth(), m = p.getFullYear(), g = p.toLocaleDateString([], { month: "long", year: "numeric" }), y = new Date(m, k, 1).getDay(), v = new Date(m, k + 1, 0).getDate(), b = [];
   for (let _ = 0; _ < y; _++) b.push(null);
-  for (let _ = 1; _ <= x; _++) b.push(_);
+  for (let _ = 1; _ <= v; _++) b.push(_);
   const j = React.useMemo(() => {
     const _ = /* @__PURE__ */ new Set();
     for (const E of t || [])
@@ -9484,34 +9482,34 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
     return _;
   }, [t]), S = React.useMemo(() => {
     if (!t?.length) return [];
-    if (w)
-      return t.filter((E) => E.start && yn(E.start instanceof Date ? E.start : new Date(E.start)) === w);
-    const _ = new Date(p);
+    if (x)
+      return t.filter((E) => E.start && yn(E.start instanceof Date ? E.start : new Date(E.start)) === x);
+    const _ = new Date(f);
     return _.setHours(0, 0, 0, 0), _.setDate(_.getDate() + 3), t.filter((E) => {
       if (!E.start) return !1;
       const H = E.start instanceof Date ? E.start : new Date(E.start);
-      return H.getTime() >= p.getTime() - 60 * 60 * 1e3 && H.getTime() < _.getTime();
+      return H.getTime() >= f.getTime() - 60 * 60 * 1e3 && H.getTime() < _.getTime();
     });
-  }, [t, w, u]), C = () => v((_) => new Date(_.getFullYear(), _.getMonth() - 1, 1)), $ = () => v((_) => new Date(_.getFullYear(), _.getMonth() + 1, 1)), T = () => {
-    v(new Date(p.getFullYear(), p.getMonth(), 1)), f(null);
+  }, [t, x, c]), C = () => w((_) => new Date(_.getFullYear(), _.getMonth() - 1, 1)), M = () => w((_) => new Date(_.getFullYear(), _.getMonth() + 1, 1)), T = () => {
+    w(new Date(f.getFullYear(), f.getMonth(), 1)), h(null);
   };
   return /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 14 }, children: [
-    /* @__PURE__ */ r.jsxs(Ge, { surface: o, border: c, children: [
+    /* @__PURE__ */ r.jsxs(Ge, { surface: o, border: u, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 6 }, children: [
         /* @__PURE__ */ r.jsx("div", { style: { fontFamily: i.display, fontSize: 16, color: s, fontWeight: 500, flex: 1 }, children: g }),
-        /* @__PURE__ */ r.jsx("button", { onClick: C, "aria-label": "Previous month", style: Ro(a, c), children: "‹" }),
-        /* @__PURE__ */ r.jsx("button", { onClick: T, "aria-label": "Today", style: { ...Ro(a, c), padding: "0 10px", width: "auto", fontSize: 11 }, children: "Today" }),
-        /* @__PURE__ */ r.jsx("button", { onClick: $, "aria-label": "Next month", style: Ro(a, c), children: "›" })
+        /* @__PURE__ */ r.jsx("button", { onClick: C, "aria-label": "Previous month", style: Ro(a, u), children: "‹" }),
+        /* @__PURE__ */ r.jsx("button", { onClick: T, "aria-label": "Today", style: { ...Ro(a, u), padding: "0 10px", width: "auto", fontSize: 11 }, children: "Today" }),
+        /* @__PURE__ */ r.jsx("button", { onClick: M, "aria-label": "Next month", style: Ro(a, u), children: "›" })
       ] }),
       /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, fontFamily: i.body, fontSize: 11 }, children: [
         ["S", "M", "T", "W", "T", "F", "S"].map((_, E) => /* @__PURE__ */ r.jsx("div", { style: { textAlign: "center", padding: 4, color: d, fontWeight: 500 }, children: _ }, E)),
         b.map((_, E) => {
           if (!_) return /* @__PURE__ */ r.jsx("div", {}, E);
-          const H = new Date(m, k, _), P = yn(H), D = P === u, B = P === w, U = j.has(P);
+          const H = new Date(m, k, _), P = yn(H), D = P === c, B = P === x, U = j.has(P);
           return /* @__PURE__ */ r.jsxs(
             "button",
             {
-              onClick: () => f((I) => I === P ? null : P),
+              onClick: () => h((I) => I === P ? null : P),
               style: {
                 position: "relative",
                 textAlign: "center",
@@ -9546,12 +9544,12 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
         })
       ] })
     ] }),
-    /* @__PURE__ */ r.jsxs(Ge, { surface: o, border: c, children: [
+    /* @__PURE__ */ r.jsxs(Ge, { surface: o, border: u, children: [
       /* @__PURE__ */ r.jsx(
-        $r,
+        Mr,
         {
-          title: w ? (/* @__PURE__ */ new Date(w + "T00:00:00")).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "Next 3 days",
-          right: w ? /* @__PURE__ */ r.jsx("button", { onClick: () => f(null), style: Hg(d), children: "Clear" }) : /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 11, color: d }, children: [
+          title: x ? (/* @__PURE__ */ new Date(x + "T00:00:00")).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) : "Next 3 days",
+          right: x ? /* @__PURE__ */ r.jsx("button", { onClick: () => h(null), style: Hg(d), children: "Clear" }) : /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 11, color: d }, children: [
             S.length,
             " event",
             S.length === 1 ? "" : "s"
@@ -9564,7 +9562,7 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
       ),
       S.length > 0 ? /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 10 }, children: S.map((_, E) => {
         const H = _.start instanceof Date ? _.start : new Date(_.start), P = _.end ? _.end instanceof Date ? _.end : new Date(_.end) : null, D = H.getDate(), B = H.toLocaleDateString([], { month: "short" }).toUpperCase(), U = _.isAllDay ? "All day" : H.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + (P ? ` – ${P.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "");
-        return /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 10, padding: "6px 0", borderBottom: E < S.length - 1 ? `.5px solid ${c}` : "none" }, children: [
+        return /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 10, padding: "6px 0", borderBottom: E < S.length - 1 ? `.5px solid ${u}` : "none" }, children: [
           /* @__PURE__ */ r.jsxs("div", { style: {
             width: 38,
             flex: "none",
@@ -9572,7 +9570,7 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
             padding: "4px 0",
             background: l,
             borderRadius: 6,
-            border: `.5px solid ${c}`
+            border: `.5px solid ${u}`
           }, children: [
             /* @__PURE__ */ r.jsx("div", { style: { fontSize: 9, color: d, letterSpacing: ".06em", textTransform: "uppercase" }, children: B }),
             /* @__PURE__ */ r.jsx("div", { style: { fontFamily: i.display, fontSize: 16, color: s, fontWeight: 500, lineHeight: 1 }, children: D })
@@ -9586,7 +9584,7 @@ const Pg = ({ todos: e, accent: t, fonts: n, surface: i, fg: o, fg2: l, fg3: s, 
           ] }),
           _.kind === "birthday" && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 12 }, children: "🎂" })
         ] }, _.id || E);
-      }) }) : e?.length ? /* @__PURE__ */ r.jsx("div", { style: { padding: "20px 0", textAlign: "center", color: d, fontSize: 12 }, children: w ? "Nothing scheduled this day." : "Nothing scheduled in the next 3 days." }) : /* @__PURE__ */ r.jsx(Tu, { hint: "Add Outlook, Google Calendar, or Remote iCalendar in HA to see events here.", fg: a, fg3: d, border: c, accent: n, surface: l })
+      }) }) : e?.length ? /* @__PURE__ */ r.jsx("div", { style: { padding: "20px 0", textAlign: "center", color: d, fontSize: 12 }, children: x ? "Nothing scheduled this day." : "Nothing scheduled in the next 3 days." }) : /* @__PURE__ */ r.jsx(Tu, { hint: "Add Outlook, Google Calendar, or Remote iCalendar in HA to see events here.", fg: a, fg3: d, border: u, accent: n, surface: l })
     ] })
   ] });
 };
@@ -9624,11 +9622,11 @@ const Ro = (e, t) => ({
   background: e,
   border: `.5px solid ${t}`,
   ...i
-}, children: n }), $r = ({ title: e, right: t, fonts: n, fg: i, fg3: o, accent: l }) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }, children: [
+}, children: n }), Mr = ({ title: e, right: t, fonts: n, fg: i, fg3: o, accent: l }) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }, children: [
   /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 15, color: i, fontWeight: 500 }, children: e }),
   t
 ] }), _s = ({ title: e, hint: t, surface: n, fg: i, fg2: o, fg3: l, border: s, fonts: a, accent: d }) => /* @__PURE__ */ r.jsxs(Ge, { surface: n, border: s, children: [
-  /* @__PURE__ */ r.jsx($r, { title: e, right: null, fonts: a, fg: i, fg3: l, accent: d }),
+  /* @__PURE__ */ r.jsx(Mr, { title: e, right: null, fonts: a, fg: i, fg3: l, accent: d }),
   /* @__PURE__ */ r.jsx(Tu, { hint: t, fg: o, fg3: l, border: s, accent: d, surface: n })
 ] }), Tu = ({ hint: e, fg: t, fg3: n, border: i, accent: o, surface: l }) => /* @__PURE__ */ r.jsxs("div", { style: {
   padding: "14px 12px",
@@ -9661,12 +9659,12 @@ const Io = [
   { id: "scenes", label: "Scenes" },
   { id: "cameras", label: "Cameras" },
   { id: "security", label: "Security & access" },
-  { id: "car", label: "Car & garage" },
+  { id: "car", label: "Car" },
   { id: "today", label: "Today's schedule" }
 ], Bg = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l, room: s, user: a, patchUser: d, narrow: c } = e, p = window.ROOMS.find((y) => y.id === s), u = o.lights.filter((y) => y.room === s), h = a?.roomSections || {}, w = a?.homeSections || Object.fromEntries(Io.map((y) => [y.id, !0])), f = h[s] || w, k = (y, x) => d?.((b) => {
+  const { p: t, fonts: n, dens: i, state: o, setState: l, room: s, user: a, patchUser: d, narrow: u } = e, f = window.ROOMS.find((y) => y.id === s), c = o.lights.filter((y) => y.room === s), p = a?.roomSections || {}, x = a?.homeSections || Object.fromEntries(Io.map((y) => [y.id, !0])), h = p[s] || x, k = (y, v) => d?.((b) => {
     const j = b.roomSections && b.roomSections[s] || b.homeSections || Object.fromEntries(Io.map((S) => [S.id, !0]));
-    return { ...b, roomSections: { ...b.roomSections || {}, [s]: { ...j, [y]: x } } };
+    return { ...b, roomSections: { ...b.roomSections || {}, [s]: { ...j, [y]: v } } };
   }), [m, g] = React.useState(!1);
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsx(
@@ -9674,8 +9672,8 @@ const Io = [
       {
         ctx: e,
         eyebrow: "Currently in",
-        title: `The ${p?.name || "house"}`,
-        sub: `${u.filter((y) => y.on).length} lamps softly lit · ${o.thermostat.temp}° · the cat is asleep on the rug`,
+        title: `The ${f?.name || "house"}`,
+        sub: `${c.filter((y) => y.on).length} lamps softly lit · ${o.thermostat.temp}° · the cat is asleep on the rug`,
         right: /* @__PURE__ */ r.jsxs("button", { onClick: () => g((y) => !y), style: {
           padding: "8px 14px",
           borderRadius: 9,
@@ -9697,70 +9695,70 @@ const Io = [
     m && /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 14 }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: t.fg3, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 10 }, children: [
         "Show in ",
-        p?.name || "this room"
+        f?.name || "this room"
       ] }),
       /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }, children: Io.map((y) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, background: t.surface, border: `.5px solid ${t.border}` }, children: [
         /* @__PURE__ */ r.jsx("span", { style: { flex: 1, fontSize: 12, color: t.fg }, children: y.label }),
-        /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: f[y.id] !== !1, onChange: (x) => k(y.id, x), size: 16 })
+        /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: h[y.id] !== !1, onChange: (v) => k(y.id, v), size: 16 })
       ] }, y.id)) }),
       /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, fontStyle: "italic", marginTop: 10 }, children: "Each room remembers its own layout." })
     ] }),
-    f.climate !== !1 && /* @__PURE__ */ r.jsx(window.ClimateSection, { ctx: e }),
-    f.lights !== !1 && /* @__PURE__ */ r.jsx(window.LightsSection, { ctx: e }),
-    f.music !== !1 && /* @__PURE__ */ r.jsx(window.MusicSection, { ctx: e }),
-    f.tvs !== !1 && /* @__PURE__ */ r.jsx(window.TvsSection, { ctx: e }),
-    f.scenes !== !1 && /* @__PURE__ */ r.jsx(window.ScenesSection, { ctx: e }),
-    f.cameras !== !1 && /* @__PURE__ */ r.jsx(window.CamerasSection, { ctx: e }),
-    f.security !== !1 && /* @__PURE__ */ r.jsx(window.SecuritySection, { ctx: e }),
-    f.car !== !1 && /* @__PURE__ */ r.jsx(window.CarSection, { ctx: e }),
-    f.today !== !1 && /* @__PURE__ */ r.jsx(window.TodaySection, { ctx: e }),
+    h.climate !== !1 && /* @__PURE__ */ r.jsx(window.ClimateSection, { ctx: e }),
+    h.lights !== !1 && /* @__PURE__ */ r.jsx(window.LightsSection, { ctx: e }),
+    h.music !== !1 && /* @__PURE__ */ r.jsx(window.MusicSection, { ctx: e }),
+    h.tvs !== !1 && /* @__PURE__ */ r.jsx(window.TvsSection, { ctx: e }),
+    h.scenes !== !1 && /* @__PURE__ */ r.jsx(window.ScenesSection, { ctx: e }),
+    h.cameras !== !1 && /* @__PURE__ */ r.jsx(window.CamerasSection, { ctx: e }),
+    h.security !== !1 && /* @__PURE__ */ r.jsx(window.SecuritySection, { ctx: e }),
+    h.car !== !1 && /* @__PURE__ */ r.jsx(window.CarSection, { ctx: e }),
+    h.today !== !1 && /* @__PURE__ */ r.jsx(window.TodaySection, { ctx: e }),
     /* @__PURE__ */ r.jsx("div", { style: { height: 80 } })
   ] });
 }, Vg = ({ ctx: e }) => {
-  const { p: t, fonts: n, state: i, setState: o, narrow: l } = e, s = i.thermostat, a = (P) => o((D) => ({ ...D, thermostat: { ...D.thermostat, target: P } })), d = (P) => o((D) => ({ ...D, thermostat: { ...D.thermostat, mode: P } })), c = 60, p = 83, u = React.useRef(null), [h, v] = React.useState(!1), w = (P) => {
-    const D = u.current.getBoundingClientRect(), B = D.left + D.width / 2, U = D.top + D.height / 2, I = P.clientX - B, R = P.clientY - U;
+  const { p: t, fonts: n, state: i, setState: o, narrow: l } = e, s = i.thermostat, a = (P) => o((D) => ({ ...D, thermostat: { ...D.thermostat, target: P } })), d = (P) => o((D) => ({ ...D, thermostat: { ...D.thermostat, mode: P } })), u = 60, f = 83, c = React.useRef(null), [p, w] = React.useState(!1), x = (P) => {
+    const D = c.current.getBoundingClientRect(), B = D.left + D.width / 2, U = D.top + D.height / 2, I = P.clientX - B, R = P.clientY - U;
     let O = ((Math.atan2(R, I) * 180 / Math.PI + 360) % 360 - 135 + 360) % 360;
     O > 270 && (O = O > 315 ? 0 : 270);
     const me = O / 270;
-    return Math.round(c + me * (p - c));
-  }, f = (P) => {
-    v(!0), u.current.setPointerCapture?.(P.pointerId), a(w(P));
+    return Math.round(u + me * (f - u));
+  }, h = (P) => {
+    w(!0), c.current.setPointerCapture?.(P.pointerId), a(x(P));
   }, k = (P) => {
-    h && a(w(P));
+    p && a(x(P));
   }, m = (P) => {
-    v(!1);
-  }, g = 220, y = 92, x = g / 2, b = g / 2, j = (P, D) => {
+    w(!1);
+  }, g = 220, y = 92, v = g / 2, b = g / 2, j = (P, D) => {
     const B = P * Math.PI / 180;
-    return [x + D * Math.cos(B), b + D * Math.sin(B)];
-  }, S = 135, C = 405, $ = S + (s.target - c) / (p - c) * 270, T = S + (s.temp - c) / (p - c) * 270, _ = (P, D) => {
+    return [v + D * Math.cos(B), b + D * Math.sin(B)];
+  }, S = 135, C = 405, M = S + (s.target - u) / (f - u) * 270, T = S + (s.temp - u) / (f - u) * 270, _ = (P, D) => {
     const [B, U] = j(P, y), [I, R] = j(D, y), F = D - P > 180 ? 1 : 0;
     return `M ${B} ${U} A ${y} ${y} 0 ${F} 1 ${I} ${R}`;
-  }, [E, H] = j($, y);
+  }, [E, H] = j(M, y);
   return /* @__PURE__ */ r.jsx(window.Section, { title: "Climate", subtitle: "Hallway · Nest", p: t, fonts: n, children: /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: l ? 18 : 24, display: "grid", gridTemplateColumns: l ? "1fr" : "auto 1fr", gap: l ? 18 : 30, alignItems: "center", justifyItems: l ? "center" : "stretch" }, children: [
     /* @__PURE__ */ r.jsx(
       "div",
       {
-        ref: u,
-        onPointerDown: f,
+        ref: c,
+        onPointerDown: h,
         onPointerMove: k,
         onPointerUp: m,
         onPointerCancel: m,
-        style: { width: g, height: g, position: "relative", cursor: h ? "grabbing" : "grab", touchAction: "none", userSelect: "none", flex: "none" },
+        style: { width: g, height: g, position: "relative", cursor: p ? "grabbing" : "grab", touchAction: "none", userSelect: "none", flex: "none" },
         children: /* @__PURE__ */ r.jsxs("svg", { width: g, height: g, style: { position: "absolute", inset: 0 }, children: [
           /* @__PURE__ */ r.jsx("path", { d: _(S, C), fill: "none", stroke: t.border, strokeWidth: "14", strokeLinecap: "round" }),
-          /* @__PURE__ */ r.jsx("path", { d: _(Math.min(T, $), Math.max(T, $)), fill: "none", stroke: t.accentSoft, strokeWidth: "14", strokeLinecap: "round" }),
-          /* @__PURE__ */ r.jsx("path", { d: _(S, $), fill: "none", stroke: t.accent, strokeWidth: "3", strokeLinecap: "round", opacity: ".75" }),
+          /* @__PURE__ */ r.jsx("path", { d: _(Math.min(T, M), Math.max(T, M)), fill: "none", stroke: t.accentSoft, strokeWidth: "14", strokeLinecap: "round" }),
+          /* @__PURE__ */ r.jsx("path", { d: _(S, M), fill: "none", stroke: t.accent, strokeWidth: "3", strokeLinecap: "round", opacity: ".75" }),
           Array.from({ length: 24 }).map((P, D) => {
             const B = S + D / 23 * 270, [U, I] = j(B, y - 10), [R, F] = j(B, y - 4);
             return /* @__PURE__ */ r.jsx("line", { x1: U, y1: I, x2: R, y2: F, stroke: t.fg3, strokeWidth: ".5", opacity: D % 4 === 0 ? 0.6 : 0.25 }, D);
           }),
           /* @__PURE__ */ r.jsx("circle", { cx: E, cy: H, r: "11", fill: t.accent, stroke: t.surface2, strokeWidth: "3" }),
-          /* @__PURE__ */ r.jsx("text", { x, y: b - 12, textAnchor: "middle", fill: t.fg3, fontSize: "10", fontFamily: n.body, letterSpacing: "2", children: "SET TO" }),
-          /* @__PURE__ */ r.jsxs("text", { x, y: b + 22, textAnchor: "middle", fill: t.fg, fontSize: "50", fontFamily: n.display, fontWeight: "500", children: [
+          /* @__PURE__ */ r.jsx("text", { x: v, y: b - 12, textAnchor: "middle", fill: t.fg3, fontSize: "10", fontFamily: n.body, letterSpacing: "2", children: "SET TO" }),
+          /* @__PURE__ */ r.jsxs("text", { x: v, y: b + 22, textAnchor: "middle", fill: t.fg, fontSize: "50", fontFamily: n.display, fontWeight: "500", children: [
             s.target,
             "°"
           ] }),
-          /* @__PURE__ */ r.jsxs("text", { x, y: b + 44, textAnchor: "middle", fill: t.fg3, fontSize: "11", fontFamily: n.display, fontStyle: "italic", children: [
+          /* @__PURE__ */ r.jsxs("text", { x: v, y: b + 44, textAnchor: "middle", fill: t.fg3, fontSize: "11", fontFamily: n.display, fontStyle: "italic", children: [
             "now ",
             s.temp,
             "°"
@@ -9812,46 +9810,46 @@ const Io = [
     ] })
   ] }) });
 }, Ug = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l, room: s } = e, a = o.lights.filter((c) => c.room === s), d = a.every((c) => c.on);
+  const { p: t, fonts: n, dens: i, state: o, setState: l, room: s } = e, a = o.lights.filter((u) => u.room === s), d = a.every((u) => u.on);
   return /* @__PURE__ */ r.jsx(
     window.Section,
     {
       title: "Lighting",
-      subtitle: `${a.filter((c) => c.on).length} of ${a.length} on`,
+      subtitle: `${a.filter((u) => u.on).length} of ${a.length} on`,
       p: t,
       fonts: n,
-      action: /* @__PURE__ */ r.jsx("button", { onClick: () => l((c) => ({ ...c, lights: c.lights.map((p) => p.room === s ? { ...p, on: !d } : p) })), style: { padding: "6px 12px", borderRadius: 7, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 11, cursor: "pointer", fontFamily: n.body }, children: d ? "All off" : "All on" }),
-      children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: i.tileGap }, children: a.map((c) => /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 14, position: "relative", overflow: "hidden" }, children: [
-        c.on && /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", right: -20, top: -20, width: 80, height: 80, borderRadius: "50%", background: `radial-gradient(circle, ${c.color}77, transparent 70%)` } }),
+      action: /* @__PURE__ */ r.jsx("button", { onClick: () => l((u) => ({ ...u, lights: u.lights.map((f) => f.room === s ? { ...f, on: !d } : f) })), style: { padding: "6px 12px", borderRadius: 7, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 11, cursor: "pointer", fontFamily: n.body }, children: d ? "All off" : "All on" }),
+      children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: i.tileGap }, children: a.map((u) => /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 14, position: "relative", overflow: "hidden" }, children: [
+        u.on && /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", right: -20, top: -20, width: 80, height: 80, borderRadius: "50%", background: `radial-gradient(circle, ${u.color}77, transparent 70%)` } }),
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", position: "relative" }, children: [
-          /* @__PURE__ */ r.jsx(window.Icon, { name: "bulb", size: 18, stroke: 1.4, style: { color: c.on ? c.color : t.fg3 } }),
-          /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: c.on, size: 18, onChange: () => l((p) => ({ ...p, lights: p.lights.map((u) => u.id === c.id ? { ...u, on: !u.on } : u) })) })
+          /* @__PURE__ */ r.jsx(window.Icon, { name: "bulb", size: 18, stroke: 1.4, style: { color: u.on ? u.color : t.fg3 } }),
+          /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: u.on, size: 18, onChange: () => l((f) => ({ ...f, lights: f.lights.map((c) => c.id === u.id ? { ...c, on: !c.on } : c) })) })
         ] }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg, marginTop: 10, fontWeight: 500 }, children: c.name }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 1 }, children: c.on ? `${c.brightness}%` : "off" }),
-        c.on && /* @__PURE__ */ r.jsx(
+        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg, marginTop: 10, fontWeight: 500 }, children: u.name }),
+        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 1 }, children: u.on ? `${u.brightness}%` : "off" }),
+        u.on && /* @__PURE__ */ r.jsx(
           "input",
           {
             type: "range",
             min: "1",
             max: "100",
-            value: c.brightness,
-            onChange: (p) => l((u) => ({ ...u, lights: u.lights.map((h) => h.id === c.id ? { ...h, brightness: +p.target.value } : h) })),
+            value: u.brightness,
+            onChange: (f) => l((c) => ({ ...c, lights: c.lights.map((p) => p.id === u.id ? { ...p, brightness: +f.target.value } : p) })),
             style: { width: "100%", marginTop: 8, accentColor: t.accent }
           }
         )
-      ] }, c.id)) })
+      ] }, u.id)) })
     }
   );
 }, Gg = ({ ctx: e }) => {
-  const { p: t, fonts: n, state: i, setState: o, room: l, setPage: s } = e, a = i.speakers.find((p) => p.room === l) || i.speakers[0];
+  const { p: t, fonts: n, state: i, setState: o, room: l, setPage: s } = e, a = i.speakers.find((f) => f.room === l) || i.speakers[0];
   if (!a) return null;
-  const d = window.trackById(a.trackId), c = () => o((p) => ({ ...p, speakers: p.speakers.map((u) => u.id === a.id ? { ...u, playing: !a.playing } : u) }));
+  const d = window.trackById(a.trackId), u = () => o((f) => ({ ...f, speakers: f.speakers.map((c) => c.id === a.id ? { ...c, playing: !a.playing } : c) }));
   return /* @__PURE__ */ r.jsx(
     window.Section,
     {
       title: "Music",
-      subtitle: `${i.speakers.filter((p) => p.playing).length} speakers playing`,
+      subtitle: `${i.speakers.filter((f) => f.playing).length} speakers playing`,
       p: t,
       fonts: n,
       action: /* @__PURE__ */ r.jsx("button", { onClick: () => s("music"), style: { padding: "6px 12px", borderRadius: 7, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 11, cursor: "pointer", fontFamily: n.body }, children: "Library →" }),
@@ -9860,7 +9858,7 @@ const Io = [
         /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
           /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 10, color: t.fg3, letterSpacing: ".1em", textTransform: "uppercase" }, children: [
             "Now playing · ",
-            window.ROOMS.find((p) => p.id === a.room)?.name
+            window.ROOMS.find((f) => f.id === a.room)?.name
           ] }),
           /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 20, color: t.fg, fontWeight: 500, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: d.title }),
           /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: t.fg2, fontStyle: "italic", marginTop: 1 }, children: [
@@ -9879,7 +9877,7 @@ const Io = [
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 6, flex: "none" }, children: [
           /* @__PURE__ */ r.jsx("button", { style: { width: 34, height: 34, borderRadius: 8, background: "transparent", border: `.5px solid ${t.border2}`, color: t.fg2, cursor: "pointer" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "prev", size: 14 }) }),
-          /* @__PURE__ */ r.jsx("button", { onClick: c, style: { width: 42, height: 42, borderRadius: "50%", background: t.accent, color: "#fff", border: 0, cursor: "pointer", display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: a.playing ? "pause" : "play", size: 16 }) }),
+          /* @__PURE__ */ r.jsx("button", { onClick: u, style: { width: 42, height: 42, borderRadius: "50%", background: t.accent, color: "#fff", border: 0, cursor: "pointer", display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: a.playing ? "pause" : "play", size: 16 }) }),
           /* @__PURE__ */ r.jsx("button", { style: { width: 34, height: 34, borderRadius: 8, background: "transparent", border: `.5px solid ${t.border2}`, color: t.fg2, cursor: "pointer" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "next", size: 14 }) })
         ] })
       ] })
@@ -9922,14 +9920,14 @@ const Io = [
   { id: "home", label: "Home", icon: "home", desc: "Perimeter armed · interior bypassed", color: "oklch(60% 0.13 145)" },
   { id: "away", label: "Away", icon: "lock", desc: "Full system armed · entry delay 30s", color: "oklch(58% 0.16 30)" }
 ], _u = ({ ctx: e, compact: t }) => {
-  const { p: n, fonts: i, state: o, setState: l } = e, s = o.ring?.mode || "disarmed", a = (c) => {
-    l((p) => ({
-      ...p,
-      ring: { ...p.ring || {}, mode: c, lastChanged: (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), changedBy: "You" },
+  const { p: n, fonts: i, state: o, setState: l } = e, s = o.ring?.mode || "disarmed", a = (u) => {
+    l((f) => ({
+      ...f,
+      ring: { ...f.ring || {}, mode: u, lastChanged: (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), changedBy: "You" },
       // Away also locks everything
-      locks: c === "away" ? p.locks.map((u) => ({ ...u, locked: !0 })) : p.locks
+      locks: u === "away" ? f.locks.map((c) => ({ ...c, locked: !0 })) : f.locks
     }));
-  }, d = _l.find((c) => c.id === s);
+  }, d = _l.find((u) => u.id === s);
   return /* @__PURE__ */ r.jsxs(window.Card, { p: n, style: { padding: t ? 12 : 16 }, children: [
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }, children: [
       /* @__PURE__ */ r.jsx("div", { style: { width: 24, height: 24, borderRadius: 5, background: "#1f1f1f", color: "#fff", display: "grid", placeItems: "center", fontSize: 9, fontWeight: 700, flex: "none" }, children: "R" }),
@@ -9945,14 +9943,14 @@ const Io = [
       ] }),
       /* @__PURE__ */ r.jsx("div", { style: { width: 7, height: 7, borderRadius: "50%", background: d.color } })
     ] }),
-    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }, children: _l.map((c) => {
-      const p = c.id === s;
-      return /* @__PURE__ */ r.jsxs("button", { onClick: () => a(c.id), style: {
+    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }, children: _l.map((u) => {
+      const f = u.id === s;
+      return /* @__PURE__ */ r.jsxs("button", { onClick: () => a(u.id), style: {
         padding: t ? "8px 6px" : "10px 8px",
         borderRadius: 8,
-        border: `.5px solid ${p ? c.color : n.border2}`,
-        background: p ? `color-mix(in oklch, ${c.color} 14%, transparent)` : n.surface,
-        color: p ? c.color : n.fg,
+        border: `.5px solid ${f ? u.color : n.border2}`,
+        background: f ? `color-mix(in oklch, ${u.color} 14%, transparent)` : n.surface,
+        color: f ? u.color : n.fg,
         cursor: "pointer",
         fontFamily: i.body,
         display: "flex",
@@ -9961,13 +9959,13 @@ const Io = [
         gap: 4,
         transition: "border-color .15s, background .15s"
       }, children: [
-        /* @__PURE__ */ r.jsx(window.Icon, { name: c.icon, size: 14 }),
-        /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, fontWeight: p ? 600 : 500 }, children: c.label })
-      ] }, c.id);
+        /* @__PURE__ */ r.jsx(window.Icon, { name: u.icon, size: 14 }),
+        /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, fontWeight: f ? 600 : 500 }, children: u.label })
+      ] }, u.id);
     }) })
   ] });
 }, Kg = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, s = o.locks.every((c) => c.locked), a = o.ring?.mode || "disarmed", d = _l.find((c) => c.id === a);
+  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, s = o.locks.every((u) => u.locked), a = o.ring?.mode || "disarmed", d = _l.find((u) => u.id === a);
   return /* @__PURE__ */ r.jsxs(
     window.Section,
     {
@@ -9975,62 +9973,47 @@ const Io = [
       subtitle: `${d.label} · ${s ? "all locked" : "something is open"}`,
       p: t,
       fonts: n,
-      action: /* @__PURE__ */ r.jsx("button", { onClick: () => l((c) => ({ ...c, locks: c.locks.map((p) => ({ ...p, locked: !0 })) })), style: { padding: "6px 12px", borderRadius: 7, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 11, cursor: "pointer", fontFamily: n.body }, children: "Lock all" }),
+      action: /* @__PURE__ */ r.jsx("button", { onClick: () => l((u) => ({ ...u, locks: u.locks.map((f) => ({ ...f, locked: !0 })) })), style: { padding: "6px 12px", borderRadius: 7, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 11, cursor: "pointer", fontFamily: n.body }, children: "Lock all" }),
       children: [
         /* @__PURE__ */ r.jsx("div", { style: { marginBottom: i.tileGap }, children: /* @__PURE__ */ r.jsx(_u, { ctx: e }) }),
-        /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: i.tileGap }, children: o.locks.map((c) => /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 14, display: "flex", alignItems: "center", gap: 12 }, children: [
-          /* @__PURE__ */ r.jsx(window.Icon, { name: "lock", size: 20, style: { color: c.locked ? "oklch(60% 0.13 145)" : t.accent } }),
+        /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: i.tileGap }, children: o.locks.map((u) => /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 14, display: "flex", alignItems: "center", gap: 12 }, children: [
+          /* @__PURE__ */ r.jsx(window.Icon, { name: "lock", size: 20, style: { color: u.locked ? "oklch(60% 0.13 145)" : t.accent } }),
           /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg, fontWeight: 500 }, children: c.name }),
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 1 }, children: c.locked ? "Locked" : "Unlocked" })
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg, fontWeight: 500 }, children: u.name }),
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 1 }, children: u.locked ? "Locked" : "Unlocked" })
           ] }),
-          /* @__PURE__ */ r.jsx("button", { onClick: () => l((p) => ({ ...p, locks: p.locks.map((u) => u.id === c.id ? { ...u, locked: !u.locked } : u) })), style: { padding: "5px 10px", borderRadius: 999, border: `.5px solid ${c.locked ? t.border2 : t.accent}`, background: c.locked ? "transparent" : t.accentSoft, color: c.locked ? t.fg2 : t.accent, fontSize: 11, cursor: "pointer" }, children: c.locked ? "Unlock" : "Lock" })
-        ] }, c.id)) })
+          /* @__PURE__ */ r.jsx("button", { onClick: () => l((f) => ({ ...f, locks: f.locks.map((c) => c.id === u.id ? { ...c, locked: !c.locked } : c) })), style: { padding: "5px 10px", borderRadius: 999, border: `.5px solid ${u.locked ? t.border2 : t.accent}`, background: u.locked ? "transparent" : t.accentSoft, color: u.locked ? t.fg2 : t.accent, fontSize: 11, cursor: "pointer" }, children: u.locked ? "Unlock" : "Lock" })
+        ] }, u.id)) })
       ]
     }
   );
 }, Xg = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setPage: l, narrow: s } = e, a = o.tesla, d = o.garage.doors.filter((c) => c.open).length;
-  return /* @__PURE__ */ r.jsx(window.Section, { title: "Car & garage", p: t, fonts: n, children: /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: s ? "1fr" : "1fr 1fr", gap: i.tileGap }, children: [
-    /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 16, cursor: "pointer" }, onClick: () => l("car"), children: [
-      /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t.fg3 }, children: "Tesla · Model 3" }),
-        /* @__PURE__ */ r.jsx(window.Icon, { name: "car", size: 14, style: { color: t.fg3 } })
+  const { p: t, fonts: n, state: i, setPage: o } = e, l = i.tesla;
+  return l.id ? /* @__PURE__ */ r.jsx(window.Section, { title: "Car", p: t, fonts: n, children: /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 16, cursor: "pointer" }, onClick: () => o("car"), children: [
+    /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
+      /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t.fg3 }, children: l.name }),
+      /* @__PURE__ */ r.jsx(window.Icon, { name: "car", size: 14, style: { color: t.fg3 } })
+    ] }),
+    /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginTop: 10 }, children: [
+      /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: n.display, fontSize: 34, color: t.fg, fontWeight: 500, lineHeight: 1 }, children: [
+        l.chargePct,
+        /* @__PURE__ */ r.jsx("span", { style: { fontSize: 14, color: t.fg2 }, children: "%" })
       ] }),
-      /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginTop: 10 }, children: [
-        /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: n.display, fontSize: 34, color: t.fg, fontWeight: 500, lineHeight: 1 }, children: [
-          a.chargePct,
-          /* @__PURE__ */ r.jsx("span", { style: { fontSize: 14, color: t.fg2 }, children: "%" })
-        ] }),
-        /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: t.fg2 }, children: [
-          a.range,
-          " mi · ",
-          a.charging ? `+${a.chargeRate} mph` : a.pluggedIn ? "plugged in" : "unplugged"
-        ] })
-      ] }),
-      /* @__PURE__ */ r.jsx("div", { style: { height: 5, background: t.border, borderRadius: 3, marginTop: 12, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${a.chargePct}%`, height: "100%", background: a.charging ? t.accent : "oklch(60% 0.14 145)" } }) }),
-      /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: t.fg3, marginTop: 8, display: "flex", alignItems: "center", gap: 5 }, children: [
-        /* @__PURE__ */ r.jsx(window.Icon, { name: "location", size: 10 }),
+      /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: t.fg2 }, children: [
+        l.range,
         " ",
-        a.location
+        l.rangeUnit || "mi",
+        " · ",
+        l.charging ? `+${l.chargeRate} mph` : l.pluggedIn ? "plugged in" : "unplugged"
       ] })
     ] }),
-    /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 16, cursor: "pointer" }, onClick: () => l("garage"), children: [
-      /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t.fg3 }, children: "Garage · MyQ" }),
-        /* @__PURE__ */ r.jsx(window.Icon, { name: "garage", size: 14, style: { color: t.fg3 } })
-      ] }),
-      /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 18, color: t.fg, marginTop: 10, fontWeight: 500 }, children: d === 0 ? "Both doors closed" : /* @__PURE__ */ r.jsxs("em", { style: { fontStyle: "italic", color: t.accent }, children: [
-        d,
-        " open"
-      ] }) }),
-      /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 5, marginTop: 10 }, children: o.garage.doors.map((c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: t.fg2 }, children: [
-        /* @__PURE__ */ r.jsx(window.Icon, { name: "garage", size: 11, style: { color: c.open ? t.accent : t.fg3 } }),
-        /* @__PURE__ */ r.jsx("span", { style: { flex: 1 }, children: c.name }),
-        /* @__PURE__ */ r.jsx("span", { style: { color: c.open ? t.accent : t.fg3, fontSize: 11 }, children: c.open ? "Open" : "Closed" })
-      ] }, c.id)) })
+    /* @__PURE__ */ r.jsx("div", { style: { height: 5, background: t.border, borderRadius: 3, marginTop: 12, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${l.chargePct}%`, height: "100%", background: l.charging ? t.accent : "oklch(60% 0.14 145)" } }) }),
+    /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: t.fg3, marginTop: 8, display: "flex", alignItems: "center", gap: 5 }, children: [
+      /* @__PURE__ */ r.jsx(window.Icon, { name: "location", size: 10 }),
+      " ",
+      l.location
     ] })
-  ] }) });
+  ] }) }) : null;
 }, qg = ({ ctx: e }) => {
   const { p: t, fonts: n, dens: i, state: o, setPage: l, narrow: s } = e;
   return /* @__PURE__ */ r.jsx(
@@ -10062,7 +10045,7 @@ const Io = [
               /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: t.fg3 }, children: a.label })
             ] }),
             /* @__PURE__ */ r.jsx("div", { style: { flex: 1 } }),
-            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: a.on, size: 16, onChange: (c) => e.setState((p) => ({ ...p, alarms: p.alarms.map((u) => u.id === a.id ? { ...u, on: c } : u) })) })
+            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: a.on, size: 16, onChange: (u) => e.setState((f) => ({ ...f, alarms: f.alarms.map((c) => c.id === a.id ? { ...c, on: u } : c) })) })
           ] }, a.id))
         ] })
       ] })
@@ -10082,34 +10065,34 @@ const Io = [
 };
 Object.assign(window, { HomeView: Bg, ClimateSection: Vg, LightsSection: Ug, MusicSection: Gg, ScenesSection: Qg, CamerasSection: Yg, SecuritySection: Kg, CarSection: Xg, TodaySection: qg, CamThumb: Jg, RingModeSwitcher: _u });
 const Zg = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, [s, a] = React.useState("library"), [d, c] = React.useState(window.PLAYLISTS[0].id), [p, u] = React.useState(""), [h, v] = React.useState(o.speakers[0].id), w = o.speakers.find((S) => S.id === h) || o.speakers[0], f = (S, C = h) => {
-    l(($) => ({
-      ...$,
-      speakers: $.speakers.map((T) => T.id === C ? { ...T, trackId: S, progress: 0, playing: !0 } : T)
+  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, [s, a] = React.useState("library"), [d, u] = React.useState(window.PLAYLISTS[0].id), [f, c] = React.useState(""), [p, w] = React.useState(o.speakers[0].id), x = o.speakers.find((S) => S.id === p) || o.speakers[0], h = (S, C = p) => {
+    l((M) => ({
+      ...M,
+      speakers: M.speakers.map((T) => T.id === C ? { ...T, trackId: S, progress: 0, playing: !0 } : T)
     }));
   }, k = (S) => l((C) => ({
     ...C,
-    speakers: C.speakers.map(($) => $.id === S ? { ...$, playing: !$.playing } : $)
-  })), m = (S, C) => l(($) => ({
-    ...$,
-    speakers: $.speakers.map((T) => T.id === S ? { ...T, vol: C } : T)
+    speakers: C.speakers.map((M) => M.id === S ? { ...M, playing: !M.playing } : M)
+  })), m = (S, C) => l((M) => ({
+    ...M,
+    speakers: M.speakers.map((T) => T.id === S ? { ...T, vol: C } : T)
   })), g = (S, C) => {
-    l(($) => {
-      const T = $.playlists || JSON.parse(JSON.stringify(window.PLAYLISTS));
+    l((M) => {
+      const T = M.playlists || JSON.parse(JSON.stringify(window.PLAYLISTS));
       return {
-        ...$,
+        ...M,
         playlists: T.map((_) => _.id === S ? { ..._, tracks: _.tracks.includes(C) ? _.tracks : [..._.tracks, C], count: _.count + (_.tracks.includes(C) ? 0 : 1) } : _)
       };
     });
   }, y = (S, C) => {
-    l(($) => {
-      const T = $.playlists || JSON.parse(JSON.stringify(window.PLAYLISTS));
+    l((M) => {
+      const T = M.playlists || JSON.parse(JSON.stringify(window.PLAYLISTS));
       return {
-        ...$,
+        ...M,
         playlists: T.map((_) => _.id === S ? { ..._, tracks: _.tracks.filter((E) => E !== C), count: Math.max(0, _.count - 1) } : _)
       };
     });
-  }, x = o.playlists || window.PLAYLISTS, b = x.find((S) => S.id === d), j = p ? window.TRACKS.filter((S) => (S.title + " " + S.artist + " " + S.album).toLowerCase().includes(p.toLowerCase())) : window.TRACKS;
+  }, v = o.playlists || window.PLAYLISTS, b = v.find((S) => S.id === d), j = f ? window.TRACKS.filter((S) => (S.title + " " + S.artist + " " + S.album).toLowerCase().includes(f.toLowerCase())) : window.TRACKS;
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsx(
       window.PageHead,
@@ -10118,8 +10101,8 @@ const Zg = ({ ctx: e }) => {
         eyebrow: "Apple Music · 2,847 songs",
         title: "Library",
         sub: "frances.w@icloud.com · streaming to Sonos & AirPlay",
-        right: /* @__PURE__ */ r.jsx(em, { ctx: e, value: p, onChange: (S) => {
-          u(S), S && a("search");
+        right: /* @__PURE__ */ r.jsx(em, { ctx: e, value: f, onChange: (S) => {
+          c(S), S && a("search");
         } })
       }
     ),
@@ -10130,7 +10113,7 @@ const Zg = ({ ctx: e }) => {
         /* @__PURE__ */ r.jsx(Yn, { ctx: e, icon: "heart", label: "Favorites", onClick: () => a("library") }),
         /* @__PURE__ */ r.jsx(Yn, { ctx: e, icon: "search", label: "Search", active: s === "search", onClick: () => a("search") }),
         /* @__PURE__ */ r.jsx("div", { style: { padding: "14px 14px 6px", fontSize: 10, letterSpacing: ".14em", textTransform: "uppercase", color: t.fg3, fontWeight: 500 }, children: "Playlists" }),
-        x.map((S) => /* @__PURE__ */ r.jsx(
+        v.map((S) => /* @__PURE__ */ r.jsx(
           Yn,
           {
             ctx: e,
@@ -10138,7 +10121,7 @@ const Zg = ({ ctx: e }) => {
             label: S.name,
             active: s === "playlist" && d === S.id,
             onClick: () => {
-              a("playlist"), c(S.id);
+              a("playlist"), u(S.id);
             }
           },
           S.id
@@ -10166,17 +10149,17 @@ const Zg = ({ ctx: e }) => {
         {
           ctx: e,
           pl: b,
-          playOn: f,
-          speaker: w,
+          playOn: h,
+          speaker: x,
           removeFromPlaylist: y
         }
-      ) : s === "recent" ? /* @__PURE__ */ r.jsx(Li, { ctx: e, title: "Recently played", tracks: window.TRACKS.slice(0, 8), playOn: f, speaker: w, playlists: x, addToPlaylist: g }) : s === "search" ? /* @__PURE__ */ r.jsx(Li, { ctx: e, title: `Results for "${p}"`, tracks: j, playOn: f, speaker: w, playlists: x, addToPlaylist: g }) : /* @__PURE__ */ r.jsx(tm, { ctx: e, playOn: f, speaker: w, playlists: x, addToPlaylist: g, setSection: a, setActivePlaylist: c }) }),
+      ) : s === "recent" ? /* @__PURE__ */ r.jsx(Li, { ctx: e, title: "Recently played", tracks: window.TRACKS.slice(0, 8), playOn: h, speaker: x, playlists: v, addToPlaylist: g }) : s === "search" ? /* @__PURE__ */ r.jsx(Li, { ctx: e, title: `Results for "${f}"`, tracks: j, playOn: h, speaker: x, playlists: v, addToPlaylist: g }) : /* @__PURE__ */ r.jsx(tm, { ctx: e, playOn: h, speaker: x, playlists: v, addToPlaylist: g, setSection: a, setActivePlaylist: u }) }),
       /* @__PURE__ */ r.jsx(
         im,
         {
           ctx: e,
-          activeSpeaker: h,
-          setActiveSpeaker: v,
+          activeSpeaker: p,
+          setActiveSpeaker: w,
           togglePlay: k,
           setVol: m
         }
@@ -10204,7 +10187,7 @@ const Zg = ({ ctx: e }) => {
     borderLeft: i ? `2px solid ${s.accent}` : "2px solid transparent"
   }, children: [
     t && /* @__PURE__ */ r.jsx(window.Icon, { name: t, size: 14, stroke: 1.5 }),
-    l && /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", width: 18, height: 18, borderRadius: 3, overflow: "hidden", flex: "none" }, children: l.map((d, c) => /* @__PURE__ */ r.jsx("span", { style: { background: d } }, c)) }),
+    l && /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", width: 18, height: 18, borderRadius: 3, overflow: "hidden", flex: "none" }, children: l.map((d, u) => /* @__PURE__ */ r.jsx("span", { style: { background: d } }, u)) }),
     /* @__PURE__ */ r.jsx("span", { style: { flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: n })
   ] });
 }, em = ({ ctx: e, value: t, onChange: n }) => {
@@ -10222,7 +10205,7 @@ const Zg = ({ ctx: e }) => {
     } })
   ] });
 }, tm = ({ ctx: e, playOn: t, speaker: n, playlists: i, addToPlaylist: o, setSection: l, setActivePlaylist: s }) => {
-  const { p: a, fonts: d, dens: c } = e;
+  const { p: a, fonts: d, dens: u } = e;
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsxs(window.Card, { p: a, style: { padding: 0, overflow: "hidden", display: "flex", minHeight: 200 }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, padding: 24, display: "flex", flexDirection: "column", justifyContent: "flex-end", background: `linear-gradient(135deg, ${a.accent} 0%, oklch(35% 0.13 30) 100%)` }, children: [
@@ -10237,33 +10220,33 @@ const Zg = ({ ctx: e }) => {
           /* @__PURE__ */ r.jsx("button", { style: { padding: "8px 18px", borderRadius: 8, border: ".5px solid rgba(255,255,255,.4)", background: "transparent", color: "#fff", fontSize: 13, cursor: "pointer" }, children: "Shuffle" })
         ] })
       ] }),
-      /* @__PURE__ */ r.jsx("div", { style: { width: 200, position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }, children: window.PLAYLISTS[3].art.map((p, u) => /* @__PURE__ */ r.jsx("div", { style: { background: p } }, u)) })
+      /* @__PURE__ */ r.jsx("div", { style: { width: 200, position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }, children: window.PLAYLISTS[3].art.map((f, c) => /* @__PURE__ */ r.jsx("div", { style: { background: f } }, c)) })
     ] }),
-    /* @__PURE__ */ r.jsx(window.Section, { title: "Recently played", p: a, fonts: d, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: c.tileGap }, children: window.TRACKS.slice(0, 6).map((p) => /* @__PURE__ */ r.jsxs("button", { onClick: () => t(p.id), style: { padding: 0, border: 0, background: "transparent", cursor: "pointer", textAlign: "left" }, children: [
-      /* @__PURE__ */ r.jsxs("div", { style: { aspectRatio: "1", borderRadius: 8, background: `radial-gradient(120% 120% at 30% 25%, ${p.hue}, oklch(15% 0.05 25))`, position: "relative", overflow: "hidden" }, children: [
+    /* @__PURE__ */ r.jsx(window.Section, { title: "Recently played", p: a, fonts: d, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: u.tileGap }, children: window.TRACKS.slice(0, 6).map((f) => /* @__PURE__ */ r.jsxs("button", { onClick: () => t(f.id), style: { padding: 0, border: 0, background: "transparent", cursor: "pointer", textAlign: "left" }, children: [
+      /* @__PURE__ */ r.jsxs("div", { style: { aspectRatio: "1", borderRadius: 8, background: `radial-gradient(120% 120% at 30% 25%, ${f.hue}, oklch(15% 0.05 25))`, position: "relative", overflow: "hidden" }, children: [
         /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", inset: 0, background: "radial-gradient(circle at 70% 70%, rgba(255,220,150,.4), transparent 55%)" } }),
-        /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", bottom: 8, left: 10, right: 10, fontFamily: d.display, fontStyle: "italic", fontSize: 10, color: "rgba(255,240,210,.85)", letterSpacing: ".05em", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.album })
+        /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", bottom: 8, left: 10, right: 10, fontFamily: d.display, fontStyle: "italic", fontSize: 10, color: "rgba(255,240,210,.85)", letterSpacing: ".05em", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: f.album })
       ] }),
-      /* @__PURE__ */ r.jsx("div", { style: { fontFamily: d.display, fontSize: 14, color: a.fg, marginTop: 8, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.title }),
-      /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: a.fg3, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.artist })
-    ] }, p.id)) }) }),
-    /* @__PURE__ */ r.jsx(window.Section, { title: "Your playlists", p: a, fonts: d, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: c.tileGap }, children: i.map((p) => /* @__PURE__ */ r.jsxs("button", { onClick: () => {
-      l("playlist"), s(p.id);
+      /* @__PURE__ */ r.jsx("div", { style: { fontFamily: d.display, fontSize: 14, color: a.fg, marginTop: 8, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: f.title }),
+      /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: a.fg3, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: f.artist })
+    ] }, f.id)) }) }),
+    /* @__PURE__ */ r.jsx(window.Section, { title: "Your playlists", p: a, fonts: d, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: u.tileGap }, children: i.map((f) => /* @__PURE__ */ r.jsxs("button", { onClick: () => {
+      l("playlist"), s(f.id);
     }, style: { padding: 0, border: 0, background: "transparent", cursor: "pointer", textAlign: "left" }, children: [
-      /* @__PURE__ */ r.jsx("div", { style: { aspectRatio: "1", borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr", overflow: "hidden" }, children: p.art.slice(0, 4).map((u, h) => /* @__PURE__ */ r.jsx("div", { style: { background: u } }, h)) }),
-      /* @__PURE__ */ r.jsx("div", { style: { fontFamily: d.display, fontSize: 14, color: a.fg, marginTop: 8, fontWeight: 500 }, children: p.name }),
+      /* @__PURE__ */ r.jsx("div", { style: { aspectRatio: "1", borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr", overflow: "hidden" }, children: f.art.slice(0, 4).map((c, p) => /* @__PURE__ */ r.jsx("div", { style: { background: c } }, p)) }),
+      /* @__PURE__ */ r.jsx("div", { style: { fontFamily: d.display, fontSize: 14, color: a.fg, marginTop: 8, fontWeight: 500 }, children: f.name }),
       /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: a.fg3, marginTop: 1 }, children: [
-        p.count,
+        f.count,
         " songs"
       ] })
-    ] }, p.id)) }) }),
+    ] }, f.id)) }) }),
     /* @__PURE__ */ r.jsx(window.Section, { title: "All songs", subtitle: `${window.TRACKS.length} of 2,847`, p: a, fonts: d, children: /* @__PURE__ */ r.jsx(Li, { ctx: e, tracks: window.TRACKS, playOn: t, speaker: n, playlists: i, addToPlaylist: o }) })
   ] });
 }, nm = ({ ctx: e, pl: t, playOn: n, speaker: i, removeFromPlaylist: o }) => {
   const { p: l, fonts: s } = e, a = t.tracks.map((d) => window.trackById(d)).filter(Boolean);
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsxs(window.Card, { p: l, style: { padding: 0, overflow: "hidden", display: "flex", minHeight: 200 }, children: [
-      /* @__PURE__ */ r.jsx("div", { style: { width: 200, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, flex: "none" }, children: t.art.slice(0, 4).map((d, c) => /* @__PURE__ */ r.jsx("div", { style: { background: d } }, c)) }),
+      /* @__PURE__ */ r.jsx("div", { style: { width: 200, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, flex: "none" }, children: t.art.slice(0, 4).map((d, u) => /* @__PURE__ */ r.jsx("div", { style: { background: d } }, u)) }),
       /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, padding: 24, display: "flex", flexDirection: "column", justifyContent: "flex-end" }, children: [
         /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: l.fg3, letterSpacing: ".12em", textTransform: "uppercase" }, children: [
           "Playlist · ",
@@ -10297,8 +10280,8 @@ const Zg = ({ ctx: e }) => {
         rowAction: (d) => /* @__PURE__ */ r.jsxs(
           "button",
           {
-            onClick: (c) => {
-              c.stopPropagation(), o(t.id, d.id);
+            onClick: (u) => {
+              u.stopPropagation(), o(t.id, d.id);
             },
             style: { padding: "4px 8px", borderRadius: 6, border: `.5px solid ${l.border2}`, background: "transparent", color: l.fg3, fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: s.body },
             children: [
@@ -10311,9 +10294,9 @@ const Zg = ({ ctx: e }) => {
     )
   ] });
 }, Li = ({ ctx: e, tracks: t, title: n, playOn: i, speaker: o, playlists: l, addToPlaylist: s, rowAction: a }) => {
-  const { p: d, fonts: c } = e, [p, u] = React.useState(null);
+  const { p: d, fonts: u } = e, [f, c] = React.useState(null);
   return /* @__PURE__ */ r.jsxs("div", { children: [
-    n && /* @__PURE__ */ r.jsx("h2", { style: { margin: "0 0 12px", fontFamily: c.display, fontSize: 20, fontWeight: 500, color: d.fg }, children: n }),
+    n && /* @__PURE__ */ r.jsx("h2", { style: { margin: "0 0 12px", fontFamily: u.display, fontSize: 20, fontWeight: 500, color: d.fg }, children: n }),
     /* @__PURE__ */ r.jsxs(window.Card, { p: d, style: { padding: 0, overflow: "hidden" }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "40px 1.6fr 1fr 1fr 60px 80px", alignItems: "center", gap: 14, padding: "10px 18px", fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", color: d.fg3, borderBottom: `.5px solid ${d.border}` }, children: [
         /* @__PURE__ */ r.jsx("span", { children: "#" }),
@@ -10323,20 +10306,20 @@ const Zg = ({ ctx: e }) => {
         /* @__PURE__ */ r.jsx("span", { style: { textAlign: "right" }, children: "Time" }),
         /* @__PURE__ */ r.jsx("span", {})
       ] }),
-      t.map((h, v) => {
-        const w = o.trackId === h.id;
-        return /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "40px 1.6fr 1fr 1fr 60px 80px", alignItems: "center", gap: 14, padding: "8px 18px", fontSize: 13, color: d.fg, borderBottom: v < t.length - 1 ? `.5px solid ${d.border}` : "none", cursor: "pointer", position: "relative" }, onDoubleClick: () => i(h.id), children: [
-          /* @__PURE__ */ r.jsx("button", { onClick: () => i(h.id), style: { width: 24, height: 24, borderRadius: "50%", border: 0, background: w ? d.accent : "transparent", color: w ? "#fff" : d.fg3, cursor: "pointer", display: "grid", placeItems: "center" }, children: w && o.playing ? /* @__PURE__ */ r.jsx(rm, { p: d }) : /* @__PURE__ */ r.jsx(window.Icon, { name: "play", size: 11 }) }),
+      t.map((p, w) => {
+        const x = o.trackId === p.id;
+        return /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "40px 1.6fr 1fr 1fr 60px 80px", alignItems: "center", gap: 14, padding: "8px 18px", fontSize: 13, color: d.fg, borderBottom: w < t.length - 1 ? `.5px solid ${d.border}` : "none", cursor: "pointer", position: "relative" }, onDoubleClick: () => i(p.id), children: [
+          /* @__PURE__ */ r.jsx("button", { onClick: () => i(p.id), style: { width: 24, height: 24, borderRadius: "50%", border: 0, background: x ? d.accent : "transparent", color: x ? "#fff" : d.fg3, cursor: "pointer", display: "grid", placeItems: "center" }, children: x && o.playing ? /* @__PURE__ */ r.jsx(rm, { p: d }) : /* @__PURE__ */ r.jsx(window.Icon, { name: "play", size: 11 }) }),
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0 }, children: [
-            /* @__PURE__ */ r.jsx("div", { style: { width: 34, height: 34, borderRadius: 5, flex: "none", background: `radial-gradient(120% 120% at 30% 25%, ${h.hue}, oklch(20% 0.05 25))` } }),
-            /* @__PURE__ */ r.jsx("div", { style: { minWidth: 0 }, children: /* @__PURE__ */ r.jsx("div", { style: { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: w ? d.accent : d.fg, fontWeight: w ? 500 : 400 }, children: h.title }) })
+            /* @__PURE__ */ r.jsx("div", { style: { width: 34, height: 34, borderRadius: 5, flex: "none", background: `radial-gradient(120% 120% at 30% 25%, ${p.hue}, oklch(20% 0.05 25))` } }),
+            /* @__PURE__ */ r.jsx("div", { style: { minWidth: 0 }, children: /* @__PURE__ */ r.jsx("div", { style: { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: x ? d.accent : d.fg, fontWeight: x ? 500 : 400 }, children: p.title }) })
           ] }),
-          /* @__PURE__ */ r.jsx("div", { style: { color: d.fg2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: h.artist }),
-          /* @__PURE__ */ r.jsx("div", { style: { color: d.fg3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: h.album }),
-          /* @__PURE__ */ r.jsx("div", { style: { textAlign: "right", color: d.fg3, fontSize: 11, fontVariantNumeric: "tabular-nums" }, children: window.fmtTime(h.dur) }),
+          /* @__PURE__ */ r.jsx("div", { style: { color: d.fg2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.artist }),
+          /* @__PURE__ */ r.jsx("div", { style: { color: d.fg3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.album }),
+          /* @__PURE__ */ r.jsx("div", { style: { textAlign: "right", color: d.fg3, fontSize: 11, fontVariantNumeric: "tabular-nums" }, children: window.fmtTime(p.dur) }),
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", justifyContent: "flex-end", gap: 6, position: "relative" }, children: [
-            a ? a(h) : /* @__PURE__ */ r.jsx("button", { onClick: (f) => {
-              f.stopPropagation(), u(p === h.id ? null : h.id);
+            a ? a(p) : /* @__PURE__ */ r.jsx("button", { onClick: (h) => {
+              h.stopPropagation(), c(f === p.id ? null : p.id);
             }, style: {
               width: 26,
               height: 26,
@@ -10348,15 +10331,15 @@ const Zg = ({ ctx: e }) => {
               display: "grid",
               placeItems: "center"
             }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "dots", size: 14 }) }),
-            p === h.id && l && /* @__PURE__ */ r.jsxs(
+            f === p.id && l && /* @__PURE__ */ r.jsxs(
               "div",
               {
                 style: { position: "absolute", right: 0, top: 30, width: 200, background: d.surface2, border: `.5px solid ${d.border2}`, borderRadius: 9, boxShadow: "0 12px 32px rgba(0,0,0,.18)", zIndex: 30, padding: 6 },
-                onMouseLeave: () => u(null),
+                onMouseLeave: () => c(null),
                 children: [
                   /* @__PURE__ */ r.jsx("div", { style: { padding: "4px 10px", fontSize: 10, color: d.fg3, letterSpacing: ".1em", textTransform: "uppercase" }, children: "Add to playlist" }),
-                  l.map((f) => /* @__PURE__ */ r.jsxs("button", { onClick: () => {
-                    s(f.id, h.id), u(null);
+                  l.map((h) => /* @__PURE__ */ r.jsxs("button", { onClick: () => {
+                    s(h.id, p.id), c(null);
                   }, style: {
                     display: "flex",
                     alignItems: "center",
@@ -10369,17 +10352,17 @@ const Zg = ({ ctx: e }) => {
                     color: d.fg,
                     fontSize: 12,
                     cursor: "pointer",
-                    fontFamily: c.body,
+                    fontFamily: u.body,
                     textAlign: "left"
                   }, children: [
-                    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", width: 14, height: 14, borderRadius: 2, overflow: "hidden", flex: "none" }, children: f.art.slice(0, 4).map((k, m) => /* @__PURE__ */ r.jsx("span", { style: { background: k } }, m)) }),
-                    f.name
-                  ] }, f.id))
+                    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", width: 14, height: 14, borderRadius: 2, overflow: "hidden", flex: "none" }, children: h.art.slice(0, 4).map((k, m) => /* @__PURE__ */ r.jsx("span", { style: { background: k } }, m)) }),
+                    h.name
+                  ] }, h.id))
                 ]
               }
             )
           ] })
-        ] }, h.id + "-" + v);
+        ] }, p.id + "-" + w);
       })
     ] })
   ] });
@@ -10393,44 +10376,44 @@ const Zg = ({ ctx: e }) => {
       /* @__PURE__ */ r.jsx(window.Icon, { name: "airplay", size: 14, style: { color: l.accent } }),
       /* @__PURE__ */ r.jsx("div", { style: { flex: 1, fontFamily: s.display, fontSize: 15, color: l.fg, fontWeight: 500 }, children: "Playing on" }),
       /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: l.fg3 }, children: [
-        a.speakers.filter((c) => c.playing).length,
+        a.speakers.filter((u) => u.playing).length,
         " of ",
         a.speakers.length
       ] })
     ] }),
-    /* @__PURE__ */ r.jsx("div", { style: { maxHeight: 520, overflow: "auto" }, children: a.speakers.map((c) => {
-      const p = window.trackById(c.trackId), u = c.id === t;
-      return /* @__PURE__ */ r.jsxs("div", { onClick: () => n(c.id), style: {
+    /* @__PURE__ */ r.jsx("div", { style: { maxHeight: 520, overflow: "auto" }, children: a.speakers.map((u) => {
+      const f = window.trackById(u.trackId), c = u.id === t;
+      return /* @__PURE__ */ r.jsxs("div", { onClick: () => n(u.id), style: {
         padding: "12px 14px",
         borderBottom: `.5px solid ${l.border}`,
         cursor: "pointer",
-        background: u ? l.warm : "transparent",
-        borderLeft: u ? `2px solid ${l.accent}` : "2px solid transparent"
+        background: c ? l.warm : "transparent",
+        borderLeft: c ? `2px solid ${l.accent}` : "2px solid transparent"
       }, children: [
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10 }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { width: 36, height: 36, borderRadius: 6, background: `radial-gradient(120% 120% at 30% 25%, ${p.hue}, oklch(20% 0.05 25))`, flex: "none" } }),
+          /* @__PURE__ */ r.jsx("div", { style: { width: 36, height: 36, borderRadius: 6, background: `radial-gradient(120% 120% at 30% 25%, ${f.hue}, oklch(20% 0.05 25))`, flex: "none" } }),
           /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
             /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: l.fg, fontWeight: 500 }, children: [
-              /* @__PURE__ */ r.jsx(window.Icon, { name: c.type === "airplay" ? "airplay" : "sonos", size: 11, style: { color: l.fg3 } }),
-              c.name,
-              c.playing && /* @__PURE__ */ r.jsx("span", { style: { width: 6, height: 6, borderRadius: "50%", background: "oklch(60% 0.14 145)" } })
+              /* @__PURE__ */ r.jsx(window.Icon, { name: u.type === "airplay" ? "airplay" : "sonos", size: 11, style: { color: l.fg3 } }),
+              u.name,
+              u.playing && /* @__PURE__ */ r.jsx("span", { style: { width: 6, height: 6, borderRadius: "50%", background: "oklch(60% 0.14 145)" } })
             ] }),
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: l.fg3, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: c.playing ? `${p.title} · ${p.artist}` : "Idle" })
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: l.fg3, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: u.playing ? `${f.title} · ${f.artist}` : "Idle" })
           ] }),
-          /* @__PURE__ */ r.jsx("button", { onClick: (h) => {
-            h.stopPropagation(), i(c.id);
+          /* @__PURE__ */ r.jsx("button", { onClick: (p) => {
+            p.stopPropagation(), i(u.id);
           }, style: {
             width: 28,
             height: 28,
             borderRadius: "50%",
             border: 0,
-            background: c.playing ? l.accent : l.surface,
-            color: c.playing ? "#fff" : l.fg2,
+            background: u.playing ? l.accent : l.surface,
+            color: u.playing ? "#fff" : l.fg2,
             cursor: "pointer",
             display: "grid",
             placeItems: "center",
             flex: "none"
-          }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: c.playing ? "pause" : "play", size: 11 }) })
+          }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: u.playing ? "pause" : "play", size: 11 }) })
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 8 }, children: [
           /* @__PURE__ */ r.jsx(window.Icon, { name: "speaker", size: 11, style: { color: l.fg3 } }),
@@ -10440,19 +10423,19 @@ const Zg = ({ ctx: e }) => {
               type: "range",
               min: "0",
               max: "100",
-              value: c.vol,
-              onChange: (h) => o(c.id, +h.target.value),
-              onClick: (h) => h.stopPropagation(),
+              value: u.vol,
+              onChange: (p) => o(u.id, +p.target.value),
+              onClick: (p) => p.stopPropagation(),
               style: { flex: 1, accentColor: l.accent, height: 3 }
             }
           ),
-          /* @__PURE__ */ r.jsx("span", { style: { fontSize: 10, color: l.fg3, fontVariantNumeric: "tabular-nums", width: 20, textAlign: "right" }, children: c.vol })
+          /* @__PURE__ */ r.jsx("span", { style: { fontSize: 10, color: l.fg3, fontVariantNumeric: "tabular-nums", width: 20, textAlign: "right" }, children: u.vol })
         ] }),
-        c.playing && /* @__PURE__ */ r.jsx("div", { style: { height: 2, background: l.border, borderRadius: 1, marginTop: 6, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${c.progress / p.dur * 100}%`, height: "100%", background: l.accent } }) })
-      ] }, c.id);
+        u.playing && /* @__PURE__ */ r.jsx("div", { style: { height: 2, background: l.border, borderRadius: 1, marginTop: 6, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${u.progress / f.dur * 100}%`, height: "100%", background: l.accent } }) })
+      ] }, u.id);
     }) }),
     /* @__PURE__ */ r.jsxs("div", { style: { padding: "12px 14px", borderTop: `.5px solid ${l.border}`, display: "flex", gap: 8 }, children: [
-      /* @__PURE__ */ r.jsx("button", { onClick: () => d((c) => ({ ...c, speakers: c.speakers.map((p) => ({ ...p, playing: !1 })) })), style: {
+      /* @__PURE__ */ r.jsx("button", { onClick: () => d((u) => ({ ...u, speakers: u.speakers.map((f) => ({ ...f, playing: !1 })) })), style: {
         flex: 1,
         padding: "7px 10px",
         borderRadius: 7,
@@ -10464,8 +10447,8 @@ const Zg = ({ ctx: e }) => {
         fontFamily: s.body
       }, children: "Pause all" }),
       /* @__PURE__ */ r.jsxs("button", { onClick: () => {
-        const c = a.speakers.find((p) => p.id === t);
-        d((p) => ({ ...p, speakers: p.speakers.map((u) => ({ ...u, group: "g1", trackId: c.trackId, progress: c.progress, playing: c.playing })) }));
+        const u = a.speakers.find((f) => f.id === t);
+        d((f) => ({ ...f, speakers: f.speakers.map((c) => ({ ...c, group: "g1", trackId: u.trackId, progress: u.progress, playing: u.playing })) }));
       }, style: {
         flex: 1,
         padding: "7px 10px",
@@ -10513,18 +10496,18 @@ const om = ({ ctx: e }) => {
       { t: "5:14 PM", cam: "Driveway", what: "Vehicle pulled in · Frances's Subaru", dot: "oklch(60% 0.13 145)" },
       { t: "2:02 PM", cam: "Back Yard", what: "Motion · likely a deer", dot: t.fg3 },
       { t: "12:38 PM", cam: "Garage", what: "Door opened · Frances", dot: "oklch(60% 0.13 145)" }
-    ].map((d, c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 10, background: t.surface2, border: `.5px solid ${t.border}`, marginBottom: 8 }, children: [
+    ].map((d, u) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 10, background: t.surface2, border: `.5px solid ${t.border}`, marginBottom: 8 }, children: [
       /* @__PURE__ */ r.jsx("div", { style: { width: 60, fontSize: 12, color: t.fg2, fontVariantNumeric: "tabular-nums" }, children: d.t }),
       /* @__PURE__ */ r.jsx("div", { style: { width: 6, height: 6, borderRadius: "50%", background: d.dot } }),
       /* @__PURE__ */ r.jsx("div", { style: { flex: 1, fontSize: 13, color: t.fg }, children: d.what }),
       /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, fontStyle: "italic" }, children: d.cam })
-    ] }, c)) }),
+    ] }, u)) }),
     /* @__PURE__ */ r.jsx("div", { style: { height: 60 } })
   ] });
 };
 window.CamerasView = om;
 const lm = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, s = (p, u, h) => l((v) => ({ ...v, calendar: v.calendar.map((w) => w.id === p ? { ...w, [u]: h } : w) })), a = (p, u) => s(p, "dnd", !u), d = (p, u) => s(p, "preMins", u), c = (p) => l((u) => ({ ...u, dnd: { active: !0, until: p.end + " (" + p.title + ")", source: p.id } }));
+  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, s = (f, c, p) => l((w) => ({ ...w, calendar: w.calendar.map((x) => x.id === f ? { ...x, [c]: p } : x) })), a = (f, c) => s(f, "dnd", !c), d = (f, c) => s(f, "preMins", c), u = (f) => l((c) => ({ ...c, dnd: { active: !0, until: f.end + " (" + f.title + ")", source: f.id } }));
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsx(
       window.PageHead,
@@ -10532,62 +10515,62 @@ const lm = ({ ctx: e }) => {
         ctx: e,
         eyebrow: "Microsoft Outlook · frances.w@willowstudio.com",
         title: "Tuesday, May 5",
-        sub: `${o.calendar.length} events · ${o.calendar.filter((p) => p.dnd).length} with Do Not Disturb`,
+        sub: `${o.calendar.length} events · ${o.calendar.filter((f) => f.dnd).length} with Do Not Disturb`,
         right: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 8, alignItems: "center" }, children: /* @__PURE__ */ r.jsx(sm, { ctx: e }) })
       }
     ),
     /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: i.gap, alignItems: "start" }, children: [
       /* @__PURE__ */ r.jsx(window.Card, { p: t, style: { padding: 0, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx(am, { ctx: e }) }),
-      /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 12 }, children: o.calendar.map((p) => /* @__PURE__ */ r.jsx(window.Card, { p: t, style: { padding: 16 }, children: /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 12, alignItems: "flex-start" }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { width: 4, alignSelf: "stretch", borderRadius: 2, background: p.dot, flex: "none" } }),
+      /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 12 }, children: o.calendar.map((f) => /* @__PURE__ */ r.jsx(window.Card, { p: t, style: { padding: 16 }, children: /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 12, alignItems: "flex-start" }, children: [
+        /* @__PURE__ */ r.jsx("div", { style: { width: 4, alignSelf: "stretch", borderRadius: 2, background: f.dot, flex: "none" } }),
         /* @__PURE__ */ r.jsxs("div", { style: { flex: 1 }, children: [
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "baseline", gap: 10 }, children: [
-            /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 17, fontWeight: 500, color: t.fg, flex: 1 }, children: p.title }),
+            /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 17, fontWeight: 500, color: t.fg, flex: 1 }, children: f.title }),
             /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: t.fg2, fontVariantNumeric: "tabular-nums" }, children: [
-              p.t,
+              f.t,
               " – ",
-              p.end
+              f.end
             ] })
           ] }),
           /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: t.fg3, marginTop: 3, fontStyle: "italic" }, children: [
-            p.where,
+            f.where,
             " · ",
-            p.organizer
+            f.organizer
           ] }),
-          /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginTop: 12, padding: "10px 12px", borderRadius: 8, background: p.dnd ? t.accentSoft : t.surface, border: `.5px solid ${p.dnd ? t.accent : t.border}` }, children: [
-            /* @__PURE__ */ r.jsx(window.Icon, { name: p.dnd ? "bellOff" : "bell", size: 14, style: { color: p.dnd ? t.accent : t.fg3 } }),
+          /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10, marginTop: 12, padding: "10px 12px", borderRadius: 8, background: f.dnd ? t.accentSoft : t.surface, border: `.5px solid ${f.dnd ? t.accent : t.border}` }, children: [
+            /* @__PURE__ */ r.jsx(window.Icon, { name: f.dnd ? "bellOff" : "bell", size: 14, style: { color: f.dnd ? t.accent : t.fg3 } }),
             /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, fontSize: 12 }, children: [
-              /* @__PURE__ */ r.jsxs("div", { style: { color: p.dnd ? t.accent : t.fg, fontWeight: p.dnd ? 500 : 400 }, children: [
+              /* @__PURE__ */ r.jsxs("div", { style: { color: f.dnd ? t.accent : t.fg, fontWeight: f.dnd ? 500 : 400 }, children: [
                 "Do not disturb ",
-                p.dnd ? "on" : "off"
+                f.dnd ? "on" : "off"
               ] }),
-              p.dnd && /* @__PURE__ */ r.jsxs("div", { style: { color: t.fg3, marginTop: 2, fontSize: 11 }, children: [
+              f.dnd && /* @__PURE__ */ r.jsxs("div", { style: { color: t.fg3, marginTop: 2, fontSize: 11 }, children: [
                 "Starts ",
-                p.preMins,
+                f.preMins,
                 " min before · ends when meeting ends"
               ] })
             ] }),
-            p.dnd && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 4 }, children: [0, 5, 10, 15].map((u) => /* @__PURE__ */ r.jsx("button", { onClick: () => d(p.id, u), style: {
+            f.dnd && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 4 }, children: [0, 5, 10, 15].map((c) => /* @__PURE__ */ r.jsx("button", { onClick: () => d(f.id, c), style: {
               padding: "3px 7px",
               borderRadius: 5,
               fontSize: 10,
-              border: `.5px solid ${u === p.preMins ? t.accent : t.border2}`,
-              background: u === p.preMins ? t.accent : "transparent",
-              color: u === p.preMins ? "#fff" : t.fg2,
+              border: `.5px solid ${c === f.preMins ? t.accent : t.border2}`,
+              background: c === f.preMins ? t.accent : "transparent",
+              color: c === f.preMins ? "#fff" : t.fg2,
               cursor: "pointer",
               fontFamily: n.body
-            }, children: u === 0 ? "now" : `−${u}m` }, u)) }),
-            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: p.dnd, onChange: () => a(p.id, p.dnd) })
+            }, children: c === 0 ? "now" : `−${c}m` }, c)) }),
+            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: f.dnd, onChange: () => a(f.id, f.dnd) })
           ] }),
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 6, marginTop: 10, fontSize: 11 }, children: [
             /* @__PURE__ */ r.jsx("span", { style: {
               padding: "3px 8px",
               borderRadius: 999,
               border: `.5px solid ${t.border2}`,
-              color: p.accepted === "accepted" ? "oklch(60% 0.13 145)" : t.fg3,
-              background: p.accepted === "accepted" ? "oklch(60% 0.13 145 / .12)" : "transparent"
-            }, children: p.accepted === "accepted" ? "✓ Going" : "? Tentative" }),
-            p.dnd && /* @__PURE__ */ r.jsx("button", { onClick: () => c(p), style: {
+              color: f.accepted === "accepted" ? "oklch(60% 0.13 145)" : t.fg3,
+              background: f.accepted === "accepted" ? "oklch(60% 0.13 145 / .12)" : "transparent"
+            }, children: f.accepted === "accepted" ? "✓ Going" : "? Tentative" }),
+            f.dnd && /* @__PURE__ */ r.jsx("button", { onClick: () => u(f), style: {
               padding: "3px 9px",
               borderRadius: 999,
               border: `.5px solid ${t.accent}`,
@@ -10599,7 +10582,7 @@ const lm = ({ ctx: e }) => {
             }, children: "Start DND now" })
           ] })
         ] })
-      ] }) }, p.id)) })
+      ] }) }, f.id)) })
     ] }),
     /* @__PURE__ */ r.jsx(dm, { ctx: e }),
     /* @__PURE__ */ r.jsx("div", { style: { height: 60 } })
@@ -10625,28 +10608,28 @@ const lm = ({ ctx: e }) => {
     "Notifications · all clear"
   ] });
 }, am = ({ ctx: e }) => {
-  const { p: t, fonts: n, state: i } = e, o = 8, l = 20, s = (l - o) * 60, a = 44, d = (l - o) * a, c = (v) => {
-    const [, w, f, k] = v.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    return (parseInt(w) % 12 + (k.toUpperCase() === "PM" ? 12 : 0)) * 60 + parseInt(f);
-  }, p = (v) => (c(v) - o * 60) / s * d, h = (19 * 60 + 42 - o * 60) / s * d;
+  const { p: t, fonts: n, state: i } = e, o = 8, l = 20, s = (l - o) * 60, a = 44, d = (l - o) * a, u = (w) => {
+    const [, x, h, k] = w.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    return (parseInt(x) % 12 + (k.toUpperCase() === "PM" ? 12 : 0)) * 60 + parseInt(h);
+  }, f = (w) => (u(w) - o * 60) / s * d, p = (19 * 60 + 42 - o * 60) / s * d;
   return /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "60px 1fr", height: d, fontSize: 11 }, children: [
-    /* @__PURE__ */ r.jsx("div", { children: Array.from({ length: l - o }).map((v, w) => /* @__PURE__ */ r.jsxs("div", { style: { height: a, color: t.fg3, padding: "2px 10px 0", borderTop: `.5px solid ${t.border}`, textAlign: "right" }, children: [
-      (o + w) % 12 || 12,
+    /* @__PURE__ */ r.jsx("div", { children: Array.from({ length: l - o }).map((w, x) => /* @__PURE__ */ r.jsxs("div", { style: { height: a, color: t.fg3, padding: "2px 10px 0", borderTop: `.5px solid ${t.border}`, textAlign: "right" }, children: [
+      (o + x) % 12 || 12,
       " ",
-      o + w >= 12 ? "PM" : "AM"
-    ] }, w)) }),
+      o + x >= 12 ? "PM" : "AM"
+    ] }, x)) }),
     /* @__PURE__ */ r.jsxs("div", { style: { position: "relative", borderLeft: `.5px solid ${t.border}` }, children: [
-      Array.from({ length: l - o }).map((v, w) => /* @__PURE__ */ r.jsx("div", { style: { height: a, borderTop: `.5px solid ${t.border}` } }, w)),
-      i.calendar.map((v) => {
-        const w = p(v.t), k = (c(v.end) - c(v.t)) / 60 * a;
+      Array.from({ length: l - o }).map((w, x) => /* @__PURE__ */ r.jsx("div", { style: { height: a, borderTop: `.5px solid ${t.border}` } }, x)),
+      i.calendar.map((w) => {
+        const x = f(w.t), k = (u(w.end) - u(w.t)) / 60 * a;
         return /* @__PURE__ */ r.jsxs("div", { style: {
           position: "absolute",
-          top: w,
+          top: x,
           left: 8,
           right: 14,
           height: k - 4,
           borderRadius: 8,
-          background: v.dot,
+          background: w.dot,
           color: "#fff",
           padding: "8px 10px",
           fontSize: 11,
@@ -10654,18 +10637,18 @@ const lm = ({ ctx: e }) => {
           overflow: "hidden",
           boxShadow: "0 2px 8px rgba(0,0,0,.15)"
         }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { fontWeight: 600, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: v.title }),
+          /* @__PURE__ */ r.jsx("div", { style: { fontWeight: 600, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: w.title }),
           /* @__PURE__ */ r.jsxs("div", { style: { opacity: 0.85, fontSize: 10 }, children: [
-            v.t,
+            w.t,
             " – ",
-            v.end,
+            w.end,
             " · ",
-            v.where
+            w.where
           ] }),
-          v.dnd && /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", top: 7, right: 8, fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "rgba(255,255,255,.25)" }, children: "DND" })
-        ] }, v.id);
+          w.dnd && /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", top: 7, right: 8, fontSize: 9, padding: "1px 5px", borderRadius: 3, background: "rgba(255,255,255,.25)" }, children: "DND" })
+        ] }, w.id);
       }),
-      /* @__PURE__ */ r.jsxs("div", { style: { position: "absolute", top: h, left: 0, right: 0, height: 1, background: t.accent, zIndex: 5 }, children: [
+      /* @__PURE__ */ r.jsxs("div", { style: { position: "absolute", top: p, left: 0, right: 0, height: 1, background: t.accent, zIndex: 5 }, children: [
         /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", left: -4, top: -4, width: 9, height: 9, borderRadius: "50%", background: t.accent } }),
         /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", right: 8, top: -9, fontSize: 10, color: t.accent, fontWeight: 600, background: t.surface2, padding: "1px 5px", borderRadius: 3 }, children: "now · 7:42 PM" })
       ] })
@@ -10688,9 +10671,9 @@ const lm = ({ ctx: e }) => {
   ] });
 };
 window.CalendarView = lm;
-const cm = "https://static-assets.tesla.com/configurator/compositor?context=design_studio_2&bkba_opt=1&view=STUD_3QTR&size=1920&model=m3&options=$MT311,$PPSW,$IBB1,$WY18B", um = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, s = o.tesla, a = (y, x) => l((b) => ({ ...b, tesla: { ...b.tesla, [y]: x } })), d = ["/local/homecntrd-tesla.jpg", cm], [c, p] = React.useState(0), [u, h] = React.useState(!1), v = () => {
-    c < d.length - 1 ? p(c + 1) : h(!0);
+const cm = "https://static-assets.tesla.com/configurator/compositor?context=design_studio_2&bkba_opt=1&view=STUD_3QTR&size=1920&model=m3&options=$MT311,$PPSW,$IBB1,$WY19B", um = ({ ctx: e }) => {
+  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, s = o.tesla, a = (y, v) => l((b) => ({ ...b, tesla: { ...b.tesla, [y]: v } })), d = ["/local/homecntrd-tesla.jpg", cm], [u, f] = React.useState(0), [c, p] = React.useState(!1), w = () => {
+    u < d.length - 1 ? f(u + 1) : p(!0);
   };
   if (!s.id)
     return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
@@ -10717,9 +10700,9 @@ const cm = "https://static-assets.tesla.com/configurator/compositor?context=desi
         ] })
       ] }) })
     ] });
-  const w = [];
-  s.location && s.location !== "—" && w.push(s.location), s.software && s.software !== "—" && w.push(`software ${s.software}`), s.odometer && w.push(`${s.odometer.toLocaleString()} ${s.odometerUnit}`);
-  const f = w.join(" · "), k = s.tempUnit || "°F", m = s.rangeUnit || "mi", g = s.chargePct <= 20 ? "#c14d36" : s.chargePct <= 40 ? "#d8843e" : t.accent;
+  const x = [];
+  s.location && s.location !== "—" && x.push(s.location), s.software && s.software !== "—" && x.push(`software ${s.software}`), s.odometer && x.push(`${s.odometer.toLocaleString()} ${s.odometerUnit}`);
+  const h = x.join(" · "), k = s.tempUnit || "°F", m = s.rangeUnit || "mi", g = s.chargePct <= 20 ? "#c14d36" : s.chargePct <= 40 ? "#d8843e" : t.accent;
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsx(
       window.PageHead,
@@ -10727,7 +10710,7 @@ const cm = "https://static-assets.tesla.com/configurator/compositor?context=desi
         ctx: e,
         eyebrow: "Tesla",
         title: s.name,
-        sub: f || "—",
+        sub: h || "—",
         right: /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 8 }, children: [
           /* @__PURE__ */ r.jsxs(
             window.PillBtn,
@@ -10765,12 +10748,12 @@ const cm = "https://static-assets.tesla.com/configurator/compositor?context=desi
     /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: i.gap, alignItems: "start" }, children: [
       /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 0, overflow: "hidden" }, children: [
         /* @__PURE__ */ r.jsxs("div", { style: { position: "relative", height: 280, background: `linear-gradient(180deg, ${t.dark ? "#1a1a1f" : "#e6e3dd"} 0%, ${t.surface2} 100%)`, overflow: "hidden" }, children: [
-          u ? /* @__PURE__ */ r.jsx(fm, { p: t, accent: t.accent, charging: s.charging, frunk: s.frunk, trunk: s.trunk }) : /* @__PURE__ */ r.jsx(
+          c ? /* @__PURE__ */ r.jsx(pm, { p: t, accent: t.accent, charging: s.charging, frunk: s.frunk, trunk: s.trunk }) : /* @__PURE__ */ r.jsx(
             "img",
             {
-              src: d[c],
+              src: d[u],
               alt: "Tesla",
-              onError: v,
+              onError: w,
               style: {
                 position: "absolute",
                 top: "50%",
@@ -10784,7 +10767,7 @@ const cm = "https://static-assets.tesla.com/configurator/compositor?context=desi
               }
             }
           ),
-          !u && s.charging && /* @__PURE__ */ r.jsx("div", { style: {
+          !c && s.charging && /* @__PURE__ */ r.jsx("div", { style: {
             position: "absolute",
             top: "46%",
             right: "12%",
@@ -10919,7 +10902,7 @@ const cm = "https://static-assets.tesla.com/configurator/compositor?context=desi
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: [
           /* @__PURE__ */ r.jsx(He, { p: t, label: "State", value: s.charging ? "Charging" : s.pluggedIn ? "Plugged in · idle" : "Unplugged" }),
           /* @__PURE__ */ r.jsx(He, { p: t, label: "Charge limit", value: `${s.chargeLimit}%` }),
-          s.charging && s.timeToFull > 0 && /* @__PURE__ */ r.jsx(He, { p: t, label: "Time to full", value: pm(s.timeToFull) }),
+          s.charging && s.timeToFull > 0 && /* @__PURE__ */ r.jsx(He, { p: t, label: "Time to full", value: fm(s.timeToFull) }),
           s.chargingAmps !== null && /* @__PURE__ */ r.jsx(He, { p: t, label: "Amps", value: `${Math.round(s.chargingAmps)} A` }),
           s.voltage !== null && /* @__PURE__ */ r.jsx(He, { p: t, label: "Voltage", value: `${Math.round(s.voltage)} V` }),
           s.energyAdded !== null && /* @__PURE__ */ r.jsx(He, { p: t, label: "Energy added", value: `${s.energyAdded.toFixed(1)} kWh` })
@@ -10964,7 +10947,7 @@ const cm = "https://static-assets.tesla.com/configurator/compositor?context=desi
   background: t ? e.accentSoft : e.surface,
   color: t ? e.accent : e.fg
 });
-function pm(e) {
+function fm(e) {
   if (!e) return "—";
   const t = Math.floor(e), n = Math.round((e - t) * 60);
   return t === 0 ? `${n}m` : n === 0 ? `${t}h` : `${t}h ${n}m`;
@@ -10972,7 +10955,7 @@ function pm(e) {
 const He = ({ p: e, label: t, value: n }) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", fontSize: 12, gap: 8 }, children: [
   /* @__PURE__ */ r.jsx("span", { style: { color: e.fg2, flex: "none" }, children: t }),
   /* @__PURE__ */ r.jsx("span", { style: { color: e.fg, fontVariantNumeric: "tabular-nums", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: n })
-] }), fm = ({ p: e, accent: t, charging: n, frunk: i, trunk: o }) => /* @__PURE__ */ r.jsxs("svg", { viewBox: "0 0 400 160", style: { position: "absolute", bottom: 30, left: "50%", transform: "translateX(-50%)", width: "82%", height: "auto", filter: e.dark ? "drop-shadow(0 8px 24px rgba(0,0,0,.5))" : "drop-shadow(0 8px 18px rgba(0,0,0,.18))" }, children: [
+] }), pm = ({ p: e, accent: t, charging: n, frunk: i, trunk: o }) => /* @__PURE__ */ r.jsxs("svg", { viewBox: "0 0 400 160", style: { position: "absolute", bottom: 30, left: "50%", transform: "translateX(-50%)", width: "82%", height: "auto", filter: e.dark ? "drop-shadow(0 8px 24px rgba(0,0,0,.5))" : "drop-shadow(0 8px 18px rgba(0,0,0,.18))" }, children: [
   /* @__PURE__ */ r.jsx(
     "path",
     {
@@ -10996,116 +10979,16 @@ const He = ({ p: e, label: t, value: n }) => /* @__PURE__ */ r.jsxs("div", { sty
 ] });
 window.CarView = um;
 const hm = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, s = (a) => l((d) => ({
-    ...d,
-    garage: { ...d.garage, doors: d.garage.doors.map((c) => c.id === a ? { ...c, open: !c.open, lastChanged: "now" } : c) }
+  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, [s, a] = React.useState(null), [d, u] = React.useState(null), f = o.integrations.filter((w) => w.status === "connected"), c = o.integrations.filter((w) => w.status === "available"), p = (w, x) => l((h) => ({
+    ...h,
+    integrations: h.integrations.map((k) => k.id === w ? { ...k, status: x } : k)
   }));
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsx(
       window.PageHead,
       {
         ctx: e,
-        eyebrow: "MyQ · Willowbrook",
-        title: "Garage",
-        sub: `${o.garage.doors.filter((a) => a.open).length} open · ${o.garage.doors.length} doors`
-      }
-    ),
-    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: i.gap }, children: o.garage.doors.map((a) => /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 0, overflow: "hidden" }, children: [
-      /* @__PURE__ */ r.jsxs("div", { style: { position: "relative", height: 240, background: t.dark ? "#1c1814" : "#efe7d8", display: "grid", placeItems: "center", overflow: "hidden" }, children: [
-        /* @__PURE__ */ r.jsxs("svg", { viewBox: "0 0 240 200", style: { width: "80%" }, children: [
-          /* @__PURE__ */ r.jsx("rect", { x: "20", y: "60", width: "200", height: "120", fill: t.dark ? "#28221b" : "#dfd2bd", stroke: t.border2 }),
-          /* @__PURE__ */ r.jsx("path", { d: "M 10 60 L 120 15 L 230 60 Z", fill: t.dark ? "#1f1a14" : "#cdbfa6", stroke: t.border2 }),
-          /* @__PURE__ */ r.jsx("rect", { x: "50", y: "80", width: "140", height: "100", fill: t.dark ? "#15110c" : "#fffaf0", stroke: t.border2, strokeWidth: ".8" }),
-          Array.from({ length: 7 }).map((d, c) => /* @__PURE__ */ r.jsx(
-            "rect",
-            {
-              x: "54",
-              y: 86 + c * 13,
-              width: "132",
-              height: "11",
-              rx: "2",
-              fill: t.dark ? "#3a3024" : "#e8d9bd",
-              stroke: t.border,
-              strokeWidth: ".5",
-              style: {
-                transform: a.open ? `translateY(-${(c + 1) * 8}px)` : "translateY(0)",
-                opacity: a.open ? Math.max(0, 1 - c * 0.18) : 1,
-                transition: "all .6s cubic-bezier(.5,0,.2,1)",
-                transformOrigin: "center"
-              }
-            },
-            c
-          )),
-          a.open && /* @__PURE__ */ r.jsx("rect", { x: "54", y: "86", width: "132", height: "14", fill: "#0a0805", opacity: "0.6" })
-        ] }),
-        /* @__PURE__ */ r.jsx("div", { style: {
-          position: "absolute",
-          top: 14,
-          left: 14,
-          padding: "4px 9px",
-          borderRadius: 999,
-          fontSize: 11,
-          fontWeight: 500,
-          letterSpacing: ".05em",
-          background: a.open ? t.accent : "oklch(60% 0.14 145)",
-          color: "#fff"
-        }, children: a.open ? "OPEN" : "CLOSED" }),
-        /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", top: 14, right: 14, fontSize: 11, color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: a.lastChanged })
-      ] }),
-      /* @__PURE__ */ r.jsxs("div", { style: { padding: 18 }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 22, color: t.fg, fontWeight: 500 }, children: a.name }),
-        /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 12, color: t.fg3, marginTop: 4 }, children: [
-          "Last ",
-          a.open ? "opened" : "closed",
-          " ",
-          a.lastChanged
-        ] }),
-        /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 8, marginTop: 14 }, children: [
-          /* @__PURE__ */ r.jsx("button", { onClick: () => s(a.id), style: {
-            flex: 1,
-            padding: "10px 0",
-            borderRadius: 9,
-            border: 0,
-            cursor: "pointer",
-            fontSize: 13,
-            fontFamily: n.body,
-            fontWeight: 500,
-            background: a.open ? t.surface : t.accent,
-            color: a.open ? t.fg : "#fff",
-            border: a.open ? `.5px solid ${t.border2}` : "none"
-          }, children: a.open ? "Close door" : "Open door" }),
-          /* @__PURE__ */ r.jsx("button", { style: { padding: "10px 14px", borderRadius: 9, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 12, fontFamily: n.body, cursor: "pointer" }, children: "Auto-close" })
-        ] })
-      ] })
-    ] }, a.id)) }),
-    /* @__PURE__ */ r.jsxs(window.Card, { p: t, style: { padding: 18 }, children: [
-      /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase", color: t.fg3, marginBottom: 12 }, children: "Activity · last 24 hours" }),
-      o.garage.history.map((a, d) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderTop: d ? `.5px solid ${t.border}` : "none", fontSize: 13 }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { width: 60, color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: a.t }),
-        /* @__PURE__ */ r.jsx("div", { style: { width: 6, height: 6, borderRadius: "50%", background: a.action === "opened" ? t.accent : "oklch(60% 0.14 145)" } }),
-        /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, color: t.fg }, children: [
-          /* @__PURE__ */ r.jsx("b", { style: { fontWeight: 500 }, children: a.door }),
-          " ",
-          /* @__PURE__ */ r.jsx("span", { style: { color: t.fg2 }, children: a.action })
-        ] }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, fontStyle: "italic", fontFamily: n.display }, children: a.who })
-      ] }, d))
-    ] }),
-    /* @__PURE__ */ r.jsx("div", { style: { height: 60 } })
-  ] });
-};
-window.GarageView = hm;
-const gm = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, [s, a] = React.useState(null), [d, c] = React.useState(null), p = o.integrations.filter((v) => v.status === "connected"), u = o.integrations.filter((v) => v.status === "available"), h = (v, w) => l((f) => ({
-    ...f,
-    integrations: f.integrations.map((k) => k.id === v ? { ...k, status: w } : k)
-  }));
-  return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
-    /* @__PURE__ */ r.jsx(
-      window.PageHead,
-      {
-        ctx: e,
-        eyebrow: `${p.length} integrations connected`,
+        eyebrow: `${f.length} integrations connected`,
         title: "Devices",
         sub: "Hue, Sonos, Ring, Nest, Apple TV, Apple Music, Tesla, MyQ, Outlook · all online",
         right: /* @__PURE__ */ r.jsxs("button", { onClick: () => a("PICK"), style: {
@@ -11127,18 +11010,18 @@ const gm = ({ ctx: e }) => {
         ] })
       }
     ),
-    /* @__PURE__ */ r.jsx(window.Section, { title: "Connected", subtitle: `${p.length} services · 32 devices`, p: t, fonts: n, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: i.tileGap }, children: p.map((v) => /* @__PURE__ */ r.jsx(
-      mm,
+    /* @__PURE__ */ r.jsx(window.Section, { title: "Connected", subtitle: `${f.length} services · 32 devices`, p: t, fonts: n, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: i.tileGap }, children: f.map((w) => /* @__PURE__ */ r.jsx(
+      gm,
       {
         ctx: e,
-        integration: v,
-        expanded: d === v.id,
-        onClick: () => c(d === v.id ? null : v.id),
-        onDisconnect: () => h(v.id, "available")
+        integration: w,
+        expanded: d === w.id,
+        onClick: () => u(d === w.id ? null : w.id),
+        onDisconnect: () => p(w.id, "available")
       },
-      v.id
+      w.id
     )) }) }),
-    /* @__PURE__ */ r.jsx(window.Section, { title: "Available", subtitle: "Compatible with HomeCNTRD", p: t, fonts: n, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: i.tileGap }, children: u.map((v) => /* @__PURE__ */ r.jsxs("button", { onClick: () => a(v.id), style: {
+    /* @__PURE__ */ r.jsx(window.Section, { title: "Available", subtitle: "Compatible with HomeCNTRD", p: t, fonts: n, children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: i.tileGap }, children: c.map((w) => /* @__PURE__ */ r.jsxs("button", { onClick: () => a(w.id), style: {
       padding: 18,
       borderRadius: 12,
       border: `1px dashed ${t.border2}`,
@@ -11151,25 +11034,25 @@ const gm = ({ ctx: e }) => {
       gap: 8,
       fontFamily: n.body
     }, children: [
-      /* @__PURE__ */ r.jsx("div", { style: { width: 38, height: 38, borderRadius: 9, background: v.color + "22", color: v.color, display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: v.icon, size: 20 }) }),
-      /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 15, fontWeight: 500, marginTop: 4 }, children: v.name }),
+      /* @__PURE__ */ r.jsx("div", { style: { width: 38, height: 38, borderRadius: 9, background: w.color + "22", color: w.color, display: "grid", placeItems: "center" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: w.icon, size: 20 }) }),
+      /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 15, fontWeight: 500, marginTop: 4 }, children: w.name }),
       /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3 }, children: "+ Set up" })
-    ] }, v.id)) }) }),
+    ] }, w.id)) }) }),
     s && /* @__PURE__ */ r.jsx(
-      xm,
+      ym,
       {
         ctx: e,
         integrationId: s,
         onClose: () => a(null),
-        onConnect: (v) => {
-          h(v, "connected"), a(null);
+        onConnect: (w) => {
+          p(w, "connected"), a(null);
         }
       }
     ),
     /* @__PURE__ */ r.jsx("div", { style: { height: 60 } })
   ] });
-}, mm = ({ ctx: e, integration: t, expanded: n, onClick: i, onDisconnect: o }) => {
-  const { p: l, fonts: s, state: a } = e, d = t, c = ym(d.id, a);
+}, gm = ({ ctx: e, integration: t, expanded: n, onClick: i, onDisconnect: o }) => {
+  const { p: l, fonts: s, state: a } = e, d = t, u = mm(d.id, a);
   return /* @__PURE__ */ r.jsxs("div", { style: { borderRadius: 12, border: `.5px solid ${l.border}`, background: l.surface2, overflow: "hidden" }, children: [
     /* @__PURE__ */ r.jsxs("button", { onClick: i, style: {
       width: "100%",
@@ -11198,19 +11081,19 @@ const gm = ({ ctx: e }) => {
       ] })
     ] }),
     n && /* @__PURE__ */ r.jsxs("div", { style: { borderTop: `.5px solid ${l.border}`, padding: "10px 14px", background: l.surface }, children: [
-      d.id === "hue" || d.id === "sonos" || d.id === "ring" ? /* @__PURE__ */ r.jsx(bm, { ctx: e, integrationId: d.id }) : c.length > 0 && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }, children: c.map((p, u) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12, color: l.fg2, borderBottom: u < c.length - 1 ? `.5px solid ${l.border}` : "none" }, children: [
-        /* @__PURE__ */ r.jsx(window.Icon, { name: p.icon, size: 11, style: { color: l.fg3 } }),
-        /* @__PURE__ */ r.jsx("span", { style: { flex: 1 }, children: p.name }),
-        /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 10, color: p.online ? "oklch(60% 0.14 145)" : l.fg3 }, children: [
+      d.id === "hue" || d.id === "sonos" || d.id === "ring" ? /* @__PURE__ */ r.jsx(km, { ctx: e, integrationId: d.id }) : u.length > 0 && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }, children: u.map((f, c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12, color: l.fg2, borderBottom: c < u.length - 1 ? `.5px solid ${l.border}` : "none" }, children: [
+        /* @__PURE__ */ r.jsx(window.Icon, { name: f.icon, size: 11, style: { color: l.fg3 } }),
+        /* @__PURE__ */ r.jsx("span", { style: { flex: 1 }, children: f.name }),
+        /* @__PURE__ */ r.jsxs("span", { style: { fontSize: 10, color: f.online ? "oklch(60% 0.14 145)" : l.fg3 }, children: [
           "● ",
-          p.online ? "online" : "offline"
+          f.online ? "online" : "offline"
         ] })
-      ] }, u)) }),
+      ] }, c)) }),
       /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 6 }, children: [
         /* @__PURE__ */ r.jsx("button", { style: { flex: 1, padding: "6px 10px", borderRadius: 6, border: `.5px solid ${l.border2}`, background: "transparent", color: l.fg2, fontSize: 11, cursor: "pointer", fontFamily: s.body }, children: "Refresh" }),
         /* @__PURE__ */ r.jsx("button", { style: { flex: 1, padding: "6px 10px", borderRadius: 6, border: `.5px solid ${l.border2}`, background: "transparent", color: l.fg2, fontSize: 11, cursor: "pointer", fontFamily: s.body }, children: "Settings" }),
-        /* @__PURE__ */ r.jsx("button", { onClick: (p) => {
-          p.stopPropagation(), o();
+        /* @__PURE__ */ r.jsx("button", { onClick: (f) => {
+          f.stopPropagation(), o();
         }, style: {
           flex: 1,
           padding: "6px 10px",
@@ -11226,7 +11109,7 @@ const gm = ({ ctx: e }) => {
     ] })
   ] });
 };
-function ym(e, t) {
+function mm(e, t) {
   switch (e) {
     case "hue":
       return t.lights.map((n) => ({ name: `${n.name}`, icon: "bulb", online: !0 }));
@@ -11254,16 +11137,16 @@ function ym(e, t) {
       return [];
   }
 }
-const xm = ({ ctx: e, integrationId: t, onClose: n, onConnect: i }) => {
-  const { p: o, fonts: l, state: s } = e, [a, d] = React.useState(t === "PICK" ? "pick" : "auth"), [c, p] = React.useState(t === "PICK" ? null : t), [u, h] = React.useState(0), v = s.integrations;
+const ym = ({ ctx: e, integrationId: t, onClose: n, onConnect: i }) => {
+  const { p: o, fonts: l, state: s } = e, [a, d] = React.useState(t === "PICK" ? "pick" : "auth"), [u, f] = React.useState(t === "PICK" ? null : t), [c, p] = React.useState(0), w = s.integrations;
   React.useEffect(() => {
     if (a === "discover") {
-      h(0);
-      const f = setInterval(() => h((k) => k >= 100 ? (clearInterval(f), d("done"), 100) : k + 8), 80);
-      return () => clearInterval(f);
+      p(0);
+      const h = setInterval(() => p((k) => k >= 100 ? (clearInterval(h), d("done"), 100) : k + 8), 80);
+      return () => clearInterval(h);
     }
   }, [a]);
-  const w = v.find((f) => f.id === c);
+  const x = w.find((h) => h.id === u);
   return /* @__PURE__ */ r.jsx("div", { style: {
     position: "absolute",
     inset: 0,
@@ -11273,7 +11156,7 @@ const xm = ({ ctx: e, integrationId: t, onClose: n, onConnect: i }) => {
     display: "grid",
     placeItems: "center",
     padding: 24
-  }, onClick: n, children: /* @__PURE__ */ r.jsxs("div", { onClick: (f) => f.stopPropagation(), style: {
+  }, onClick: n, children: /* @__PURE__ */ r.jsxs("div", { onClick: (h) => h.stopPropagation(), style: {
     width: "min(560px, 100%)",
     maxHeight: "min(640px, 100%)",
     background: o.surface2,
@@ -11285,55 +11168,55 @@ const xm = ({ ctx: e, integrationId: t, onClose: n, onConnect: i }) => {
     flexDirection: "column"
   }, children: [
     /* @__PURE__ */ r.jsxs("div", { style: { padding: "16px 20px", borderBottom: `.5px solid ${o.border}`, display: "flex", alignItems: "center", gap: 12 }, children: [
-      /* @__PURE__ */ r.jsx("div", { style: { flex: 1, fontFamily: l.display, fontSize: 17, color: o.fg, fontWeight: 500 }, children: a === "pick" ? "Add a device" : w ? `Connect ${w.name}` : "Add a device" }),
+      /* @__PURE__ */ r.jsx("div", { style: { flex: 1, fontFamily: l.display, fontSize: 17, color: o.fg, fontWeight: 500 }, children: a === "pick" ? "Add a device" : x ? `Connect ${x.name}` : "Add a device" }),
       /* @__PURE__ */ r.jsx("button", { onClick: n, style: { border: 0, background: "transparent", color: o.fg3, cursor: "pointer", padding: 6, fontSize: 18 }, children: "×" })
     ] }),
     /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, overflow: "auto", padding: 20 }, children: [
       a === "pick" && /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
         /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: o.fg2, marginBottom: 14 }, children: "Choose what to connect. HomeCNTRD will guide you through sign-in and discovery." }),
-        /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }, children: v.map((f) => /* @__PURE__ */ r.jsxs("button", { onClick: () => {
-          p(f.id), d("auth");
-        }, disabled: f.status === "connected", style: {
+        /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }, children: w.map((h) => /* @__PURE__ */ r.jsxs("button", { onClick: () => {
+          f(h.id), d("auth");
+        }, disabled: h.status === "connected", style: {
           padding: 14,
           borderRadius: 10,
           border: `.5px solid ${o.border2}`,
-          background: f.status === "connected" ? o.surface : o.surface2,
+          background: h.status === "connected" ? o.surface : o.surface2,
           color: o.fg,
-          cursor: f.status === "connected" ? "default" : "pointer",
+          cursor: h.status === "connected" ? "default" : "pointer",
           textAlign: "left",
           display: "flex",
           alignItems: "center",
           gap: 11,
           fontFamily: l.body,
-          opacity: f.status === "connected" ? 0.55 : 1
+          opacity: h.status === "connected" ? 0.55 : 1
         }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { width: 32, height: 32, borderRadius: 7, background: f.color + "22", color: f.color, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: f.icon, size: 16 }) }),
+          /* @__PURE__ */ r.jsx("div", { style: { width: 32, height: 32, borderRadius: 7, background: h.color + "22", color: h.color, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: h.icon, size: 16 }) }),
           /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, fontWeight: 500 }, children: f.name }),
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: o.fg3, marginTop: 1 }, children: f.status === "connected" ? "✓ Connected" : "Not connected" })
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, fontWeight: 500 }, children: h.name }),
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: o.fg3, marginTop: 1 }, children: h.status === "connected" ? "✓ Connected" : "Not connected" })
           ] })
-        ] }, f.id)) })
+        ] }, h.id)) })
       ] }),
-      a === "auth" && w && /* @__PURE__ */ r.jsxs("div", { children: [
+      a === "auth" && x && /* @__PURE__ */ r.jsxs("div", { children: [
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 14, padding: 14, borderRadius: 11, background: o.surface, border: `.5px solid ${o.border}` }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { width: 44, height: 44, borderRadius: 10, background: w.color + "22", color: w.color, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: w.icon, size: 22 }) }),
+          /* @__PURE__ */ r.jsx("div", { style: { width: 44, height: 44, borderRadius: 10, background: x.color + "22", color: x.color, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: x.icon, size: 22 }) }),
           /* @__PURE__ */ r.jsxs("div", { children: [
-            /* @__PURE__ */ r.jsx("div", { style: { fontFamily: l.display, fontSize: 16, color: o.fg, fontWeight: 500 }, children: w.name }),
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: o.fg3, marginTop: 2 }, children: vm(w.id) })
+            /* @__PURE__ */ r.jsx("div", { style: { fontFamily: l.display, fontSize: 16, color: o.fg, fontWeight: 500 }, children: x.name }),
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: o.fg3, marginTop: 2 }, children: xm(x.id) })
           ] })
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { marginTop: 16, padding: "14px 16px", background: o.surface, border: `.5px solid ${o.border}`, borderRadius: 10 }, children: [
           /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase", color: o.fg3, marginBottom: 10 }, children: "Permissions" }),
-          wm(w.id).map((f, k) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", fontSize: 12 }, children: [
+          vm(x.id).map((h, k) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", fontSize: 12 }, children: [
             /* @__PURE__ */ r.jsx(window.Icon, { name: "check", size: 13, style: { color: o.accent, marginTop: 2, flex: "none" } }),
-            /* @__PURE__ */ r.jsx("div", { style: { color: o.fg2 }, children: f })
+            /* @__PURE__ */ r.jsx("div", { style: { color: o.fg2 }, children: h })
           ] }, k))
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { marginTop: 14, fontSize: 11, color: o.fg3, lineHeight: 1.5 }, children: [
           "You'll be redirected to ",
-          w.name,
+          x.name,
           "'s sign-in page. HomeCNTRD never sees your password — only the access token ",
-          w.name,
+          x.name,
           " returns."
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 10, marginTop: 18 }, children: [
@@ -11353,7 +11236,7 @@ const xm = ({ ctx: e, integrationId: t, onClose: n, onConnect: i }) => {
             padding: "11px 0",
             borderRadius: 9,
             border: 0,
-            background: w.color,
+            background: x.color,
             color: "#fff",
             fontSize: 13,
             fontWeight: 500,
@@ -11361,33 +11244,33 @@ const xm = ({ ctx: e, integrationId: t, onClose: n, onConnect: i }) => {
             fontFamily: l.body
           }, children: [
             "Sign in to ",
-            w.name
+            x.name
           ] })
         ] })
       ] }),
-      a === "discover" && w && /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 }, children: [
-        /* @__PURE__ */ r.jsx("div", { style: { width: 64, height: 64, borderRadius: 14, background: w.color + "22", color: w.color, display: "grid", placeItems: "center", marginBottom: 18 }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: w.icon, size: 32 }) }),
+      a === "discover" && x && /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 }, children: [
+        /* @__PURE__ */ r.jsx("div", { style: { width: 64, height: 64, borderRadius: 14, background: x.color + "22", color: x.color, display: "grid", placeItems: "center", marginBottom: 18 }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: x.icon, size: 32 }) }),
         /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: l.display, fontSize: 18, color: o.fg, fontWeight: 500 }, children: [
           "Discovering ",
-          w.name,
+          x.name,
           " devices…"
         ] }),
         /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: o.fg3, marginTop: 6 }, children: "Scanning your network and account" }),
-        /* @__PURE__ */ r.jsx("div", { style: { width: "100%", maxWidth: 300, height: 4, background: o.border, borderRadius: 2, marginTop: 20, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${u}%`, height: "100%", background: w.color, transition: "width .1s" } }) }),
+        /* @__PURE__ */ r.jsx("div", { style: { width: "100%", maxWidth: 300, height: 4, background: o.border, borderRadius: 2, marginTop: 20, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${c}%`, height: "100%", background: x.color, transition: "width .1s" } }) }),
         /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: o.fg3, marginTop: 12, fontVariantNumeric: "tabular-nums" }, children: [
-          u,
+          c,
           "%"
         ] }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: o.fg2, marginTop: 18, fontStyle: "italic", fontFamily: l.display, textAlign: "center", maxWidth: 280 }, children: u < 30 ? "Connecting securely…" : u < 60 ? "Loading your account…" : u < 90 ? `Found ${Math.floor(u / 15)} devices…` : "Almost done…" })
+        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: o.fg2, marginTop: 18, fontStyle: "italic", fontFamily: l.display, textAlign: "center", maxWidth: 280 }, children: c < 30 ? "Connecting securely…" : c < 60 ? "Loading your account…" : c < 90 ? `Found ${Math.floor(c / 15)} devices…` : "Almost done…" })
       ] }),
-      a === "done" && w && /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", padding: "30px 20px", textAlign: "center" }, children: [
+      a === "done" && x && /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", padding: "30px 20px", textAlign: "center" }, children: [
         /* @__PURE__ */ r.jsx("div", { style: { width: 56, height: 56, borderRadius: "50%", background: "oklch(60% 0.14 145 / .15)", color: "oklch(60% 0.14 145)", display: "grid", placeItems: "center", marginBottom: 14 }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "check", size: 28, stroke: 2.2 }) }),
         /* @__PURE__ */ r.jsxs("div", { style: { fontFamily: l.display, fontSize: 20, color: o.fg, fontWeight: 500 }, children: [
-          w.name,
+          x.name,
           " connected"
         ] }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: o.fg2, marginTop: 8, maxWidth: 340 }, children: km(w.id) }),
-        /* @__PURE__ */ r.jsx("button", { onClick: () => i(c), style: {
+        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: o.fg2, marginTop: 8, maxWidth: 340 }, children: wm(x.id) }),
+        /* @__PURE__ */ r.jsx("button", { onClick: () => i(u), style: {
           marginTop: 22,
           padding: "11px 24px",
           borderRadius: 9,
@@ -11403,7 +11286,7 @@ const xm = ({ ctx: e, integrationId: t, onClose: n, onConnect: i }) => {
     ] })
   ] }) });
 };
-function vm(e) {
+function xm(e) {
   return {
     hue: "Sign in with your Hue Bridge account · Bridge auto-discovered on local network",
     sonos: "Sign in with your Sonos household ID · OAuth via sonos.com",
@@ -11421,7 +11304,7 @@ function vm(e) {
     august: "Sign in with your August Home account"
   }[e] || "Sign in to continue";
 }
-function wm(e) {
+function vm(e) {
   return {
     hue: ["Read & control all bulbs and groups", "Read scenes", "Modify schedules"],
     sonos: ["Play, pause & skip on any speaker", "Group & ungroup speakers", "Change volume", "Read playback state"],
@@ -11439,7 +11322,7 @@ function wm(e) {
     august: ["Lock & unlock", "Read door state"]
   }[e] || ["Connect & manage"];
 }
-function km(e) {
+function wm(e) {
   return {
     hue: "Found 9 bulbs across 4 rooms. Imported 4 scenes.",
     sonos: "Found 5 speakers in the Willowbrook household. Living Room and Kitchen are already grouped.",
@@ -11457,14 +11340,14 @@ function km(e) {
     august: "Found 1 lock."
   }[e] || "Connected.";
 }
-const bm = ({ ctx: e, integrationId: t }) => {
-  const { p: n, fonts: i, state: o, setState: l } = e, s = t === "hue" ? o.lights : t === "sonos" ? o.speakers.filter((p) => p.type === "sonos") : o.cameras, a = t === "hue" ? "bulb" : t === "sonos" ? "sonos" : "cam", d = t === "hue" ? "lights" : t === "sonos" ? "speakers" : "cameras", c = (p, u) => l((h) => ({ ...h, [d]: h[d].map((v) => v.id === p ? { ...v, room: u } : v) }));
+const km = ({ ctx: e, integrationId: t }) => {
+  const { p: n, fonts: i, state: o, setState: l } = e, s = t === "hue" ? o.lights : t === "sonos" ? o.speakers.filter((f) => f.type === "sonos") : o.cameras, a = t === "hue" ? "bulb" : t === "sonos" ? "sonos" : "cam", d = t === "hue" ? "lights" : t === "sonos" ? "speakers" : "cameras", u = (f, c) => l((p) => ({ ...p, [d]: p[d].map((w) => w.id === f ? { ...w, room: c } : w) }));
   return /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }, children: [
     /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: n.fg3, marginBottom: 2 }, children: "Assign rooms" }),
-    s.map((p) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, background: n.surface2, border: `.5px solid ${n.border}` }, children: [
+    s.map((f) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, background: n.surface2, border: `.5px solid ${n.border}` }, children: [
       /* @__PURE__ */ r.jsx(window.Icon, { name: a, size: 12, style: { color: n.fg3, flex: "none" } }),
-      /* @__PURE__ */ r.jsx("span", { style: { flex: 1, fontSize: 12, color: n.fg, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.name }),
-      /* @__PURE__ */ r.jsx("select", { value: p.room, onChange: (u) => c(p.id, u.target.value), style: {
+      /* @__PURE__ */ r.jsx("span", { style: { flex: 1, fontSize: 12, color: n.fg, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: f.name }),
+      /* @__PURE__ */ r.jsx("select", { value: f.room, onChange: (c) => u(f.id, c.target.value), style: {
         padding: "4px 8px",
         borderRadius: 6,
         border: `.5px solid ${n.border2}`,
@@ -11474,22 +11357,22 @@ const bm = ({ ctx: e, integrationId: t }) => {
         fontFamily: i.body,
         cursor: "pointer",
         flex: "none"
-      }, children: window.ROOMS.map((u) => /* @__PURE__ */ r.jsx("option", { value: u.id, children: u.name }, u.id)) })
-    ] }, p.id))
+      }, children: window.ROOMS.map((c) => /* @__PURE__ */ r.jsx("option", { value: c.id, children: c.name }, c.id)) })
+    ] }, f.id))
   ] });
 };
-window.DevicesView = gm;
-const jm = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, [s, a] = React.useState(!1), [d, c] = React.useState(""), [p, u] = React.useState(null), [h, v] = React.useState(""), w = (x) => {
-    if (c(x), v(""), !x.trim()) {
-      u(null);
+window.DevicesView = hm;
+const bm = ({ ctx: e }) => {
+  const { p: t, fonts: n, dens: i, state: o, setState: l } = e, [s, a] = React.useState(!1), [d, u] = React.useState(""), [f, c] = React.useState(null), [p, w] = React.useState(""), x = (v) => {
+    if (u(v), w(""), !v.trim()) {
+      c(null);
       return;
     }
-    const b = window.parseAutomation(x, o);
-    b ? u(b) : (u(null), v('Try: "When there is motion at the front door, turn on the porch light"'));
-  }, f = () => {
-    p && (l((x) => ({ ...x, automations: [...x.automations, p] })), c(""), u(null), a(!1));
-  }, k = (x) => l((b) => ({ ...b, automations: b.automations.map((j) => j.id === x ? { ...j, enabled: !j.enabled } : j) })), m = (x) => l((b) => ({ ...b, automations: b.automations.filter((j) => j.id !== x) })), g = (x) => window.runAutomation(x, o, l), y = [
+    const b = window.parseAutomation(v, o);
+    b ? c(b) : (c(null), w('Try: "When there is motion at the front door, turn on the porch light"'));
+  }, h = () => {
+    f && (l((v) => ({ ...v, automations: [...v.automations, f] })), u(""), c(null), a(!1));
+  }, k = (v) => l((b) => ({ ...b, automations: b.automations.map((j) => j.id === v ? { ...j, enabled: !j.enabled } : j) })), m = (v) => l((b) => ({ ...b, automations: b.automations.filter((j) => j.id !== v) })), g = (v) => window.runAutomation(v, o, l), y = [
     "When there is motion at the front door, turn on the porch light",
     "When I leave home, lock everything",
     "Every day at 11:00 PM, run goodnight",
@@ -11502,8 +11385,8 @@ const jm = ({ ctx: e }) => {
         ctx: e,
         eyebrow: `${o.automations.length} routines`,
         title: "Automations",
-        sub: `${o.automations.filter((x) => x.enabled).length} active · let the house run itself`,
-        right: /* @__PURE__ */ r.jsxs("button", { onClick: () => a((x) => !x), style: {
+        sub: `${o.automations.filter((v) => v.enabled).length} active · let the house run itself`,
+        right: /* @__PURE__ */ r.jsxs("button", { onClick: () => a((v) => !v), style: {
           padding: "9px 16px",
           borderRadius: 9,
           border: `.5px solid ${t.accent}`,
@@ -11527,14 +11410,14 @@ const jm = ({ ctx: e }) => {
         "input",
         {
           value: d,
-          onChange: (x) => w(x.target.value),
+          onChange: (v) => x(v.target.value),
           placeholder: "When there is motion at the front door, turn on the porch light",
           autoFocus: !0,
           style: {
             width: "100%",
             padding: "12px 14px",
             borderRadius: 10,
-            border: `.5px solid ${p ? t.accent : t.border2}`,
+            border: `.5px solid ${f ? t.accent : t.border2}`,
             background: t.surface,
             color: t.fg,
             fontSize: 14,
@@ -11544,7 +11427,7 @@ const jm = ({ ctx: e }) => {
           }
         }
       ),
-      !d && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }, children: y.map((x) => /* @__PURE__ */ r.jsx("button", { onClick: () => w(x), style: {
+      !d && /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }, children: y.map((v) => /* @__PURE__ */ r.jsx("button", { onClick: () => x(v), style: {
         padding: "5px 10px",
         borderRadius: 999,
         border: `.5px solid ${t.border2}`,
@@ -11553,19 +11436,19 @@ const jm = ({ ctx: e }) => {
         fontSize: 11,
         cursor: "pointer",
         fontFamily: n.body
-      }, children: x }, x)) }),
-      p && /* @__PURE__ */ r.jsxs("div", { style: { marginTop: 14, padding: 14, borderRadius: 10, background: t.warm, border: `.5px solid ${t.border}` }, children: [
+      }, children: v }, v)) }),
+      f && /* @__PURE__ */ r.jsxs("div", { style: { marginTop: 14, padding: 14, borderRadius: 10, background: t.warm, border: `.5px solid ${t.border}` }, children: [
         /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6 }, children: "I understood" }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 16, color: t.fg, fontWeight: 500, marginBottom: 4 }, children: p.name }),
-        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: t.fg2, fontStyle: "italic" }, children: p.desc }),
+        /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 16, color: t.fg, fontWeight: 500, marginBottom: 4 }, children: f.name }),
+        /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: t.fg2, fontStyle: "italic" }, children: f.desc }),
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 8, marginTop: 12 }, children: [
-          /* @__PURE__ */ r.jsx("button", { onClick: f, style: { padding: "8px 14px", borderRadius: 8, border: 0, background: t.accent, color: "#fff", fontSize: 12, cursor: "pointer" }, children: "Save automation" }),
+          /* @__PURE__ */ r.jsx("button", { onClick: h, style: { padding: "8px 14px", borderRadius: 8, border: 0, background: t.accent, color: "#fff", fontSize: 12, cursor: "pointer" }, children: "Save automation" }),
           /* @__PURE__ */ r.jsx("button", { onClick: () => {
-            c(""), u(null);
+            u(""), c(null);
           }, style: { padding: "8px 14px", borderRadius: 8, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 12, cursor: "pointer" }, children: "Try again" })
         ] })
       ] }),
-      h && !p && /* @__PURE__ */ r.jsx("div", { style: { marginTop: 10, fontSize: 12, color: t.fg3, fontStyle: "italic" }, children: h }),
+      p && !f && /* @__PURE__ */ r.jsx("div", { style: { marginTop: 10, fontSize: 12, color: t.fg3, fontStyle: "italic" }, children: p }),
       /* @__PURE__ */ r.jsxs("div", { style: { marginTop: 14, padding: "10px 12px", borderRadius: 8, background: t.surface, border: `.5px dashed ${t.border2}`, fontSize: 11, color: t.fg3 }, children: [
         /* @__PURE__ */ r.jsx(window.Icon, { name: "sparkle", size: 11, style: { display: "inline", verticalAlign: "middle", marginRight: 5 } }),
         "Tip: you can also just tell the agent. Say ",
@@ -11573,24 +11456,24 @@ const jm = ({ ctx: e }) => {
         " and it'll set it up."
       ] })
     ] }),
-    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: i.tileGap }, children: o.automations.map((x) => /* @__PURE__ */ r.jsx(Sm, { a: x, ctx: e, onToggle: () => k(x.id), onRemove: () => m(x.id), onRun: () => g(x) }, x.id)) }),
+    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: i.tileGap }, children: o.automations.map((v) => /* @__PURE__ */ r.jsx(jm, { a: v, ctx: e, onToggle: () => k(v.id), onRemove: () => m(v.id), onRun: () => g(v) }, v.id)) }),
     /* @__PURE__ */ r.jsx("div", { style: { height: 80 } })
   ] });
-}, Sm = ({ a: e, ctx: t, onToggle: n, onRemove: i, onRun: o }) => {
-  const { p: l, fonts: s, state: a } = t, d = e.trigger.type === "motion" ? "cam" : e.trigger.type === "time" ? "clock" : e.trigger.type === "leaveHome" ? "door" : "home", c = e.trigger.type === "motion" ? `Motion · ${a.cameras.find((p) => p.id === e.trigger.cameraId)?.name || "camera"}` : e.trigger.type === "time" ? `At ${e.trigger.at}` : e.trigger.type === "leaveHome" ? "When I leave" : e.trigger.type === "arriveHome" ? "When I arrive" : "Trigger";
+}, jm = ({ a: e, ctx: t, onToggle: n, onRemove: i, onRun: o }) => {
+  const { p: l, fonts: s, state: a } = t, d = e.trigger.type === "motion" ? "cam" : e.trigger.type === "time" ? "clock" : e.trigger.type === "leaveHome" ? "door" : "home", u = e.trigger.type === "motion" ? `Motion · ${a.cameras.find((f) => f.id === e.trigger.cameraId)?.name || "camera"}` : e.trigger.type === "time" ? `At ${e.trigger.at}` : e.trigger.type === "leaveHome" ? "When I leave" : e.trigger.type === "arriveHome" ? "When I arrive" : "Trigger";
   return /* @__PURE__ */ r.jsxs(window.Card, { p: l, style: { padding: 16, opacity: e.enabled ? 1 : 0.55 }, children: [
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-start", gap: 10 }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: l.accent, letterSpacing: ".05em" }, children: [
           /* @__PURE__ */ r.jsx(window.Icon, { name: d, size: 11 }),
-          c
+          u
         ] }),
         /* @__PURE__ */ r.jsx("div", { style: { fontFamily: s.display, fontSize: 16, color: l.fg, fontWeight: 500, marginTop: 6 }, children: e.name }),
         /* @__PURE__ */ r.jsx("div", { style: { fontSize: 12, color: l.fg2, fontStyle: "italic", marginTop: 4, lineHeight: 1.4 }, children: e.desc })
       ] }),
       /* @__PURE__ */ r.jsx(window.Toggle, { p: l, on: e.enabled, onChange: n, size: 18 })
     ] }),
-    /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12, paddingTop: 12, borderTop: `.5px solid ${l.border}` }, children: e.actions.map((p, u) => /* @__PURE__ */ r.jsxs("span", { style: {
+    /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12, paddingTop: 12, borderTop: `.5px solid ${l.border}` }, children: e.actions.map((f, c) => /* @__PURE__ */ r.jsxs("span", { style: {
       padding: "3px 9px",
       borderRadius: 999,
       background: l.surface,
@@ -11601,9 +11484,9 @@ const jm = ({ ctx: e }) => {
       alignItems: "center",
       gap: 4
     }, children: [
-      /* @__PURE__ */ r.jsx(window.Icon, { name: Cm(p), size: 9 }),
-      zm(p, a)
-    ] }, u)) }),
+      /* @__PURE__ */ r.jsx(window.Icon, { name: Sm(f), size: 9 }),
+      Cm(f, a)
+    ] }, c)) }),
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 6, marginTop: 12 }, children: [
       /* @__PURE__ */ r.jsxs("button", { onClick: o, style: { flex: 1, padding: "7px 10px", borderRadius: 7, border: `.5px solid ${l.border2}`, background: "transparent", color: l.fg2, fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5 }, children: [
         /* @__PURE__ */ r.jsx(window.Icon, { name: "play", size: 10 }),
@@ -11616,15 +11499,15 @@ const jm = ({ ctx: e }) => {
       e.lastRun
     ] })
   ] });
-}, Cm = (e) => e.type === "light" || e.type === "allLights" ? "bulb" : e.type === "lockAll" ? "lock" : e.type === "scene" ? "scene" : e.type === "precondition" ? "car" : e.type === "closeGarage" ? "garage" : e.type === "thermostat" ? "therm" : "sparkle", zm = (e, t) => {
+}, Sm = (e) => e.type === "light" || e.type === "allLights" ? "bulb" : e.type === "lockAll" ? "lock" : e.type === "scene" ? "scene" : e.type === "precondition" ? "car" : e.type === "closeGarage" ? "garage" : e.type === "thermostat" ? "therm" : "sparkle", Cm = (e, t) => {
   if (e.type === "light") {
     const n = t.lights.find((i) => i.id === e.lightId);
     return `${e.on ? "On" : "Off"} · ${n?.name || "light"}`;
   }
   return e.type === "allLights" ? e.on ? "All lights on" : "All lights off" : e.type === "lockAll" ? "Lock all" : e.type === "scene" ? `Scene · ${e.sceneId}` : e.type === "precondition" ? "Precondition Tesla" : e.type === "closeGarage" ? "Close garage" : e.type === "thermostat" ? `Set ${e.target}°` : e.type;
 };
-Object.assign(window, { AutomationsView: jm });
-const Tm = ({ ctx: e }) => {
+Object.assign(window, { AutomationsView: bm });
+const zm = ({ ctx: e }) => {
   const { p: t, fonts: n, dens: i } = e, o = e.settings || {}, l = e.setSetting || (() => {
   }), [s, a] = React.useState("appearance"), d = [
     { id: "tangerine", name: "Tangerine", hex: "#e87f4a" },
@@ -11633,11 +11516,11 @@ const Tm = ({ ctx: e }) => {
     { id: "sage", name: "Sage", hex: "#7a8c6c" },
     { id: "plum", name: "Plum", hex: "#7d4f6b" },
     { id: "slate", name: "Slate", hex: "#5b7390" }
-  ], c = [
+  ], u = [
     { id: "jarvis", name: "Jarvis-y", desc: "Warm, capable, conversational" },
     { id: "terse", name: "Terse", desc: "Brief terminal-style replies" },
     { id: "playful", name: "Playful", desc: "Cheeky, light, friendly (Pip)" }
-  ], p = [
+  ], f = [
     { id: "editorial", name: "Editorial", desc: "Newsreader · Inter" },
     { id: "classic", name: "Classic", desc: "Instrument Serif · Inter" },
     { id: "modern", name: "Modern", desc: "Space Grotesk · Inter" }
@@ -11661,9 +11544,9 @@ const Tm = ({ ctx: e }) => {
         { id: "notifications", icon: "bell", label: "Notifications" },
         { id: "account", icon: "user", label: "Account" },
         { id: "diagnostics", icon: "grid", label: "Diagnostics" }
-      ].map((u) => {
-        const h = s === u.id;
-        return /* @__PURE__ */ r.jsxs("button", { onClick: () => a(u.id), style: {
+      ].map((c) => {
+        const p = s === c.id;
+        return /* @__PURE__ */ r.jsxs("button", { onClick: () => a(c.id), style: {
           display: "flex",
           alignItems: "center",
           gap: 10,
@@ -11671,18 +11554,18 @@ const Tm = ({ ctx: e }) => {
           margin: "2px 4px",
           borderRadius: 7,
           border: 0,
-          background: h ? t.warm : "transparent",
-          color: h ? t.accent : t.fg2,
-          fontWeight: h ? 500 : 400,
+          background: p ? t.warm : "transparent",
+          color: p ? t.accent : t.fg2,
+          fontWeight: p ? 500 : 400,
           fontFamily: n.body,
           fontSize: 13,
           cursor: "pointer",
           width: "calc(100% - 8px)",
           textAlign: "left"
         }, children: [
-          /* @__PURE__ */ r.jsx(window.Icon, { name: u.icon, size: 14, stroke: 1.5 }),
-          /* @__PURE__ */ r.jsx("span", { style: { flex: 1 }, children: u.label })
-        ] }, u.id);
+          /* @__PURE__ */ r.jsx(window.Icon, { name: c.icon, size: 14, stroke: 1.5 }),
+          /* @__PURE__ */ r.jsx("span", { style: { flex: 1 }, children: c.label })
+        ] }, c.id);
       }) }),
       /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: i.gap }, children: [
         s === "appearance" && /* @__PURE__ */ r.jsxs(window.Card, { p: t, id: "setting-appearance", style: { padding: 22 }, children: [
@@ -11690,89 +11573,89 @@ const Tm = ({ ctx: e }) => {
           /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Theme", desc: "Light, dark, or follow system", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 8 }, children: [
             { id: !1, name: "Light", icon: "sun" },
             { id: !0, name: "Dark", icon: "moon" }
-          ].map((u) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("dark", u.id), style: {
+          ].map((c) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("dark", c.id), style: {
             display: "flex",
             alignItems: "center",
             gap: 7,
             padding: "8px 14px",
             borderRadius: 9,
-            border: `.5px solid ${o.dark === u.id ? t.accent : t.border2}`,
-            background: o.dark === u.id ? t.accentSoft : "transparent",
-            color: o.dark === u.id ? t.accent : t.fg,
+            border: `.5px solid ${o.dark === c.id ? t.accent : t.border2}`,
+            background: o.dark === c.id ? t.accentSoft : "transparent",
+            color: o.dark === c.id ? t.accent : t.fg,
             fontSize: 12,
             cursor: "pointer",
             fontFamily: n.body
           }, children: [
-            /* @__PURE__ */ r.jsx(window.Icon, { name: u.icon, size: 13 }),
+            /* @__PURE__ */ r.jsx(window.Icon, { name: c.icon, size: 13 }),
             " ",
-            u.name
-          ] }, String(u.id))) }) }),
-          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Accent color", desc: "Used across the app for highlights and status", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" }, children: d.map((u) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("hearthAccent", u.id), style: {
+            c.name
+          ] }, String(c.id))) }) }),
+          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Accent color", desc: "Used across the app for highlights and status", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" }, children: d.map((c) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("hearthAccent", c.id), style: {
             display: "flex",
             alignItems: "center",
             gap: 8,
             padding: "7px 10px 7px 7px",
             borderRadius: 999,
-            border: `.5px solid ${o.hearthAccent === u.id ? t.fg : t.border2}`,
-            background: o.hearthAccent === u.id ? t.warm : "transparent",
+            border: `.5px solid ${o.hearthAccent === c.id ? t.fg : t.border2}`,
+            background: o.hearthAccent === c.id ? t.warm : "transparent",
             color: t.fg,
             fontSize: 12,
             cursor: "pointer",
             fontFamily: n.body
           }, children: [
-            /* @__PURE__ */ r.jsx("span", { style: { width: 18, height: 18, borderRadius: "50%", background: u.hex, border: `.5px solid ${t.border2}` } }),
-            u.name
-          ] }, u.id)) }) }),
-          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Density", desc: "How tightly information is packed", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 8 }, children: ["compact", "regular", "comfy"].map((u) => /* @__PURE__ */ r.jsx("button", { onClick: () => l("density", u), style: {
+            /* @__PURE__ */ r.jsx("span", { style: { width: 18, height: 18, borderRadius: "50%", background: c.hex, border: `.5px solid ${t.border2}` } }),
+            c.name
+          ] }, c.id)) }) }),
+          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Density", desc: "How tightly information is packed", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 8 }, children: ["compact", "regular", "comfy"].map((c) => /* @__PURE__ */ r.jsx("button", { onClick: () => l("density", c), style: {
             padding: "8px 16px",
             borderRadius: 9,
             textTransform: "capitalize",
-            border: `.5px solid ${o.density === u ? t.accent : t.border2}`,
-            background: o.density === u ? t.accentSoft : "transparent",
-            color: o.density === u ? t.accent : t.fg,
+            border: `.5px solid ${o.density === c ? t.accent : t.border2}`,
+            background: o.density === c ? t.accentSoft : "transparent",
+            color: o.density === c ? t.accent : t.fg,
             fontSize: 12,
             cursor: "pointer",
             fontFamily: n.body
-          }, children: u }, u)) }) }),
-          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Typography", desc: "Headline pairing", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: p.map((u) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("fontPair", u.id), style: {
+          }, children: c }, c)) }) }),
+          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Typography", desc: "Headline pairing", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" }, children: f.map((c) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("fontPair", c.id), style: {
             padding: "10px 14px",
             borderRadius: 9,
             textAlign: "left",
-            border: `.5px solid ${o.fontPair === u.id ? t.accent : t.border2}`,
-            background: o.fontPair === u.id ? t.accentSoft : "transparent",
+            border: `.5px solid ${o.fontPair === c.id ? t.accent : t.border2}`,
+            background: o.fontPair === c.id ? t.accentSoft : "transparent",
             color: t.fg,
             fontSize: 12,
             cursor: "pointer",
             fontFamily: n.body
           }, children: [
-            /* @__PURE__ */ r.jsx("div", { style: { fontWeight: 500, color: o.fontPair === u.id ? t.accent : t.fg }, children: u.name }),
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: t.fg3, marginTop: 2 }, children: u.desc })
-          ] }, u.id)) }) })
+            /* @__PURE__ */ r.jsx("div", { style: { fontWeight: 500, color: o.fontPair === c.id ? t.accent : t.fg }, children: c.name }),
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: t.fg3, marginTop: 2 }, children: c.desc })
+          ] }, c.id)) }) })
         ] }),
         s === "agent" && /* @__PURE__ */ r.jsxs(window.Card, { p: t, id: "setting-agent", style: { padding: 22 }, children: [
           /* @__PURE__ */ r.jsx(Bt, { p: t, fonts: n, title: "Agent", sub: "How HomeCNTRD speaks to you" }),
-          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Personality", desc: "Persona used when chatting and reading status", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: c.map((u) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("agentTone", u.id), style: {
+          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Personality", desc: "Persona used when chatting and reading status", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 8 }, children: u.map((c) => /* @__PURE__ */ r.jsxs("button", { onClick: () => l("agentTone", c.id), style: {
             display: "flex",
             alignItems: "center",
             gap: 12,
             padding: "10px 14px",
             borderRadius: 9,
             textAlign: "left",
-            border: `.5px solid ${o.agentTone === u.id ? t.accent : t.border2}`,
-            background: o.agentTone === u.id ? t.accentSoft : "transparent",
+            border: `.5px solid ${o.agentTone === c.id ? t.accent : t.border2}`,
+            background: o.agentTone === c.id ? t.accentSoft : "transparent",
             color: t.fg,
             cursor: "pointer",
             fontFamily: n.body
           }, children: [
             /* @__PURE__ */ r.jsx("div", { style: { width: 22, height: 22, borderRadius: "50%", background: t.accent, color: "#fff", display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "sparkle", size: 11 }) }),
             /* @__PURE__ */ r.jsxs("div", { style: { flex: 1 }, children: [
-              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, fontWeight: o.agentTone === u.id ? 500 : 400 }, children: u.name }),
-              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 1 }, children: u.desc })
+              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, fontWeight: o.agentTone === c.id ? 500 : 400 }, children: c.name }),
+              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 1 }, children: c.desc })
             ] }),
-            o.agentTone === u.id && /* @__PURE__ */ r.jsx(window.Icon, { name: "check", size: 14, style: { color: t.accent } })
-          ] }, u.id)) }) }),
-          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Voice activation", desc: "Wake on 'Hey HomeCNTRD'", inline: !0, children: /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o.wake !== !1, onChange: (u) => l("wake", u) }) }),
-          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Suggestions on home", desc: "Show suggested commands when you open the agent", inline: !0, children: /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o.suggestions !== !1, onChange: (u) => l("suggestions", u) }) })
+            o.agentTone === c.id && /* @__PURE__ */ r.jsx(window.Icon, { name: "check", size: 14, style: { color: t.accent } })
+          ] }, c.id)) }) }),
+          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Voice activation", desc: "Wake on 'Hey HomeCNTRD'", inline: !0, children: /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o.wake !== !1, onChange: (c) => l("wake", c) }) }),
+          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Suggestions on home", desc: "Show suggested commands when you open the agent", inline: !0, children: /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o.suggestions !== !1, onChange: (c) => l("suggestions", c) }) })
         ] }),
         s === "devices" && /* @__PURE__ */ r.jsxs(window.Card, { p: t, id: "setting-devices", style: { padding: 22 }, children: [
           /* @__PURE__ */ r.jsx(Bt, { p: t, fonts: n, title: "Devices on home screen", sub: "Choose which categories appear on the dashboard" }),
@@ -11787,11 +11670,11 @@ const Tm = ({ ctx: e }) => {
             { k: "showAlarms", icon: "bell", name: "Alarms" },
             { k: "showTv", icon: "tv", name: "TV" },
             { k: "showWeather", icon: "cloud", name: "Weather" }
-          ].map((u) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 9, border: `.5px solid ${t.border}`, background: t.surface }, children: [
-            /* @__PURE__ */ r.jsx(window.Icon, { name: u.icon, size: 15, style: { color: t.fg3 } }),
-            /* @__PURE__ */ r.jsx("div", { style: { flex: 1, fontSize: 13, color: t.fg }, children: u.name }),
-            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o[u.k] !== !1, onChange: (h) => l(u.k, h) })
-          ] }, u.k)) })
+          ].map((c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 9, border: `.5px solid ${t.border}`, background: t.surface }, children: [
+            /* @__PURE__ */ r.jsx(window.Icon, { name: c.icon, size: 15, style: { color: t.fg3 } }),
+            /* @__PURE__ */ r.jsx("div", { style: { flex: 1, fontSize: 13, color: t.fg }, children: c.name }),
+            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o[c.k] !== !1, onChange: (p) => l(c.k, p) })
+          ] }, c.k)) })
         ] }),
         s === "home" && /* @__PURE__ */ r.jsxs(window.Card, { p: t, id: "setting-home", style: { padding: 22 }, children: [
           /* @__PURE__ */ r.jsx(Bt, { p: t, fonts: n, title: "Household", sub: "People & places" }),
@@ -11800,14 +11683,14 @@ const Tm = ({ ctx: e }) => {
               { name: "Frances Willows", role: "Owner", mail: "frances.w@willowstudio.com" },
               { name: "Jamie Willows", role: "Member", mail: "jamie.w@willowstudio.com" },
               { name: "Guests", role: "Door codes", mail: "2 active codes" }
-            ].map((u) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 9, border: `.5px solid ${t.border}`, background: t.surface }, children: [
-              /* @__PURE__ */ r.jsx("div", { style: { width: 32, height: 32, borderRadius: "50%", background: t.warm, color: t.accent, display: "grid", placeItems: "center", fontFamily: n.display, fontWeight: 500, flex: "none" }, children: u.name[0] }),
+            ].map((c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 9, border: `.5px solid ${t.border}`, background: t.surface }, children: [
+              /* @__PURE__ */ r.jsx("div", { style: { width: 32, height: 32, borderRadius: "50%", background: t.warm, color: t.accent, display: "grid", placeItems: "center", fontFamily: n.display, fontWeight: 500, flex: "none" }, children: c.name[0] }),
               /* @__PURE__ */ r.jsxs("div", { style: { flex: 1 }, children: [
-                /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg }, children: u.name }),
-                /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3 }, children: u.mail })
+                /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg }, children: c.name }),
+                /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3 }, children: c.mail })
               ] }),
-              /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, color: t.fg3 }, children: u.role })
-            ] }, u.mail)),
+              /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, color: t.fg3 }, children: c.role })
+            ] }, c.mail)),
             /* @__PURE__ */ r.jsxs("button", { style: { padding: "8px 12px", borderRadius: 8, border: `1px dashed ${t.border2}`, background: "transparent", color: t.fg2, fontSize: 12, cursor: "pointer", fontFamily: n.body, display: "flex", alignItems: "center", gap: 6, alignSelf: "flex-start" }, children: [
               /* @__PURE__ */ r.jsx(window.Icon, { name: "plus", size: 11 }),
               " Invite a member"
@@ -11825,13 +11708,13 @@ const Tm = ({ ctx: e }) => {
             { k: "notifCharge", name: "Tesla finished charging", desc: "Once per session" },
             { k: "notifGarage", name: "Garage left open > 10 min", desc: "Repeats every 5 min until closed" },
             { k: "notifBriefing", name: "Morning briefing", desc: "7:30 AM · weather + first meeting + traffic" }
-          ].map((u) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: `.5px solid ${t.border}` }, children: [
+          ].map((c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: `.5px solid ${t.border}` }, children: [
             /* @__PURE__ */ r.jsxs("div", { style: { flex: 1 }, children: [
-              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg }, children: u.name }),
-              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 2 }, children: u.desc })
+              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg }, children: c.name }),
+              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 2 }, children: c.desc })
             ] }),
-            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o[u.k] !== !1, onChange: (h) => l(u.k, h) })
-          ] }, u.k))
+            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: o[c.k] !== !1, onChange: (p) => l(c.k, p) })
+          ] }, c.k))
         ] }),
         s === "account" && /* @__PURE__ */ r.jsxs(window.Card, { p: t, id: "setting-account", style: { padding: 22 }, children: [
           /* @__PURE__ */ r.jsx(Bt, { p: t, fonts: n, title: "Account", sub: "HomeCNTRD account · sign-in" }),
@@ -11848,42 +11731,42 @@ const Tm = ({ ctx: e }) => {
             /* @__PURE__ */ r.jsx("button", { onClick: () => e.doLogout?.(), style: { padding: "7px 12px", borderRadius: 8, border: `.5px solid ${t.border2}`, background: "transparent", color: t.fg, fontSize: 12, cursor: "pointer", fontFamily: n.body }, children: "Sign out" })
           ] }),
           /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Active sessions", desc: "Devices currently signed in to your HomeCNTRD account", children: /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", flexDirection: "column", gap: 6 }, children: [
-            (e.user?.sessions || []).map((u) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 9, background: t.surface, border: `.5px solid ${t.border}` }, children: [
-              /* @__PURE__ */ r.jsx("div", { style: { width: 30, height: 30, borderRadius: 7, background: t.warm, color: t.accent, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: u.device.includes("iPhone") ? "mic" : u.device.includes("Mac") ? "grid" : u.device.includes("iPad") ? "tv" : "home", size: 14 }) }),
+            (e.user?.sessions || []).map((c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 9, background: t.surface, border: `.5px solid ${t.border}` }, children: [
+              /* @__PURE__ */ r.jsx("div", { style: { width: 30, height: 30, borderRadius: 7, background: t.warm, color: t.accent, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: c.device.includes("iPhone") ? "mic" : c.device.includes("Mac") ? "grid" : c.device.includes("iPad") ? "tv" : "home", size: 14 }) }),
               /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
-                /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 13, color: t.fg, fontWeight: u.current ? 500 : 400, display: "flex", alignItems: "center", gap: 6 }, children: [
-                  u.device,
-                  u.current && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 9, padding: "1px 6px", borderRadius: 999, background: t.accent, color: "#fff" }, children: "THIS DEVICE" })
+                /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 13, color: t.fg, fontWeight: c.current ? 500 : 400, display: "flex", alignItems: "center", gap: 6 }, children: [
+                  c.device,
+                  c.current && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 9, padding: "1px 6px", borderRadius: 999, background: t.accent, color: "#fff" }, children: "THIS DEVICE" })
                 ] }),
                 /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: t.fg3, marginTop: 1 }, children: [
-                  u.os,
+                  c.os,
                   " · ",
-                  u.loc,
+                  c.loc,
                   " · ",
-                  u.last
+                  c.last
                 ] })
               ] }),
-              !u.current && /* @__PURE__ */ r.jsx("button", { onClick: () => e.patchUser?.((h) => ({ ...h, sessions: h.sessions.filter((v) => v.id !== u.id) })), style: { padding: "5px 9px", borderRadius: 7, border: `.5px solid ${t.border2}`, background: "transparent", color: t.danger, fontSize: 11, cursor: "pointer" }, children: "End" })
-            ] }, u.id)),
-            /* @__PURE__ */ r.jsx("button", { onClick: () => e.patchUser?.((u) => ({ ...u, sessions: u.sessions.filter((h) => h.current) })), style: { padding: "8px 12px", borderRadius: 8, border: `1px dashed ${t.border2}`, background: "transparent", color: t.danger, fontSize: 12, cursor: "pointer", fontFamily: n.body, alignSelf: "flex-start" }, children: "Sign out everywhere else" })
+              !c.current && /* @__PURE__ */ r.jsx("button", { onClick: () => e.patchUser?.((p) => ({ ...p, sessions: p.sessions.filter((w) => w.id !== c.id) })), style: { padding: "5px 9px", borderRadius: 7, border: `.5px solid ${t.border2}`, background: "transparent", color: t.danger, fontSize: 11, cursor: "pointer" }, children: "End" })
+            ] }, c.id)),
+            /* @__PURE__ */ r.jsx("button", { onClick: () => e.patchUser?.((c) => ({ ...c, sessions: c.sessions.filter((p) => p.current) })), style: { padding: "8px 12px", borderRadius: 8, border: `1px dashed ${t.border2}`, background: "transparent", color: t.danger, fontSize: 12, cursor: "pointer", fontFamily: n.body, alignSelf: "flex-start" }, children: "Sign out everywhere else" })
           ] }) }),
-          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Connected services", desc: "Mirrors what's set up in Devices", children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }, children: e.state.integrations.filter((u) => u.status === "connected").map((u) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: t.surface, border: `.5px solid ${t.border}` }, children: [
-            /* @__PURE__ */ r.jsx("div", { style: { width: 22, height: 22, borderRadius: 6, background: u.color + "22", color: u.color, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: u.icon, size: 11 }) }),
-            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: u.name })
-          ] }, u.id)) }) }),
+          /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Connected services", desc: "Mirrors what's set up in Devices", children: /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }, children: e.state.integrations.filter((c) => c.status === "connected").map((c) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: t.surface, border: `.5px solid ${t.border}` }, children: [
+            /* @__PURE__ */ r.jsx("div", { style: { width: 22, height: 22, borderRadius: 6, background: c.color + "22", color: c.color, display: "grid", placeItems: "center", flex: "none" }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: c.icon, size: 11 }) }),
+            /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: c.name })
+          ] }, c.id)) }) }),
           /* @__PURE__ */ r.jsx(Fe, { p: t, fonts: n, label: "Privacy", desc: "What HomeCNTRD shares and stores", children: /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column" }, children: [
             { k: "cameraIndoorRecording", name: "Record indoor cameras when home", desc: "Turn off to only record when Away mode is active" },
             { k: "shareWithApple", name: "Share routines with Apple Home", desc: "Lets HomeKit see scenes and trigger them" },
             { k: "shareWithGoogle", name: "Share with Google Home", desc: "Off · no devices currently linked to Google" },
             { k: "analytics", name: "Anonymous usage analytics", desc: "Helps improve suggestions · no audio or video" },
             { k: "voiceTraining", name: "Use my voice to train the assistant", desc: "Off · voice samples are deleted after each session" }
-          ].map((u, h) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: h ? `.5px solid ${t.border}` : "none" }, children: [
+          ].map((c, p) => /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: p ? `.5px solid ${t.border}` : "none" }, children: [
             /* @__PURE__ */ r.jsxs("div", { style: { flex: 1 }, children: [
-              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg }, children: u.name }),
-              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 2 }, children: u.desc })
+              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg }, children: c.name }),
+              /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, marginTop: 2 }, children: c.desc })
             ] }),
-            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: !!e.user?.privacy?.[u.k], onChange: (v) => e.patchUser?.((w) => ({ ...w, privacy: { ...w.privacy, [u.k]: v } })) })
-          ] }, u.k)) }) }),
+            /* @__PURE__ */ r.jsx(window.Toggle, { p: t, on: !!e.user?.privacy?.[c.k], onChange: (w) => e.patchUser?.((x) => ({ ...x, privacy: { ...x.privacy, [c.k]: w } })) })
+          ] }, c.k)) }) }),
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: `.5px solid ${t.border}`, marginTop: 14, fontSize: 12 }, children: [
             /* @__PURE__ */ r.jsx("span", { style: { color: t.fg2 }, children: "Plan" }),
             /* @__PURE__ */ r.jsxs("span", { style: { color: t.fg }, children: [
@@ -11896,20 +11779,20 @@ const Tm = ({ ctx: e }) => {
             /* @__PURE__ */ r.jsx("span", { style: { color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: "2.1.4 (1842)" })
           ] })
         ] }),
-        s === "diagnostics" && /* @__PURE__ */ r.jsx(_m, { ctx: e })
+        s === "diagnostics" && /* @__PURE__ */ r.jsx(Tm, { ctx: e })
       ] })
     ] }),
     /* @__PURE__ */ r.jsx("div", { style: { height: 60 } })
   ] });
-}, _m = ({ ctx: e }) => {
+}, Tm = ({ ctx: e }) => {
   const { p: t, fonts: n } = e, [i, o] = React.useState(() => typeof window < "u" ? [...window.__hcDiag || []] : []);
   React.useEffect(() => {
-    const c = setInterval(() => {
+    const u = setInterval(() => {
       typeof window < "u" && o([...window.__hcDiag || []]);
     }, 1e3);
-    return () => clearInterval(c);
+    return () => clearInterval(u);
   }, []);
-  const l = [...i].reverse(), s = (c) => new Date(c).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), a = (c, p) => p === "info" ? "#7da9d6" : p === "skip" ? "#d6b97d" : c === "ok" ? "#7ed3a3" : c === "error" ? "#ec8b78" : c === "pending" ? t.fg3 : t.fg2, d = (c) => c.kind === "info" ? "ⓘ" : c.kind === "skip" ? "⊘" : c.status === "ok" ? "✓" : c.status === "error" ? "✗" : c.status === "pending" ? "·" : "!";
+  const l = [...i].reverse(), s = (u) => new Date(u).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), a = (u, f) => f === "info" ? "#7da9d6" : f === "skip" ? "#d6b97d" : u === "ok" ? "#7ed3a3" : u === "error" ? "#ec8b78" : u === "pending" ? t.fg3 : t.fg2, d = (u) => u.kind === "info" ? "ⓘ" : u.kind === "skip" ? "⊘" : u.status === "ok" ? "✓" : u.status === "error" ? "✗" : u.status === "pending" ? "·" : "!";
   return /* @__PURE__ */ r.jsxs(window.Card, { p: t, id: "setting-diagnostics", style: { padding: 22 }, children: [
     /* @__PURE__ */ r.jsx(Bt, { p: t, fonts: n, title: "Diagnostics", sub: "Recent commands HomeCNTRD has sent to Home Assistant" }),
     /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0 14px" }, children: [
@@ -11925,7 +11808,7 @@ const Tm = ({ ctx: e }) => {
         }
       )
     ] }),
-    /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 6, fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11.5 }, children: l.map((c, p) => /* @__PURE__ */ r.jsxs("div", { style: {
+    /* @__PURE__ */ r.jsx("div", { style: { display: "flex", flexDirection: "column", gap: 6, fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 11.5 }, children: l.map((u, f) => /* @__PURE__ */ r.jsxs("div", { style: {
       padding: "8px 10px",
       borderRadius: 8,
       background: "rgba(241,234,217,.03)",
@@ -11935,20 +11818,20 @@ const Tm = ({ ctx: e }) => {
       gap: 4
     }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "flex-start", gap: 8, color: t.fg }, children: [
-        /* @__PURE__ */ r.jsx("span", { style: { color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: s(c.ts) }),
-        /* @__PURE__ */ r.jsx("span", { style: { color: a(c.status, c.kind), fontWeight: 600 }, children: d(c) }),
-        /* @__PURE__ */ r.jsx("span", { style: { color: t.fg, flex: 1, wordBreak: "break-word" }, children: c.kind === "skip" || c.kind === "info" ? c.message : `${c.domain}.${c.service}` })
+        /* @__PURE__ */ r.jsx("span", { style: { color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: s(u.ts) }),
+        /* @__PURE__ */ r.jsx("span", { style: { color: a(u.status, u.kind), fontWeight: 600 }, children: d(u) }),
+        /* @__PURE__ */ r.jsx("span", { style: { color: t.fg, flex: 1, wordBreak: "break-word" }, children: u.kind === "skip" || u.kind === "info" ? u.message : `${u.domain}.${u.service}` })
       ] }),
-      c.data && /* @__PURE__ */ r.jsx("div", { style: { color: t.fg3, paddingLeft: 24, wordBreak: "break-all" }, children: Object.entries(c.data).map(([u, h]) => /* @__PURE__ */ r.jsxs("span", { style: { marginRight: 10 }, children: [
-        u,
+      u.data && /* @__PURE__ */ r.jsx("div", { style: { color: t.fg3, paddingLeft: 24, wordBreak: "break-all" }, children: Object.entries(u.data).map(([c, p]) => /* @__PURE__ */ r.jsxs("span", { style: { marginRight: 10 }, children: [
+        c,
         "=",
-        typeof h == "object" ? JSON.stringify(h) : String(h)
-      ] }, u)) }),
-      c.error && /* @__PURE__ */ r.jsxs("div", { style: { color: "#ec8b78", paddingLeft: 24, wordBreak: "break-word" }, children: [
+        typeof p == "object" ? JSON.stringify(p) : String(p)
+      ] }, c)) }),
+      u.error && /* @__PURE__ */ r.jsxs("div", { style: { color: "#ec8b78", paddingLeft: 24, wordBreak: "break-word" }, children: [
         "error: ",
-        c.error
+        u.error
       ] })
-    ] }, p)) })
+    ] }, f)) })
   ] });
 }, Bt = ({ p: e, fonts: t, title: n, sub: i }) => /* @__PURE__ */ r.jsxs("div", { style: { marginBottom: 16 }, children: [
   /* @__PURE__ */ r.jsx("div", { style: { fontFamily: t.display, fontSize: 22, color: e.fg, fontWeight: 500 }, children: n }),
@@ -11960,32 +11843,32 @@ const Tm = ({ ctx: e }) => {
   ] }),
   o
 ] });
-window.SettingsView = Tm;
-const Rm = ({ ctx: e }) => {
-  const { p: t, fonts: n, dens: i, state: o, setState: l, room: s } = e, a = o.tvs.filter((v) => v.room === s), d = a.length ? a : o.tvs, [c, p] = React.useState(null);
+window.SettingsView = zm;
+const _m = ({ ctx: e }) => {
+  const { p: t, fonts: n, dens: i, state: o, setState: l, room: s } = e, a = o.tvs.filter((w) => w.room === s), d = a.length ? a : o.tvs, [u, f] = React.useState(null);
   if (!d.length) return null;
-  const u = (v) => l((w) => ({ ...w, tvs: w.tvs.map((f) => f.id === v ? { ...f, playing: !f.playing, on: !0 } : f) })), h = (v) => l((w) => ({ ...w, tvs: w.tvs.map((f) => f.id === v ? { ...f, on: !f.on, playing: f.on ? !1 : f.playing } : f) }));
-  return /* @__PURE__ */ r.jsxs(window.Section, { title: "TVs", subtitle: `${d.filter((v) => v.on).length} of ${d.length} on${a.length ? "" : " · whole house"}`, p: t, fonts: n, children: [
-    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: i.tileGap }, children: d.map((v) => /* @__PURE__ */ r.jsx(Im, { ctx: e, tv: v, togglePlay: u, togglePower: h, openRemote: () => p(v.id) }, v.id)) }),
-    c && /* @__PURE__ */ r.jsx(Mm, { ctx: e, tv: o.tvs.find((v) => v.id === c), onClose: () => p(null) })
+  const c = (w) => l((x) => ({ ...x, tvs: x.tvs.map((h) => h.id === w ? { ...h, playing: !h.playing, on: !0 } : h) })), p = (w) => l((x) => ({ ...x, tvs: x.tvs.map((h) => h.id === w ? { ...h, on: !h.on, playing: h.on ? !1 : h.playing } : h) }));
+  return /* @__PURE__ */ r.jsxs(window.Section, { title: "TVs", subtitle: `${d.filter((w) => w.on).length} of ${d.length} on${a.length ? "" : " · whole house"}`, p: t, fonts: n, children: [
+    /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: i.tileGap }, children: d.map((w) => /* @__PURE__ */ r.jsx(Rm, { ctx: e, tv: w, togglePlay: c, togglePower: p, openRemote: () => f(w.id) }, w.id)) }),
+    u && /* @__PURE__ */ r.jsx(Mm, { ctx: e, tv: o.tvs.find((w) => w.id === u), onClose: () => f(null) })
   ] });
 }, Rl = {
   appletv: { label: "Apple TV", badgeBg: "#1f1f1f", badgeFg: "#fff", accent: "#a78bfa" },
   googletv: { label: "Google TV", badgeBg: "#1f1f1f", badgeFg: "#fff", accent: "#5b8cff" },
   lgthinq: { label: "LG ThinQ", badgeBg: "#a8174e", badgeFg: "#fff", accent: "#a8174e" }
-}, Im = ({ ctx: e, tv: t, togglePlay: n, togglePower: i, openRemote: o }) => {
-  const { p: l, fonts: s, state: a, setState: d } = e, c = Rl[t.brand] || Rl.appletv, p = window.ROOMS.find((h) => h.id === t.room)?.name, u = t.dur > 0 ? t.progress / t.dur * 100 : 0;
+}, Rm = ({ ctx: e, tv: t, togglePlay: n, togglePower: i, openRemote: o }) => {
+  const { p: l, fonts: s, state: a, setState: d } = e, u = Rl[t.brand] || Rl.appletv, f = window.ROOMS.find((p) => p.id === t.room)?.name, c = t.dur > 0 ? t.progress / t.dur * 100 : 0;
   return /* @__PURE__ */ r.jsxs(window.Card, { p: l, style: { padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }, children: [
     /* @__PURE__ */ r.jsxs("div", { style: {
       position: "relative",
       aspectRatio: "16/9",
       background: t.on ? `radial-gradient(120% 120% at 30% 25%, ${t.poster}, oklch(15% 0.05 25))` : "#0a0a0a"
     }, children: [
-      /* @__PURE__ */ r.jsxs("div", { style: { position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 6, background: c.badgeBg, color: c.badgeFg, fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }, children: [
+      /* @__PURE__ */ r.jsxs("div", { style: { position: "absolute", top: 10, left: 10, padding: "3px 8px", borderRadius: 6, background: u.badgeBg, color: u.badgeFg, fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }, children: [
         t.brand === "appletv" && /* @__PURE__ */ r.jsx(window.Icon, { name: "apple", size: 11 }),
         t.brand === "googletv" && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 11, fontWeight: 700 }, children: "▶" }),
         t.brand === "lgthinq" && /* @__PURE__ */ r.jsx("span", { style: { fontSize: 10, fontWeight: 700 }, children: "LG" }),
-        c.label
+        u.label
       ] }),
       t.on && /* @__PURE__ */ r.jsxs("div", { style: { position: "absolute", top: 10, right: 10, padding: "3px 8px", borderRadius: 6, background: "rgba(0,0,0,.5)", color: "#fff", fontSize: 10, display: "flex", alignItems: "center", gap: 5 }, children: [
         /* @__PURE__ */ r.jsx("span", { style: { width: 6, height: 6, borderRadius: "50%", background: t.playing ? "#ff5c5c" : "#fff" } }),
@@ -11998,7 +11881,7 @@ const Rm = ({ ctx: e }) => {
         "Off · ",
         t.input
       ] }) }),
-      t.on && t.dur > 0 && /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", left: 14, right: 14, bottom: 6, height: 2, background: "rgba(255,255,255,.18)", borderRadius: 1, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${u}%`, height: "100%", background: "#fff" } }) })
+      t.on && t.dur > 0 && /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", left: 14, right: 14, bottom: 6, height: 2, background: "rgba(255,255,255,.18)", borderRadius: 1, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${c}%`, height: "100%", background: "#fff" } }) })
     ] }),
     /* @__PURE__ */ r.jsxs("div", { style: { padding: "12px 14px 10px", display: "flex", alignItems: "center", gap: 10, borderBottom: `.5px solid ${l.border}` }, children: [
       /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
@@ -12009,7 +11892,7 @@ const Rm = ({ ctx: e }) => {
         /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: l.fg3, marginTop: 1 }, children: [
           t.model,
           " · ",
-          p,
+          f,
           t.on && t.dur > 0 && /* @__PURE__ */ r.jsxs("span", { children: [
             " · ",
             window.fmtTime(t.progress),
@@ -12054,20 +11937,20 @@ const Rm = ({ ctx: e }) => {
         alignItems: "center",
         gap: 6
       }, children: [
-        /* @__PURE__ */ r.jsx($m, { size: 12 }),
+        /* @__PURE__ */ r.jsx(Im, { size: 12 }),
         " Remote"
       ] })
     ] })
   ] });
-}, $m = ({ size: e = 12 }) => /* @__PURE__ */ r.jsxs("svg", { width: e, height: e, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round", children: [
+}, Im = ({ size: e = 12 }) => /* @__PURE__ */ r.jsxs("svg", { width: e, height: e, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round", children: [
   /* @__PURE__ */ r.jsx("rect", { x: "7", y: "3", width: "10", height: "18", rx: "3" }),
   /* @__PURE__ */ r.jsx("circle", { cx: "12", cy: "9", r: "2" }),
   /* @__PURE__ */ r.jsx("path", { d: "M12 14v4M10 16h4" })
 ] }), Mm = ({ ctx: e, tv: t, onClose: n }) => {
   const { p: i, fonts: o, setState: l, state: s } = e;
   if (!t) return null;
-  const a = Rl[t.brand], d = window.ROOMS.find((u) => u.id === t.room)?.name, c = (u) => l((h) => ({ ...h, tvs: h.tvs.map((v) => v.id === t.id ? { ...v, ...u } : v) })), p = (u) => {
-    u === "play" && c({ playing: !0, on: !0 }), u === "pause" && c({ playing: !1 }), u === "power" && c({ on: !t.on, playing: t.on ? !1 : t.playing }), u === "mute" && c({ mute: !t.mute }), u === "volUp" && c({ vol: Math.min(100, t.vol + 2), mute: !1 }), u === "volDown" && c({ vol: Math.max(0, t.vol - 2) }), u === "next" && c({ progress: Math.min(t.dur || 9999, t.progress + 30) }), u === "prev" && c({ progress: Math.max(0, t.progress - 30) });
+  const a = Rl[t.brand], d = window.ROOMS.find((c) => c.id === t.room)?.name, u = (c) => l((p) => ({ ...p, tvs: p.tvs.map((w) => w.id === t.id ? { ...w, ...c } : w) })), f = (c) => {
+    c === "play" && u({ playing: !0, on: !0 }), c === "pause" && u({ playing: !1 }), c === "power" && u({ on: !t.on, playing: t.on ? !1 : t.playing }), c === "mute" && u({ mute: !t.mute }), c === "volUp" && u({ vol: Math.min(100, t.vol + 2), mute: !1 }), c === "volDown" && u({ vol: Math.max(0, t.vol - 2) }), c === "next" && u({ progress: Math.min(t.dur || 9999, t.progress + 30) }), c === "prev" && u({ progress: Math.max(0, t.progress - 30) });
   };
   return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
     /* @__PURE__ */ r.jsx("div", { onClick: n, style: { position: "absolute", inset: 0, zIndex: 60, background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)" } }),
@@ -12120,9 +12003,9 @@ const Rm = ({ ctx: e }) => {
         ] })
       ] }),
       /* @__PURE__ */ r.jsxs("div", { style: { padding: 18, overflow: "auto" }, children: [
-        t.brand === "appletv" && /* @__PURE__ */ r.jsx(Fm, { p: i, fonts: o, press: p, update: c, tv: t }),
-        t.brand === "googletv" && /* @__PURE__ */ r.jsx(Em, { p: i, fonts: o, press: p, update: c, tv: t }),
-        t.brand === "lgthinq" && /* @__PURE__ */ r.jsx(Pm, { p: i, fonts: o, press: p, update: c, tv: t })
+        t.brand === "appletv" && /* @__PURE__ */ r.jsx($m, { p: i, fonts: o, press: f, update: u, tv: t }),
+        t.brand === "googletv" && /* @__PURE__ */ r.jsx(Fm, { p: i, fonts: o, press: f, update: u, tv: t }),
+        t.brand === "lgthinq" && /* @__PURE__ */ r.jsx(Em, { p: i, fonts: o, press: f, update: u, tv: t })
       ] })
     ] })
   ] });
@@ -12146,9 +12029,9 @@ const Rm = ({ ctx: e }) => {
       transition: "transform .08s",
       ...a
     },
-    onMouseDown: (c) => c.currentTarget.style.transform = "scale(.94)",
-    onMouseUp: (c) => c.currentTarget.style.transform = "scale(1)",
-    onMouseLeave: (c) => c.currentTarget.style.transform = "scale(1)",
+    onMouseDown: (u) => u.currentTarget.style.transform = "scale(.94)",
+    onMouseUp: (u) => u.currentTarget.style.transform = "scale(1)",
+    onMouseLeave: (u) => u.currentTarget.style.transform = "scale(1)",
     title: d,
     children: i
   }
@@ -12160,12 +12043,12 @@ const Rm = ({ ctx: e }) => {
     background: `radial-gradient(circle at 50% 50%, ${e.surface} 38%, ${e.surface2} 39%, ${e.surface2} 100%)`,
     border: `.5px solid ${e.border2}`,
     boxShadow: "inset 0 1px 0 rgba(255,255,255,.4), 0 1px 2px rgba(0,0,0,.08)"
-  } }), a = ({ dir: d, top: c, left: p, right: u, bottom: h, char: v }) => /* @__PURE__ */ r.jsx("button", { onClick: () => n(d), style: {
+  } }), a = ({ dir: d, top: u, left: f, right: c, bottom: p, char: w }) => /* @__PURE__ */ r.jsx("button", { onClick: () => n(d), style: {
     position: "absolute",
-    top: c,
-    left: p,
-    right: u,
-    bottom: h,
+    top: u,
+    left: f,
+    right: c,
+    bottom: p,
     width: l,
     height: l,
     border: 0,
@@ -12176,7 +12059,7 @@ const Rm = ({ ctx: e }) => {
     display: "grid",
     placeItems: "center",
     fontSize: 14
-  }, children: v });
+  }, children: w });
   return /* @__PURE__ */ r.jsxs("div", { style: { position: "relative", width: o, height: o, margin: "0 auto" }, children: [
     s,
     /* @__PURE__ */ r.jsx(a, { dir: "up", top: 4, left: `calc(50% - ${l / 2}px)`, char: "▲" }),
@@ -12201,28 +12084,28 @@ const Rm = ({ ctx: e }) => {
       boxShadow: "0 4px 12px rgba(0,0,0,.18)"
     }, children: "OK" })
   ] });
-}, $n = ({ children: e, gap: t = 10, justify: n = "space-between" }) => /* @__PURE__ */ r.jsx("div", { style: { display: "flex", justifyContent: n, alignItems: "center", gap: t, marginTop: 14 }, children: e }), Fm = ({ p: e, fonts: t, press: n, update: i, tv: o }) => /* @__PURE__ */ r.jsxs("div", { children: [
-  /* @__PURE__ */ r.jsxs($n, { justify: "space-between", gap: 8, children: [
+}, Mn = ({ children: e, gap: t = 10, justify: n = "space-between" }) => /* @__PURE__ */ r.jsx("div", { style: { display: "flex", justifyContent: n, alignItems: "center", gap: t, marginTop: 14 }, children: e }), $m = ({ p: e, fonts: t, press: n, update: i, tv: o }) => /* @__PURE__ */ r.jsxs("div", { children: [
+  /* @__PURE__ */ r.jsxs(Mn, { justify: "space-between", gap: 8, children: [
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("back"), size: 40, label: "Back", children: "↶" }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("home"), size: 40, label: "TV", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "tv", size: 16 }) }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("power"), size: 40, danger: (o.on, !1), label: "Power", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "bolt", size: 14 }) })
   ] }),
   /* @__PURE__ */ r.jsx("div", { style: { marginTop: 18 }, children: /* @__PURE__ */ r.jsx(Rs, { p: e, fonts: t, accent: "#a78bfa", onPress: (l) => n(l) }) }),
-  /* @__PURE__ */ r.jsxs($n, { justify: "space-between", gap: 8, children: [
+  /* @__PURE__ */ r.jsxs(Mn, { justify: "space-between", gap: 8, children: [
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("siri"), size: 40, label: "Siri", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "mic", size: 14 }) }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n(o.playing ? "pause" : "play"), size: 40, label: "Play/Pause", primary: !0, children: /* @__PURE__ */ r.jsx(window.Icon, { name: o.playing ? "pause" : "play", size: 14 }) }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("mute"), size: 40, label: "Mute", children: /* @__PURE__ */ r.jsx(window.Icon, { name: o.mute ? "bellOff" : "speaker", size: 14 }) })
   ] }),
   /* @__PURE__ */ r.jsx(Is, { p: e, fonts: t, tv: o, press: n }),
   /* @__PURE__ */ r.jsx(Ru, { p: e, fonts: t, tv: o, press: n }),
-  /* @__PURE__ */ r.jsx($s, { p: e, fonts: t, apps: ["Apple TV+", "Netflix", "HBO Max", "Hulu", "Disney+", "YouTube"], update: i })
-] }), Em = ({ p: e, fonts: t, press: n, update: i, tv: o }) => /* @__PURE__ */ r.jsxs("div", { children: [
-  /* @__PURE__ */ r.jsxs($n, { justify: "space-between", gap: 8, children: [
+  /* @__PURE__ */ r.jsx(Ms, { p: e, fonts: t, apps: ["Apple TV+", "Netflix", "HBO Max", "Hulu", "Disney+", "YouTube"], update: i })
+] }), Fm = ({ p: e, fonts: t, press: n, update: i, tv: o }) => /* @__PURE__ */ r.jsxs("div", { children: [
+  /* @__PURE__ */ r.jsxs(Mn, { justify: "space-between", gap: 8, children: [
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("power"), size: 40, label: "Power", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "bolt", size: 14 }) }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("mute"), size: 40, label: "Mute", children: /* @__PURE__ */ r.jsx(window.Icon, { name: o.mute ? "bellOff" : "speaker", size: 14 }) })
   ] }),
   /* @__PURE__ */ r.jsx("div", { style: { marginTop: 18 }, children: /* @__PURE__ */ r.jsx(Rs, { p: e, fonts: t, accent: "#5b8cff", onPress: (l) => n(l) }) }),
-  /* @__PURE__ */ r.jsxs($n, { justify: "space-between", gap: 8, children: [
+  /* @__PURE__ */ r.jsxs(Mn, { justify: "space-between", gap: 8, children: [
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("back"), size: 40, label: "Back", children: "←" }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("home"), size: 40, label: "Home", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "home", size: 14 }) }),
     /* @__PURE__ */ r.jsx(
@@ -12240,15 +12123,15 @@ const Rm = ({ ctx: e }) => {
   ] }),
   /* @__PURE__ */ r.jsx(Is, { p: e, fonts: t, tv: o, press: n }),
   /* @__PURE__ */ r.jsx(Ru, { p: e, fonts: t, tv: o, press: n }),
-  /* @__PURE__ */ r.jsx($s, { p: e, fonts: t, apps: ["YouTube", "Netflix", "Prime Video", "Disney+", "HBO Max", "Spotify"], update: i })
-] }), Pm = ({ p: e, fonts: t, press: n, update: i, tv: o }) => /* @__PURE__ */ r.jsxs("div", { children: [
-  /* @__PURE__ */ r.jsxs($n, { justify: "space-between", gap: 8, children: [
+  /* @__PURE__ */ r.jsx(Ms, { p: e, fonts: t, apps: ["YouTube", "Netflix", "Prime Video", "Disney+", "HBO Max", "Spotify"], update: i })
+] }), Em = ({ p: e, fonts: t, press: n, update: i, tv: o }) => /* @__PURE__ */ r.jsxs("div", { children: [
+  /* @__PURE__ */ r.jsxs(Mn, { justify: "space-between", gap: 8, children: [
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("power"), size: 40, danger: !0, label: "Power", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "bolt", size: 14 }) }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("input"), size: 40, label: "Input", children: "▣" }),
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("settings"), size: 40, label: "Settings", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "settings", size: 14 }) })
   ] }),
   /* @__PURE__ */ r.jsx("div", { style: { marginTop: 18 }, children: /* @__PURE__ */ r.jsx(Rs, { p: e, fonts: t, accent: "#a8174e", onPress: (l) => n(l) }) }),
-  /* @__PURE__ */ r.jsxs($n, { justify: "space-between", gap: 8, children: [
+  /* @__PURE__ */ r.jsxs(Mn, { justify: "space-between", gap: 8, children: [
     /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => n("back"), size: 40, label: "Back", children: "↩" }),
     /* @__PURE__ */ r.jsx(
       ie,
@@ -12275,7 +12158,7 @@ const Rm = ({ ctx: e }) => {
     fontFamily: t.body,
     cursor: l === "" ? "default" : "pointer"
   }, children: l }, s)) }),
-  /* @__PURE__ */ r.jsx($s, { p: e, fonts: t, apps: ["LG Channels", "Netflix", "Disney+", "YouTube", "Prime Video", "Apple TV"], update: i })
+  /* @__PURE__ */ r.jsx(Ms, { p: e, fonts: t, apps: ["LG Channels", "Netflix", "Disney+", "YouTube", "Prime Video", "Apple TV"], update: i })
 ] }), Is = ({ p: e, fonts: t, tv: n, press: i }) => /* @__PURE__ */ r.jsxs("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }, children: [
   /* @__PURE__ */ r.jsxs("div", { style: { padding: "8px 6px", borderRadius: 12, border: `.5px solid ${e.border2}`, background: e.surface, display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
     /* @__PURE__ */ r.jsx("button", { onClick: () => i("volDown"), style: { width: 34, height: 34, borderRadius: "50%", border: 0, background: "transparent", color: e.fg, cursor: "pointer", fontSize: 18 }, children: "−" }),
@@ -12297,7 +12180,7 @@ const Rm = ({ ctx: e }) => {
   /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => i("prev"), size: 38, label: "−30s", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "prev", size: 13 }) }),
   /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => i(n.playing ? "pause" : "play"), size: 50, primary: !0, label: "Play/Pause", children: /* @__PURE__ */ r.jsx(window.Icon, { name: n.playing ? "pause" : "play", size: 16 }) }),
   /* @__PURE__ */ r.jsx(ie, { p: e, fonts: t, onClick: () => i("next"), size: 38, label: "+30s", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "next", size: 13 }) })
-] }), $s = ({ p: e, fonts: t, apps: n, update: i }) => /* @__PURE__ */ r.jsxs("div", { style: { marginTop: 18, paddingTop: 14, borderTop: `.5px solid ${e.border}` }, children: [
+] }), Ms = ({ p: e, fonts: t, apps: n, update: i }) => /* @__PURE__ */ r.jsxs("div", { style: { marginTop: 18, paddingTop: 14, borderTop: `.5px solid ${e.border}` }, children: [
   /* @__PURE__ */ r.jsx("div", { style: { fontSize: 10, color: e.fg3, letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 8, fontWeight: 500 }, children: "Apps" }),
   /* @__PURE__ */ r.jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }, children: n.map((o) => /* @__PURE__ */ r.jsx("button", { onClick: () => i({ app: o, on: !0 }), style: {
     padding: "8px 6px",
@@ -12313,27 +12196,27 @@ const Rm = ({ ctx: e }) => {
     textOverflow: "ellipsis"
   }, children: o }, o)) })
 ] });
-window.TvsSection = Rm;
-const Dm = ({ ctx: e }) => {
-  const { p: t, fonts: n, state: i, setState: o, narrow: l } = e, [s, a] = React.useState(!1), [d, c] = React.useState(null), p = i.speakers.filter((y) => y.playing), u = d ? i.speakers.find((y) => y.id === d) || p[0] : p.find((y) => y.room === "living") || p[0];
-  if (!u) return null;
-  const h = window.trackById(u.trackId), v = window.ROOMS.find((y) => y.id === u.room)?.name || u.name, w = (y) => o((x) => ({ ...x, speakers: x.speakers.map((b) => b.id === y ? { ...b, playing: !b.playing } : b) })), f = (y) => o((x) => ({ ...x, speakers: x.speakers.map((b) => {
+window.TvsSection = _m;
+const Pm = ({ ctx: e }) => {
+  const { p: t, fonts: n, state: i, setState: o, narrow: l } = e, [s, a] = React.useState(!1), [d, u] = React.useState(null), f = i.speakers.filter((y) => y.playing), c = d ? i.speakers.find((y) => y.id === d) || f[0] : f.find((y) => y.room === "living") || f[0];
+  if (!c) return null;
+  const p = window.trackById(c.trackId), w = window.ROOMS.find((y) => y.id === c.room)?.name || c.name, x = (y) => o((v) => ({ ...v, speakers: v.speakers.map((b) => b.id === y ? { ...b, playing: !b.playing } : b) })), h = (y) => o((v) => ({ ...v, speakers: v.speakers.map((b) => {
     if (b.id !== y) return b;
     const j = b.queue || [], S = j[0] || window.TRACKS[(window.TRACKS.findIndex((C) => C.id === b.trackId) + 1) % window.TRACKS.length].id;
     return { ...b, trackId: S, queue: j.slice(1).concat(b.trackId), progress: 0 };
-  }) })), k = (y) => o((x) => ({ ...x, speakers: x.speakers.map((b) => {
+  }) })), k = (y) => o((v) => ({ ...v, speakers: v.speakers.map((b) => {
     if (b.id !== y) return b;
     const j = window.TRACKS.findIndex((S) => S.id === b.trackId);
     return { ...b, trackId: window.TRACKS[(j - 1 + window.TRACKS.length) % window.TRACKS.length].id, progress: 0 };
-  }) })), m = (y, x) => o((b) => ({ ...b, speakers: b.speakers.map((j) => {
+  }) })), m = (y, v) => o((b) => ({ ...b, speakers: b.speakers.map((j) => {
     if (j.id !== y) return j;
-    const S = (j.queue || []).filter((C) => C !== x);
-    return { ...j, trackId: x, progress: 0, playing: !0, queue: S };
-  }) })), g = (y, x) => o((b) => ({ ...b, speakers: b.speakers.map(
-    (j) => j.id === y ? { ...j, queue: (j.queue || []).filter((S) => S !== x) } : j
+    const S = (j.queue || []).filter((C) => C !== v);
+    return { ...j, trackId: v, progress: 0, playing: !0, queue: S };
+  }) })), g = (y, v) => o((b) => ({ ...b, speakers: b.speakers.map(
+    (j) => j.id === y ? { ...j, queue: (j.queue || []).filter((S) => S !== v) } : j
   ) }));
   if (s) {
-    const y = (u.queue || []).map((x) => window.trackById(x)).filter(Boolean);
+    const y = (c.queue || []).map((v) => window.trackById(v)).filter(Boolean);
     return /* @__PURE__ */ r.jsxs(r.Fragment, { children: [
       /* @__PURE__ */ r.jsx("div", { onClick: () => a(!1), style: {
         position: "absolute",
@@ -12363,7 +12246,7 @@ const Dm = ({ ctx: e }) => {
           display: "flex",
           gap: 14,
           alignItems: "flex-end",
-          background: `linear-gradient(160deg, ${h.hue} 0%, oklch(20% 0.06 25) 100%)`,
+          background: `linear-gradient(160deg, ${p.hue} 0%, oklch(20% 0.06 25) 100%)`,
           color: "#fff"
         }, children: [
           /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", inset: 0, background: "radial-gradient(circle at 80% 0%, rgba(255,220,170,.25), transparent 60%)" } }),
@@ -12373,45 +12256,45 @@ const Dm = ({ ctx: e }) => {
             borderRadius: 10,
             flex: "none",
             position: "relative",
-            background: `radial-gradient(120% 120% at 30% 25%, ${h.hue}, oklch(15% 0.05 25))`,
+            background: `radial-gradient(120% 120% at 30% 25%, ${p.hue}, oklch(15% 0.05 25))`,
             boxShadow: "0 12px 28px rgba(0,0,0,.35)"
           }, children: [
             /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", inset: 0, background: "radial-gradient(circle at 70% 70%, rgba(255,220,150,.4), transparent 55%)", borderRadius: 10 } }),
-            /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", bottom: 6, left: 7, right: 7, fontFamily: n.display, fontStyle: "italic", fontSize: 9, color: "rgba(255,240,210,.85)", letterSpacing: ".05em", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: h.album })
+            /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", bottom: 6, left: 7, right: 7, fontFamily: n.display, fontStyle: "italic", fontSize: 9, color: "rgba(255,240,210,.85)", letterSpacing: ".05em", textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.album })
           ] }),
           /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0, position: "relative", paddingBottom: 2 }, children: [
             /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 10, letterSpacing: ".12em", textTransform: "uppercase", opacity: 0.85, display: "flex", alignItems: "center", gap: 6 }, children: [
-              /* @__PURE__ */ r.jsx(window.Icon, { name: u.type === "airplay" ? "airplay" : "sonos", size: 11 }),
+              /* @__PURE__ */ r.jsx(window.Icon, { name: c.type === "airplay" ? "airplay" : "sonos", size: 11 }),
               "Playing in ",
-              v,
-              p.length > 1 && /* @__PURE__ */ r.jsxs("span", { style: { opacity: 0.7 }, children: [
+              w,
+              f.length > 1 && /* @__PURE__ */ r.jsxs("span", { style: { opacity: 0.7 }, children: [
                 "· +",
-                p.length - 1,
+                f.length - 1,
                 " more"
               ] })
             ] }),
-            /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 22, fontWeight: 500, marginTop: 4, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: h.title }),
+            /* @__PURE__ */ r.jsx("div", { style: { fontFamily: n.display, fontSize: 22, fontWeight: 500, marginTop: 4, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: p.title }),
             /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 13, opacity: 0.85, marginTop: 2, fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: [
-              h.artist,
+              p.artist,
               " · ",
-              h.album
+              p.album
             ] }),
             /* @__PURE__ */ r.jsx("button", { onClick: () => a(!1), style: { position: "absolute", top: -6, right: -2, width: 28, height: 28, borderRadius: "50%", border: 0, background: "rgba(0,0,0,.25)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", fontSize: 16, lineHeight: 1 }, children: "×" })
           ] })
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { padding: "12px 18px 14px", borderBottom: `.5px solid ${t.border}` }, children: [
-          /* @__PURE__ */ r.jsx("div", { style: { height: 3, background: t.border, borderRadius: 2, position: "relative", overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${u.progress / h.dur * 100}%`, height: "100%", background: t.accent, borderRadius: 2, transition: "width .8s linear" } }) }),
+          /* @__PURE__ */ r.jsx("div", { style: { height: 3, background: t.border, borderRadius: 2, position: "relative", overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${c.progress / p.dur * 100}%`, height: "100%", background: t.accent, borderRadius: 2, transition: "width .8s linear" } }) }),
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10, color: t.fg3, marginTop: 5, fontVariantNumeric: "tabular-nums" }, children: [
-            /* @__PURE__ */ r.jsx("span", { children: window.fmtTime(u.progress) }),
+            /* @__PURE__ */ r.jsx("span", { children: window.fmtTime(c.progress) }),
             /* @__PURE__ */ r.jsxs("span", { children: [
               "−",
-              window.fmtTime(h.dur - u.progress)
+              window.fmtTime(p.dur - c.progress)
             ] })
           ] }),
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 10 }, children: [
-            /* @__PURE__ */ r.jsx("button", { onClick: () => k(u.id), style: Ot(t, 36), children: /* @__PURE__ */ r.jsx(window.Icon, { name: "prev", size: 15 }) }),
-            /* @__PURE__ */ r.jsx("button", { onClick: () => w(u.id), style: { ...Ot(t, 46), background: t.accent, color: "#fff", border: 0 }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: u.playing ? "pause" : "play", size: 18 }) }),
-            /* @__PURE__ */ r.jsx("button", { onClick: () => f(u.id), style: Ot(t, 36), children: /* @__PURE__ */ r.jsx(window.Icon, { name: "next", size: 15 }) }),
+            /* @__PURE__ */ r.jsx("button", { onClick: () => k(c.id), style: Ot(t, 36), children: /* @__PURE__ */ r.jsx(window.Icon, { name: "prev", size: 15 }) }),
+            /* @__PURE__ */ r.jsx("button", { onClick: () => x(c.id), style: { ...Ot(t, 46), background: t.accent, color: "#fff", border: 0 }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: c.playing ? "pause" : "play", size: 18 }) }),
+            /* @__PURE__ */ r.jsx("button", { onClick: () => h(c.id), style: Ot(t, 36), children: /* @__PURE__ */ r.jsx(window.Icon, { name: "next", size: 15 }) }),
             /* @__PURE__ */ r.jsx("div", { style: { flex: 1 } }),
             /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, color: t.fg3 }, children: [
               /* @__PURE__ */ r.jsx(window.Icon, { name: "speaker", size: 12 }),
@@ -12421,17 +12304,17 @@ const Dm = ({ ctx: e }) => {
                   type: "range",
                   min: "0",
                   max: "100",
-                  value: u.vol,
-                  onChange: (x) => o((b) => ({ ...b, speakers: b.speakers.map((j) => j.id === u.id ? { ...j, vol: +x.target.value } : j) })),
+                  value: c.vol,
+                  onChange: (v) => o((b) => ({ ...b, speakers: b.speakers.map((j) => j.id === c.id ? { ...j, vol: +v.target.value } : j) })),
                   style: { width: 88, accentColor: t.accent, height: 3 }
                 }
               )
             ] })
           ] })
         ] }),
-        p.length > 1 && /* @__PURE__ */ r.jsx("div", { style: { padding: "10px 14px", borderBottom: `.5px solid ${t.border}`, display: "flex", gap: 6, overflowX: "auto" }, children: p.map((x) => {
-          const b = window.trackById(x.trackId), j = window.ROOMS.find((C) => C.id === x.room)?.name || x.name, S = x.id === u.id;
-          return /* @__PURE__ */ r.jsxs("button", { onClick: () => c(x.id), style: {
+        f.length > 1 && /* @__PURE__ */ r.jsx("div", { style: { padding: "10px 14px", borderBottom: `.5px solid ${t.border}`, display: "flex", gap: 6, overflowX: "auto" }, children: f.map((v) => {
+          const b = window.trackById(v.trackId), j = window.ROOMS.find((C) => C.id === v.room)?.name || v.name, S = v.id === c.id;
+          return /* @__PURE__ */ r.jsxs("button", { onClick: () => u(v.id), style: {
             padding: "6px 10px",
             borderRadius: 8,
             border: `.5px solid ${S ? t.accent : t.border2}`,
@@ -12453,13 +12336,13 @@ const Dm = ({ ctx: e }) => {
               "· ",
               b.title
             ] })
-          ] }, x.id);
+          ] }, v.id);
         }) }),
         /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, overflow: "auto", padding: "4px 0 8px" }, children: [
           /* @__PURE__ */ r.jsxs("div", { style: { padding: "10px 18px 6px", display: "flex", alignItems: "baseline", justifyContent: "space-between" }, children: [
             /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 10, color: t.fg3, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 500 }, children: [
               "Up next · ",
-              v
+              w
             ] }),
             /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: t.fg3 }, children: [
               y.length,
@@ -12467,10 +12350,10 @@ const Dm = ({ ctx: e }) => {
               y.length === 1 ? "" : "s"
             ] })
           ] }),
-          y.length === 0 ? /* @__PURE__ */ r.jsx("div", { style: { padding: "18px 18px 22px", fontSize: 12, color: t.fg3, fontStyle: "italic", fontFamily: n.display }, children: "Queue is empty. The next track in your library will play after this one." }) : y.map((x, b) => /* @__PURE__ */ r.jsxs(
+          y.length === 0 ? /* @__PURE__ */ r.jsx("div", { style: { padding: "18px 18px 22px", fontSize: 12, color: t.fg3, fontStyle: "italic", fontFamily: n.display }, children: "Queue is empty. The next track in your library will play after this one." }) : y.map((v, b) => /* @__PURE__ */ r.jsxs(
             "div",
             {
-              onClick: () => m(u.id, x.id),
+              onClick: () => m(c.id, v.id),
               style: {
                 display: "flex",
                 alignItems: "center",
@@ -12482,18 +12365,18 @@ const Dm = ({ ctx: e }) => {
               onMouseLeave: (j) => j.currentTarget.style.background = "transparent",
               children: [
                 /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, width: 14, textAlign: "right", fontVariantNumeric: "tabular-nums" }, children: b + 1 }),
-                /* @__PURE__ */ r.jsx("div", { style: { width: 36, height: 36, borderRadius: 5, flex: "none", background: `radial-gradient(120% 120% at 30% 25%, ${x.hue}, oklch(20% 0.05 25))` } }),
+                /* @__PURE__ */ r.jsx("div", { style: { width: 36, height: 36, borderRadius: 5, flex: "none", background: `radial-gradient(120% 120% at 30% 25%, ${v.hue}, oklch(20% 0.05 25))` } }),
                 /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
-                  /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: x.title }),
+                  /* @__PURE__ */ r.jsx("div", { style: { fontSize: 13, color: t.fg, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: v.title }),
                   /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: t.fg3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: [
-                    x.artist,
+                    v.artist,
                     " · ",
-                    x.album
+                    v.album
                   ] })
                 ] }),
-                /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: window.fmtTime(x.dur) }),
+                /* @__PURE__ */ r.jsx("div", { style: { fontSize: 11, color: t.fg3, fontVariantNumeric: "tabular-nums" }, children: window.fmtTime(v.dur) }),
                 /* @__PURE__ */ r.jsx("button", { onClick: (j) => {
-                  j.stopPropagation(), g(u.id, x.id);
+                  j.stopPropagation(), g(c.id, v.id);
                 }, style: {
                   width: 24,
                   height: 24,
@@ -12507,7 +12390,7 @@ const Dm = ({ ctx: e }) => {
                 }, children: /* @__PURE__ */ r.jsx(window.Icon, { name: "x", size: 12 }) })
               ]
             },
-            x.id + "-" + b
+            v.id + "-" + b
           ))
         ] })
       ] })
@@ -12550,30 +12433,30 @@ const Dm = ({ ctx: e }) => {
           borderRadius: 7,
           flex: "none",
           position: "relative",
-          background: `radial-gradient(120% 120% at 30% 25%, ${h.hue}, oklch(20% 0.05 25))`
+          background: `radial-gradient(120% 120% at 30% 25%, ${p.hue}, oklch(20% 0.05 25))`
         }, children: /* @__PURE__ */ r.jsx("div", { style: { position: "absolute", inset: 0, background: "radial-gradient(circle at 70% 70%, rgba(255,220,150,.35), transparent 55%)", borderRadius: 7 } }) }),
         /* @__PURE__ */ r.jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [
           /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: t.fg, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.2 }, children: [
-            h.title,
-            u.playing && /* @__PURE__ */ r.jsx(Nm, { p: t })
+            p.title,
+            c.playing && /* @__PURE__ */ r.jsx(Dm, { p: t })
           ] }),
           /* @__PURE__ */ r.jsxs("div", { style: { fontSize: 11, color: t.fg3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 1 }, children: [
-            /* @__PURE__ */ r.jsx("span", { style: { color: t.fg2 }, children: h.artist }),
+            /* @__PURE__ */ r.jsx("span", { style: { color: t.fg2 }, children: p.artist }),
             /* @__PURE__ */ r.jsxs("span", { children: [
               " · ",
-              v
+              w
             ] }),
-            p.length > 1 && /* @__PURE__ */ r.jsxs("span", { children: [
+            f.length > 1 && /* @__PURE__ */ r.jsxs("span", { children: [
               " +",
-              p.length - 1
+              f.length - 1
             ] })
           ] }),
-          /* @__PURE__ */ r.jsx("div", { style: { height: 2, background: t.border, borderRadius: 1, marginTop: 3, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${u.progress / h.dur * 100}%`, height: "100%", background: t.accent, transition: "width .8s linear" } }) })
+          /* @__PURE__ */ r.jsx("div", { style: { height: 2, background: t.border, borderRadius: 1, marginTop: 3, overflow: "hidden" }, children: /* @__PURE__ */ r.jsx("div", { style: { width: `${c.progress / p.dur * 100}%`, height: "100%", background: t.accent, transition: "width .8s linear" } }) })
         ] }),
         /* @__PURE__ */ r.jsxs("div", { style: { display: "flex", gap: 2, flex: "none" }, onClick: (y) => y.stopPropagation(), children: [
-          /* @__PURE__ */ r.jsx("button", { onClick: () => k(u.id), style: Ot(t, 28), title: "Previous", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "prev", size: 12 }) }),
-          /* @__PURE__ */ r.jsx("button", { onClick: () => w(u.id), style: { ...Ot(t, 32), background: t.accent, color: "#fff", border: 0 }, title: u.playing ? "Pause" : "Play", children: /* @__PURE__ */ r.jsx(window.Icon, { name: u.playing ? "pause" : "play", size: 13 }) }),
-          /* @__PURE__ */ r.jsx("button", { onClick: () => f(u.id), style: Ot(t, 28), title: "Next", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "next", size: 12 }) }),
+          /* @__PURE__ */ r.jsx("button", { onClick: () => k(c.id), style: Ot(t, 28), title: "Previous", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "prev", size: 12 }) }),
+          /* @__PURE__ */ r.jsx("button", { onClick: () => x(c.id), style: { ...Ot(t, 32), background: t.accent, color: "#fff", border: 0 }, title: c.playing ? "Pause" : "Play", children: /* @__PURE__ */ r.jsx(window.Icon, { name: c.playing ? "pause" : "play", size: 13 }) }),
+          /* @__PURE__ */ r.jsx("button", { onClick: () => h(c.id), style: Ot(t, 28), title: "Next", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "next", size: 12 }) }),
           /* @__PURE__ */ r.jsx("button", { onClick: () => a(!0), style: Ot(t, 28), title: "Show queue", children: /* @__PURE__ */ r.jsx(window.Icon, { name: "queue", size: 12 }) })
         ] })
       ]
@@ -12590,12 +12473,12 @@ const Dm = ({ ctx: e }) => {
   display: "grid",
   placeItems: "center",
   flex: "none"
-}), Nm = ({ p: e }) => /* @__PURE__ */ r.jsxs("span", { style: { display: "inline-flex", gap: 1.5, alignItems: "flex-end", height: 9, marginLeft: 4 }, children: [
+}), Dm = ({ p: e }) => /* @__PURE__ */ r.jsxs("span", { style: { display: "inline-flex", gap: 1.5, alignItems: "flex-end", height: 9, marginLeft: 4 }, children: [
   [0, 1, 2].map((t) => /* @__PURE__ */ r.jsx("span", { style: { width: 2, background: e.accent, animation: `npbBar 0.9s ${t * 0.13}s infinite ease-in-out`, height: "100%", borderRadius: 1 } }, t)),
   /* @__PURE__ */ r.jsx("style", { children: "@keyframes npbBar{0%,100%{height:25%}50%{height:100%}}" })
 ] });
-window.NowPlayingBar = Dm;
-function Lm({ url: e, label: t, onClose: n }) {
+window.NowPlayingBar = Pm;
+function Nm({ url: e, label: t, onClose: n }) {
   return e ? /* @__PURE__ */ r.jsxs("div", { style: {
     position: "fixed",
     inset: 0,
@@ -12662,7 +12545,7 @@ function Lm({ url: e, label: t, onClose: n }) {
     )
   ] }) : null;
 }
-const Am = (
+const Lm = (
   /*EDITMODE-BEGIN*/
   {
     dark: !0,
@@ -12684,7 +12567,7 @@ const Am = (
     ttsAgent: !0
   }
 );
-class Om extends se.Component {
+class Am extends se.Component {
   constructor(t) {
     super(t), this.state = { error: null };
   }
@@ -12747,12 +12630,12 @@ class Om extends se.Component {
     ] }) }) : this.props.children;
   }
 }
-function Wm({ hass: e, narrow: t, panel: n }) {
-  const [i, o] = window.useTweaks(Am), [l, s] = se.useState(null), a = se.useMemo(() => {
-    const w = e?.user || {};
+function Om({ hass: e, narrow: t, panel: n }) {
+  const [i, o] = window.useTweaks(Lm), [l, s] = se.useState(null), a = se.useMemo(() => {
+    const x = e?.user || {};
     return {
-      firstName: (w.name || "").split(" ")[0] || "there",
-      email: w.name || "",
+      firstName: (x.name || "").split(" ")[0] || "there",
+      email: x.name || "",
       plan: "home-assistant",
       layout: null,
       integrations: null,
@@ -12770,9 +12653,9 @@ function Wm({ hass: e, narrow: t, panel: n }) {
       location: e?.config?.location_name || "Home",
       createdAt: ""
     };
-  }, [e?.user, e?.config?.location_name]), [d, c] = se.useState({}), p = se.useCallback((w) => {
-    c((f) => typeof w == "function" ? w({ ...a, ...f }) : { ...f, ...w });
-  }, [a]), u = { ...a, ...d }, h = {
+  }, [e?.user, e?.config?.location_name]), [d, u] = se.useState({}), f = se.useCallback((x) => {
+    u((h) => typeof x == "function" ? x({ ...a, ...h }) : { ...h, ...x });
+  }, [a]), c = { ...a, ...d }, p = {
     lights: i.showLights,
     music: i.showMusic,
     cameras: i.showCameras,
@@ -12783,10 +12666,10 @@ function Wm({ hass: e, narrow: t, panel: n }) {
     weather: i.showWeather,
     alarms: i.showAlarms,
     tv: i.showTv
-  }, v = () => {
+  }, w = () => {
     typeof window < "u" && window.location.assign("/?auth_callback=1");
   };
-  return /* @__PURE__ */ r.jsxs(Om, { children: [
+  return /* @__PURE__ */ r.jsxs(Am, { children: [
     /* @__PURE__ */ r.jsx("div", { style: { width: "100%", height: "100%" }, children: /* @__PURE__ */ r.jsx(
       window.HearthApp,
       {
@@ -12796,18 +12679,18 @@ function Wm({ hass: e, narrow: t, panel: n }) {
         agentTone: i.agentTone,
         fontPair: i.fontPair,
         bgImage: i.bgImage,
-        visibleDevices: h,
+        visibleDevices: p,
         settings: i,
         setSetting: o,
-        user: u,
-        patchUser: p,
-        doLogout: v,
+        user: c,
+        patchUser: f,
+        doLogout: w,
         narrow: !!t,
-        openBrowser: (w, f) => s({ url: w, label: f })
+        openBrowser: (x, h) => s({ url: x, label: h })
       }
     ) }),
     /* @__PURE__ */ r.jsx(
-      Lm,
+      Nm,
       {
         url: l?.url,
         label: l?.label,
@@ -12816,14 +12699,14 @@ function Wm({ hass: e, narrow: t, panel: n }) {
     ),
     /* @__PURE__ */ r.jsxs(window.TweaksPanel, { children: [
       /* @__PURE__ */ r.jsx(window.TweakSection, { label: "Mode" }),
-      /* @__PURE__ */ r.jsx(window.TweakToggle, { label: "Dark mode", value: i.dark, onChange: (w) => o("dark", w) }),
+      /* @__PURE__ */ r.jsx(window.TweakToggle, { label: "Dark mode", value: i.dark, onChange: (x) => o("dark", x) }),
       /* @__PURE__ */ r.jsx(
         window.TweakRadio,
         {
           label: "Density",
           value: i.density,
           options: ["compact", "regular", "comfy"],
-          onChange: (w) => o("density", w)
+          onChange: (x) => o("density", x)
         }
       ),
       /* @__PURE__ */ r.jsx(window.TweakSection, { label: "Theme" }),
@@ -12831,9 +12714,9 @@ function Wm({ hass: e, narrow: t, panel: n }) {
         window.TweakColor,
         {
           label: "Accent",
-          value: Hm(i.hearthAccent),
+          value: Wm(i.hearthAccent),
           options: ["#e87f4a", "#c96442", "#b8843e", "#7a8c6c", "#7d4f6b", "#5b7390"],
-          onChange: (w) => o("hearthAccent", Bm(w))
+          onChange: (x) => o("hearthAccent", Hm(x))
         }
       ),
       /* @__PURE__ */ r.jsx(
@@ -12846,7 +12729,7 @@ function Wm({ hass: e, narrow: t, panel: n }) {
             { value: "classic", label: "Classic · Instrument" },
             { value: "modern", label: "Modern · Space Grotesk" }
           ],
-          onChange: (w) => o("fontPair", w)
+          onChange: (x) => o("fontPair", x)
         }
       ),
       /* @__PURE__ */ r.jsx(window.TweakSection, { label: "Agent" }),
@@ -12860,7 +12743,7 @@ function Wm({ hass: e, narrow: t, panel: n }) {
             { value: "terse", label: "Terse (terminal)" },
             { value: "playful", label: "Playful (Pip)" }
           ],
-          onChange: (w) => o("agentTone", w)
+          onChange: (x) => o("agentTone", x)
         }
       ),
       /* @__PURE__ */ r.jsx(
@@ -12868,31 +12751,31 @@ function Wm({ hass: e, narrow: t, panel: n }) {
         {
           label: "Speak responses",
           value: i.ttsAgent !== !1,
-          onChange: (w) => o("ttsAgent", w)
+          onChange: (x) => o("ttsAgent", x)
         }
       ),
       /* @__PURE__ */ r.jsx(window.TweakSection, { label: "Home Assistant" }),
       /* @__PURE__ */ r.jsx(window.TweakButton, { onClick: () => window.location.assign("/config/integrations"), children: "Manage devices in Home Assistant" }),
       /* @__PURE__ */ r.jsx(window.TweakSection, { label: "Account" }),
-      /* @__PURE__ */ r.jsxs(window.TweakButton, { onClick: v, children: [
+      /* @__PURE__ */ r.jsxs(window.TweakButton, { onClick: w, children: [
         "Sign out · ",
-        u.email || "HA user"
+        c.email || "HA user"
       ] })
     ] })
   ] });
 }
 const Il = { tangerine: "#e87f4a", terracotta: "#c96442", ochre: "#b8843e", sage: "#7a8c6c", plum: "#7d4f6b", slate: "#5b7390" };
-function Hm(e) {
+function Wm(e) {
   return Il[e] || Il.tangerine;
 }
-function Bm(e) {
+function Hm(e) {
   return Object.entries(Il).find(([, t]) => t === e)?.[0] || "tangerine";
 }
-window.App = Wm;
+window.App = Om;
 typeof globalThis < "u" && typeof globalThis.process > "u" && (globalThis.process = { env: { NODE_ENV: "production" } });
 window.React = se;
 window.HassContext = Ir;
-class Vm extends HTMLElement {
+class Bm extends HTMLElement {
   constructor() {
     super(), this._hass = null, this._narrow = !1, this._panel = null, this._route = null, this._mount = null, this._root = null;
   }
@@ -12927,7 +12810,7 @@ class Vm extends HTMLElement {
         }));
       } catch {
       }
-      this._mount = document.createElement("div"), this._mount.style.cssText = "width:100%;height:100%;display:block;background:#161310", this.appendChild(this._mount), this._mount.innerHTML = '<div style="width:100%;height:100%;display:grid;place-items:center;color:#e87f4a;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:28px;letter-spacing:.01em;">HomeCNTRD</div>', this._root = fu(this._mount), this._render();
+      this._mount = document.createElement("div"), this._mount.style.cssText = "width:100%;height:100%;display:block;background:#161310", this.appendChild(this._mount), this._mount.innerHTML = '<div style="width:100%;height:100%;display:grid;place-items:center;color:#e87f4a;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:28px;letter-spacing:.01em;">HomeCNTRD</div>', this._root = pu(this._mount), this._render();
     }
   }
   disconnectedCallback() {
@@ -12949,5 +12832,5 @@ class Vm extends HTMLElement {
     );
   }
 }
-customElements.get("homecntrd-panel") || customElements.define("homecntrd-panel", Vm);
+customElements.get("homecntrd-panel") || customElements.define("homecntrd-panel", Bm);
 //# sourceMappingURL=homecntrd.js.map

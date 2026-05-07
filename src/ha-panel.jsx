@@ -39,7 +39,6 @@ import './music-view.jsx';
 import './cameras-view.jsx';
 import './calendar-view.jsx';
 import './car-view.jsx';
-import './garage-view.jsx';
 import './devices-view.jsx';
 import './automations-view.jsx';
 import './settings-view.jsx';

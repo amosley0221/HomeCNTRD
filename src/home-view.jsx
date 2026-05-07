@@ -8,7 +8,7 @@ const SECTIONS = [
   { id:'scenes',   label:'Scenes' },
   { id:'cameras',  label:'Cameras' },
   { id:'security', label:'Security & access' },
-  { id:'car',      label:'Car & garage' },
+  { id:'car',      label:'Car' },
   { id:'today',    label:"Today's schedule" },
 ];
 
@@ -352,47 +352,27 @@ const SecuritySection = ({ ctx }) => {
   );
 };
 
-// ── CAR & GARAGE ────────────────────────────────────────────────────────
+// ── CAR ─────────────────────────────────────────────────────────────────
 const CarSection = ({ ctx }) => {
-  const { p, fonts, dens, state, setPage, narrow } = ctx;
+  const { p, fonts, state, setPage } = ctx;
   const t = state.tesla;
-  const garageOpen = state.garage.doors.filter(d => d.open).length;
+  if (!t.id) return null;
   return (
-    <window.Section title="Car & garage" p={p} fonts={fonts}>
-      <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap:dens.tileGap}}>
-        <window.Card p={p} style={{padding:16, cursor:'pointer'}} onClick={() => setPage('car')}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <div style={{fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:p.fg3}}>Tesla · Model 3</div>
-            <window.Icon name="car" size={14} style={{color:p.fg3}}/>
-          </div>
-          <div style={{display:'flex', alignItems:'baseline', gap:8, marginTop:10}}>
-            <div style={{fontFamily:fonts.display, fontSize:34, color:p.fg, fontWeight:500, lineHeight:1}}>{t.chargePct}<span style={{fontSize:14, color:p.fg2}}>%</span></div>
-            <div style={{fontSize:12, color:p.fg2}}>{t.range} mi · {t.charging ? `+${t.chargeRate} mph` : t.pluggedIn ? 'plugged in' : 'unplugged'}</div>
-          </div>
-          <div style={{height:5, background:p.border, borderRadius:3, marginTop:12, overflow:'hidden'}}>
-            <div style={{width:`${t.chargePct}%`, height:'100%', background:t.charging ? p.accent : 'oklch(60% 0.14 145)'}}/>
-          </div>
-          <div style={{fontSize:11, color:p.fg3, marginTop:8, display:'flex', alignItems:'center', gap:5}}><window.Icon name="location" size={10}/> {t.location}</div>
-        </window.Card>
-        <window.Card p={p} style={{padding:16, cursor:'pointer'}} onClick={() => setPage('garage')}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-            <div style={{fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:p.fg3}}>Garage · MyQ</div>
-            <window.Icon name="garage" size={14} style={{color:p.fg3}}/>
-          </div>
-          <div style={{fontFamily:fonts.display, fontSize:18, color:p.fg, marginTop:10, fontWeight:500}}>
-            {garageOpen === 0 ? 'Both doors closed' : <em style={{fontStyle:'italic', color:p.accent}}>{garageOpen} open</em>}
-          </div>
-          <div style={{display:'flex', flexDirection:'column', gap:5, marginTop:10}}>
-            {state.garage.doors.map(d => (
-              <div key={d.id} style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:p.fg2}}>
-                <window.Icon name="garage" size={11} style={{color: d.open ? p.accent : p.fg3}}/>
-                <span style={{flex:1}}>{d.name}</span>
-                <span style={{color: d.open ? p.accent : p.fg3, fontSize:11}}>{d.open ? 'Open' : 'Closed'}</span>
-              </div>
-            ))}
-          </div>
-        </window.Card>
-      </div>
+    <window.Section title="Car" p={p} fonts={fonts}>
+      <window.Card p={p} style={{padding:16, cursor:'pointer'}} onClick={() => setPage('car')}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <div style={{fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:p.fg3}}>{t.name}</div>
+          <window.Icon name="car" size={14} style={{color:p.fg3}}/>
+        </div>
+        <div style={{display:'flex', alignItems:'baseline', gap:8, marginTop:10}}>
+          <div style={{fontFamily:fonts.display, fontSize:34, color:p.fg, fontWeight:500, lineHeight:1}}>{t.chargePct}<span style={{fontSize:14, color:p.fg2}}>%</span></div>
+          <div style={{fontSize:12, color:p.fg2}}>{t.range} {t.rangeUnit || 'mi'} · {t.charging ? `+${t.chargeRate} mph` : t.pluggedIn ? 'plugged in' : 'unplugged'}</div>
+        </div>
+        <div style={{height:5, background:p.border, borderRadius:3, marginTop:12, overflow:'hidden'}}>
+          <div style={{width:`${t.chargePct}%`, height:'100%', background:t.charging ? p.accent : 'oklch(60% 0.14 145)'}}/>
+        </div>
+        <div style={{fontSize:11, color:p.fg3, marginTop:8, display:'flex', alignItems:'center', gap:5}}><window.Icon name="location" size={10}/> {t.location}</div>
+      </window.Card>
     </window.Section>
   );
 };

@@ -8,7 +8,7 @@ import { speak as speakText, cancelSpeak } from './lib/voice.js';
 const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibleDevices, settings, setSetting, user, patchUser, doLogout, narrow, openBrowser }) => {
   const hass = React.useContext(HassContext);
   const [state, setState] = window.useHomeState();
-  const [page, setPage] = React.useState('home');           // home | music | cameras | calendar | car | garage | devices | settings
+  const [page, setPage] = React.useState('home');           // home | music | cameras | calendar | car | devices | settings
   const [room, setRoom] = React.useState('living');
   const [sidebarOpen, setSidebarOpen] = React.useState(false); // for drawer mode on the new Home
   const [agentOpen, setAgentOpen] = React.useState(false);
@@ -105,7 +105,6 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
           {page === 'cameras'  && <window.CamerasView ctx={ctx} />}
           {page === 'calendar' && <window.CalendarView ctx={ctx} />}
           {page === 'car'      && <window.CarView ctx={ctx} />}
-          {page === 'garage'   && <window.GarageView ctx={ctx} />}
           {page === 'devices'  && <window.DevicesView ctx={ctx} />}
           {page === 'automations' && <window.AutomationsView ctx={ctx} />}
           {page === 'settings' && <window.SettingsView ctx={ctx} />}
@@ -200,7 +199,6 @@ const Sidebar = ({ ctx }) => {
   const camsLive   = state.cameras.filter(c => c.online).length;
   const playingNow = state.speakers.filter(s => s.playing).length;
   const todayLeft  = state.calendar.length;
-  const garageOpen = state.garage.doors.filter(d => d.open).length;
 
   return (
     <aside style={{borderRight:`.5px solid ${p.border}`, background: p.surface, display:'flex', flexDirection:'column', minHeight:0}}>
@@ -222,7 +220,6 @@ const Sidebar = ({ ctx }) => {
         <Item active={page==='cameras'}  onClick={() => setPage('cameras')}  icon="cam"    label="Cameras"  count={`${camsLive}/${state.cameras.length}`} />
         <Item active={page==='calendar'} onClick={() => setPage('calendar')} icon="cal"    label="Calendar" count={todayLeft} />
         <Item active={page==='car'}      onClick={() => setPage('car')}      icon="car"    label="Car"      count={`${state.tesla.chargePct}%`} />
-        <Item active={page==='garage'}   onClick={() => setPage('garage')}   icon="garage" label="Garage"   badge={garageOpen ? 'OPEN' : ''} />
         <Item active={page==='devices'}  onClick={() => setPage('devices')}  icon="grid"   label="Devices"  count={state.integrations.filter(i=>i.status==='connected').length} />
         <Item active={page==='automations'} onClick={() => setPage('automations')} icon="sparkle" label="Automations" count={state.automations.filter(a=>a.enabled).length} />
 
