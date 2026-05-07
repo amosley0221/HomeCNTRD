@@ -7089,7 +7089,8 @@ function Ba(e) {
       lastClean: "—",
       schedule: "—"
     },
-    tesla: {
+    tesla: e?.tesla || {
+      id: null,
       name: "No Tesla connected",
       locked: !0,
       charging: !1,

@@ -426,7 +426,8 @@ function defaults(out) {
       id: null, name: 'No vacuum', state: 'docked', battery: 100, mode: 'auto',
       currentRoom: null, cleanedToday: 0, bin: 'empty', lastClean: '—', schedule: '—',
     },
-    tesla: {
+    tesla: out?.tesla || {
+      id: null,
       name: 'No Tesla connected', locked: true, charging: false, chargePct: 0,
       chargeRate: 0, pluggedIn: false, range: 0, cabin: 65, target: 70,
       climateOn: false, sentry: false, location: '—', odometer: 0, frunk: false,
