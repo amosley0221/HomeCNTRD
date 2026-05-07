@@ -3,6 +3,7 @@
 // Black background, tangerine accents, two-column layout (main + calendar).
 
 import HassContext from './lib/hass-context.js';
+import { fetchAllScores } from './lib/sports.js';
 
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const { p, fonts, state, user, narrow, setPage } = ctx;
@@ -177,7 +178,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
 
           <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap: narrow ? 14 : 18}}>
             <TodoCard todos={state.todos} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
-            <SportsCard sports={state.sports} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
+            <SportsCard accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
           </div>
 
           <NewsCard news={state.news} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
@@ -350,32 +351,125 @@ const TodoCard = ({ todos, accent, fonts, surface, fg, fg2, fg3, border }) => {
 };
 
 // ── Section: Sports ───────────────────────────────────────────────────────
-const SportsCard = ({ sports, accent, fonts, surface, fg, fg2, fg3, border }) => {
-  if (!sports || !sports.length) {
-    return <EmptyCard title="Sports" hint="Install TeamTracker via HACS, then add your favourite teams." surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} fonts={fonts} accent={accent}/>;
+const SPORTS_LIMIT = 6;
+
+const SportsCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
+  // null = first load in flight; [] = loaded but no games today
+  const [games, setGames] = React.useState(null);
+  const [error, setError] = React.useState(null);
+
+  React.useEffect(() => {
+    let alive = true;
+    const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const tick = async () => {
+      try {
+        const g = await fetchAllScores({ signal: ctl?.signal });
+        if (alive) { setGames(g); setError(null); }
+      } catch (e) {
+        if (alive && e?.name !== 'AbortError') setError(e?.message || String(e));
+      }
+    };
+    tick();
+    // Refresh every 60s — fast enough to follow live games, slow enough
+    // not to hammer ESPN.
+    const t = setInterval(tick, 60 * 1000);
+    return () => { alive = false; clearInterval(t); ctl?.abort(); };
+  }, []);
+
+  if (games === null) {
+    return (
+      <Card surface={surface} border={border}>
+        <CardHeader title="Sports" right={<span style={{fontSize:11, color:fg3}}>Loading…</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <div style={{fontSize:12, color:fg3}}>Pulling scores from ESPN…</div>
+      </Card>
+    );
   }
+
+  if (error && !games.length) {
+    return (
+      <Card surface={surface} border={border}>
+        <CardHeader title="Sports" right={null} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <div style={{fontSize:12, color:fg3}}>Couldn't reach ESPN: {error}</div>
+      </Card>
+    );
+  }
+
+  if (!games.length) {
+    return (
+      <Card surface={surface} border={border}>
+        <CardHeader title="Sports" right={null} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <div style={{fontSize:12, color:fg3}}>Nothing on the docket right now.</div>
+      </Card>
+    );
+  }
+
+  const visible = games.slice(0, SPORTS_LIMIT);
+  const favCount = games.filter(g => g.isFavorite).length;
+  const liveCount = games.filter(g => g.status.state === 'in').length;
+  const meta = [
+    favCount && `${favCount} fav${favCount === 1 ? '' : 's'}`,
+    liveCount && `${liveCount} live`,
+    `${games.length} total`,
+  ].filter(Boolean).join(' · ');
+
   return (
     <Card surface={surface} border={border}>
-      <CardHeader title="Sports" right={null} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
-      <div style={{display:'flex', flexDirection:'column', gap: 10}}>
-        {sports.slice(0, 4).map(g => (
-          <div key={g.id} style={{padding: '8px 0', borderBottom: `.5px solid ${border}`}}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap: 8}}>
-              <span style={{fontSize: 12, color: fg, fontWeight: 500}}>{g.team} <span style={{color: fg3}}>vs</span> {g.opponent}</span>
-              {g.live && <span style={{fontSize: 9, padding: '2px 6px', borderRadius: 999, background: '#c14d36', color: '#fff', fontWeight: 600, letterSpacing: '.04em'}}>LIVE</span>}
-            </div>
-            <div style={{display:'flex', alignItems:'baseline', gap: 8, marginTop: 4}}>
-              <span style={{fontFamily: fonts.display, fontSize: 22, color: fg, fontVariantNumeric: 'tabular-nums'}}>{g.teamScore ?? '—'}</span>
-              <span style={{fontSize: 11, color: fg3}}>—</span>
-              <span style={{fontFamily: fonts.display, fontSize: 22, color: fg2, fontVariantNumeric: 'tabular-nums'}}>{g.oppScore ?? '—'}</span>
-              <span style={{flex: 1, textAlign: 'right', fontSize: 11, color: fg3}}>{g.state}</span>
-            </div>
-          </div>
+      <CardHeader title="Sports" right={<span style={{fontSize:11, color:fg3}}>{meta}</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+      <div style={{display:'flex', flexDirection:'column', gap: 8}}>
+        {visible.map(g => (
+          <GameRow key={g.id} g={g} accent={accent} fonts={fonts} fg={fg} fg2={fg2} fg3={fg3} border={border}/>
         ))}
       </div>
     </Card>
   );
 };
+
+const GameRow = ({ g, accent, fonts, fg, fg2, fg3, border }) => {
+  const isLive = g.status.state === 'in';
+  const isPre = g.status.state === 'pre';
+  const isPost = g.status.state === 'post';
+
+  const startStr = g.startTime
+    ? `${g.startTime.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' })} · ${g.startTime.toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`
+    : '';
+  const statusLabel = isPre ? startStr : (g.status.label || (isPost ? 'Final' : ''));
+
+  // Hide the 0-0 placeholder on pre-game rows; ESPN sends "0" before kickoff.
+  const showScores = !isPre;
+  const aLoses = isPost && Number(g.teamA.score) < Number(g.teamB.score);
+  const bLoses = isPost && Number(g.teamB.score) < Number(g.teamA.score);
+
+  return (
+    <div style={{
+      padding:'9px 11px', borderRadius: 9,
+      background: g.isFavorite ? `${accent}13` : 'rgba(241,234,217,0.025)',
+      border: g.isFavorite ? `.5px solid ${accent}44` : `.5px solid ${border}`,
+    }}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom: 6}}>
+        <span style={{fontSize:9.5, color: g.isFavorite ? accent : fg3, letterSpacing:'.06em', textTransform:'uppercase', fontWeight: 600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{g.league}</span>
+        {isLive && <span style={{flex:'none', fontSize:9, padding:'2px 6px', borderRadius:999, background:'#c14d36', color:'#fff', fontWeight:600, letterSpacing:'.04em'}}>LIVE</span>}
+      </div>
+      <div style={{display:'flex', flexDirection:'column', gap:3}}>
+        <TeamLine c={g.teamA} fg={fg} fg3={fg3} fonts={fonts} dim={aLoses} showScore={showScores}/>
+        <TeamLine c={g.teamB} fg={fg} fg3={fg3} fonts={fonts} dim={bLoses} showScore={showScores}/>
+      </div>
+      <div style={{fontSize:10.5, color: fg3, marginTop: 5, textAlign: 'right', fontVariantNumeric:'tabular-nums'}}>{statusLabel}</div>
+    </div>
+  );
+};
+
+const TeamLine = ({ c, fg, fg3, fonts, dim, showScore }) => (
+  <div style={{display:'flex', alignItems:'center', gap:8, opacity: dim ? 0.55 : 1}}>
+    {c.logo
+      ? <img src={c.logo} alt="" width="18" height="18" style={{flex:'none', objectFit:'contain'}} loading="lazy"/>
+      : <span style={{flex:'none', width:18, height:18, borderRadius:'50%', background:'rgba(241,234,217,0.06)'}}/>
+    }
+    <span style={{flex:1, minWidth:0, fontSize:12.5, color:fg, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{c.name}</span>
+    {showScore && c.score !== '' && (
+      <span style={{fontFamily: fonts.display, fontSize:15, color:fg, fontVariantNumeric:'tabular-nums', fontWeight: c.winner ? 600 : 400}}>{c.score}</span>
+    )}
+  </div>
+);
 
 // ── Section: News ─────────────────────────────────────────────────────────
 const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
