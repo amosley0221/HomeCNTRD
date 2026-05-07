@@ -8,10 +8,15 @@ const GROUPING_FEATURE = 524288;
 // the underlying Sonos / AirPlay entities don't.
 const SEARCH_FEATURE = 4194304;
 
-// Platform preference when deduping mirrored speaker entities. Music
-// Assistant first because it adds search + library; Sonos next because
-// it's the canonical native player; everything else after.
-const PLATFORM_PREF = ['mass', 'sonos', 'cast', 'apple_tv', 'airplay'];
+// Music Assistant uses domain "music_assistant" in its HA integration;
+// some older versions / community builds use "mass" instead. Accept
+// both. Sonos integration is just "sonos".
+const MA_PLATFORMS = new Set(['music_assistant', 'mass']);
+const SONOS_PLATFORMS = new Set(['sonos']);
+// Platform preference when deduping mirrored speaker entities. MA first
+// because it knows how to resolve library://, spotify://, qobuz:// URIs
+// and bridges them to the underlying Sonos / AirPlay player.
+const PLATFORM_PREF = ['music_assistant', 'mass', 'sonos'];
 
 const MusicView = ({ ctx }) => {
   const { p, fonts, dens, state, narrow } = ctx;
@@ -43,14 +48,34 @@ const MusicView = ({ ctx }) => {
     return () => { alive = false; };
   }, [hass]);
 
-  // Dedupe by friendly name (case-insensitive). When MA mirrors a Sonos
-  // entity, both end up here with the same name (or only different
-  // capitalisation). Keep the entity from the most-preferred platform,
-  // which is also the one that supports search + library browse.
+  // Restrict to Sonos and Music Assistant entities; AirPlay-only
+  // devices (MacBook), smart displays, Cast TVs etc. don't belong on
+  // the music page. Then, if MA is present, drop the underlying Sonos
+  // entities entirely — MA mirrors every Sonos as its own entity, and
+  // MA URIs (library://, spotify://) only resolve through MA. Keeping
+  // the Sonos natives in the list creates duplicates and routes
+  // playback to the wrong entity.
   const speakers = React.useMemo(() => {
     if (!state.speakers?.length) return [];
+    const platformsLoaded = Object.keys(platforms).length > 0;
+
+    // Loose Sonos detection for the rare case the registry hasn't
+    // loaded yet — Sonos exposes a sonos_group attribute.
+    const looksSonos = (s) => SONOS_PLATFORMS.has(platforms[s.id])
+      || (!platformsLoaded && (s.supportedFeatures & GROUPING_FEATURE) !== 0);
+    const looksMA = (s) => MA_PLATFORMS.has(platforms[s.id])
+      || (!platformsLoaded && (s.supportedFeatures & SEARCH_FEATURE) !== 0);
+
+    let pool = state.speakers.filter(s => looksSonos(s) || looksMA(s));
+    if (pool.length === 0) pool = state.speakers; // graceful fallback if our heuristics are wrong
+
+    const hasMA = pool.some(looksMA);
+    if (hasMA) pool = pool.filter(looksMA);
+
+    // Final dedupe by friendly name in case MA exposed two entities
+    // with the same name (e.g. one stale).
     const groups = new Map();
-    for (const s of state.speakers) {
+    for (const s of pool) {
       const key = (s.name || s.id).toLowerCase().trim();
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(s);

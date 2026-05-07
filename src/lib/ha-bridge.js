@@ -96,7 +96,16 @@ function translate(states) {
         // grouping fails because Tesla's entity doesn't support join.
         if (teslaPrefix && id === `media_player.${teslaPrefix}_media_player`) break;
         const dc = e.attributes?.device_class;
-        const isTv = dc === 'tv' || /\btv\b/i.test(name) || /apple\s*tv/i.test(name) || /chromecast/i.test(name) || /webos/i.test(name);
+        const shortId = id.split('.')[1] || '';
+        // TV detection: device_class is the cleanest signal, but lots of
+        // integrations don't set it. Fall back to name/entity_id heuristics
+        // — \btv\b alone misses things like media_player.bedroom_tv where
+        // the underscore breaks the word boundary.
+        const isTv = dc === 'tv'
+          || /\btv\b/i.test(name)
+          || /(^|_)tv($|_)/i.test(shortId)
+          || /apple\s*tv|chromecast|webos|samsung|roku|firetv|androidtv/i.test(name)
+          || /apple\s*tv|chromecast|webos|samsung|roku|firetv|androidtv/i.test(shortId);
         const playing = e.state === 'playing';
         const vol = typeof e.attributes?.volume_level === 'number'
           ? Math.round(e.attributes.volume_level * 100) : 30;
