@@ -586,18 +586,9 @@ function diffAndDispatch(prev, next, hass) {
     call('automation', n.enabled ? 'turn_on' : 'turn_off', { entity_id: n.id });
   }
 
-  // Ring / alarm_control_panel
-  if (prev.ring && prev.ring.mode !== next.ring.mode) {
-    if (!next.ring?.id) {
-      diagPush({ ts: Date.now(), kind: 'skip',
-        message: `Ring mode change ignored — no alarm_control_panel.* entity in HA. Add a Ring (or other alarm) integration and the tile will start firing alarm_arm_home / alarm_arm_away / alarm_disarm.` });
-    } else {
-      const map = { home: 'alarm_arm_home', away: 'alarm_arm_away', disarmed: 'alarm_disarm' };
-      const svc = map[next.ring.mode];
-      if (svc) call('alarm_control_panel', svc, { entity_id: next.ring.id });
-      else diagPush({ ts: Date.now(), kind: 'skip', message: `Unknown ring mode: ${next.ring.mode}` });
-    }
-  }
+  // Ring / alarm_control_panel mode changes are dispatched directly from
+  // RingModeSwitcher (so we get proper error visibility for the
+  // open-sensors / bypass case) — intentionally not handled here.
 
   // Tesla via Tessie. Watch state.tesla diffs and route them to the
   // matching HA entity. The id field is the entity prefix (e.g. "tone").

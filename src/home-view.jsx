@@ -1,34 +1,89 @@
 // home-view.jsx — Categorized home page with section visibility toggle.
 
 import HassContext from './lib/hass-context.js';
+import Hls from 'hls.js';
 
-// Fetch a short-lived signed URL for HA's MJPEG camera_proxy_stream
-// endpoint. The URL embeds a signed auth token and expires after the
-// requested TTL — we re-sign every 30 minutes so live <img src> tags
-// don't drop. Returns null when no camera id or hass connection is
-// available, and on any auth/sign_path failure.
-function useSignedCameraStream(cameraId, hass) {
-  const [url, setUrl] = React.useState(null);
+// Live HLS player. Asks HA over the WS bus for a short-lived HLS playlist
+// URL and plays it via Hls.js (or native HLS on Safari/iOS). HA's Ring
+// integration exposes its cameras via HLS only — there's no MJPEG path
+// that works generically across cloud-camera integrations.
+const CameraStream = ({ entityId, hass, style }) => {
+  const videoRef = React.useRef(null);
+  const [streamUrl, setStreamUrl] = React.useState(null);
+  const [error, setError] = React.useState(null);
+
+  // Ask HA for the HLS playlist URL. The returned URL embeds a signed
+  // auth token; HA keeps the underlying stream alive for ~5 min after
+  // last access. We re-fetch every 4 min so the stream never drops.
   React.useEffect(() => {
-    if (!cameraId || !hass?.callApi) { setUrl(null); return; }
+    if (!hass?.connection || !entityId) { setStreamUrl(null); return; }
     let alive = true;
-    const sign = async () => {
+    const fetchUrl = async () => {
       try {
-        const resp = await hass.callApi('POST', 'auth/sign_path', {
-          path: `/api/camera_proxy_stream/${cameraId}`,
-          expires: 1800, // 30 min
+        const resp = await hass.connection.sendMessagePromise({
+          type: 'camera/stream',
+          entity_id: entityId,
+          format: 'hls',
         });
-        if (alive && resp?.path) setUrl(resp.path);
+        if (alive && resp?.url) { setStreamUrl(resp.url); setError(null); }
       } catch (e) {
-        if (alive) console.warn(`[cam] sign_path failed for ${cameraId}:`, e?.message || e);
+        if (alive) setError(e?.message || String(e));
       }
     };
-    sign();
-    const t = setInterval(sign, 25 * 60 * 1000); // re-sign before expiry
+    fetchUrl();
+    const t = setInterval(fetchUrl, 4 * 60 * 1000);
     return () => { alive = false; clearInterval(t); };
-  }, [cameraId, hass]);
-  return url;
-}
+  }, [entityId, hass]);
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !streamUrl) return;
+
+    // iOS / Safari support HLS natively — feed the playlist straight in.
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+      video.play().catch(() => {});
+      return () => { video.removeAttribute('src'); video.load(); };
+    }
+
+    // Everything else: use Hls.js for the playlist + segment plumbing.
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        liveDurationInfinity: true,
+        lowLatencyMode: true,
+        // HA segments are protected by a signed token in the URL; the HLS
+        // engine just needs to be told the manifest URL. Default fetch
+        // settings work.
+      });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (data?.fatal) {
+          // For fatal errors, try to recover once before giving up.
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+          else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+          else hls.destroy();
+        }
+      });
+      return () => hls.destroy();
+    }
+  }, [streamUrl]);
+
+  if (error && !streamUrl) {
+    return React.createElement('div', {
+      style: { ...style, display:'grid', placeItems:'center', color:'rgba(255,255,255,0.6)', fontSize:11, padding:8, textAlign:'center' },
+    }, `Live stream unavailable: ${error}`);
+  }
+
+  return React.createElement('video', {
+    ref: videoRef,
+    autoPlay: true,
+    muted: true,
+    playsInline: true,
+    style: { display:'block', width:'100%', height:'100%', objectFit:'cover', ...style },
+  });
+};
 
 const SECTIONS = [
   { id:'climate',  label:'Climate' },
@@ -316,55 +371,67 @@ const RingModeSwitcher = ({ ctx, compact }) => {
   const cur = state.ring?.mode || 'disarmed';
   const meta = RING_MODES.find(m => m.id === cur);
 
-  // When a sensor is open, Ring rejects alarm_arm_home / alarm_arm_away
-  // and the entity stays disarmed. We detect that by tracking what the
-  // user just clicked — if HA's reported state hasn't moved off
-  // disarmed within a few seconds, we surface a confirm dialog offering
-  // alarm_arm_custom_bypass (which is HA's standard "arm and bypass
-  // open zones" service).
-  const [bypassPrompt, setBypassPrompt] = React.useState(null); // { mode } | null
+  // Bypass dialog state. Triggered when arming fails outright (service
+  // call rejected) OR when the entity stays disarmed long enough that
+  // Ring almost certainly refused due to an open zone.
+  const [bypassPrompt, setBypassPrompt] = React.useState(null);
+  // Most-recent error text from a failed service call, surfaced inline.
+  const [errorText, setErrorText] = React.useState(null);
   const pendingRef = React.useRef(null);
+  // Keep a fresh hass reference so the watchdog reads the live state
+  // even if the click closure has aged.
+  const hassRef = React.useRef(hass);
+  React.useEffect(() => { hassRef.current = hass; }, [hass]);
 
   const SVC = { home: 'alarm_arm_home', away: 'alarm_arm_away', disarmed: 'alarm_disarm' };
-  const BYPASS_SVC = { home: 'alarm_arm_custom_bypass', away: 'alarm_arm_custom_bypass' };
 
   const directCall = async (service) => {
-    if (!hass?.callService || !state.ring?.id) return false;
+    if (!hass?.callService || !state.ring?.id) {
+      return { ok: false, error: 'Alarm entity not detected in HA' };
+    }
     try {
       await hass.callService('alarm_control_panel', service, { entity_id: state.ring.id });
-      return true;
+      return { ok: true };
     } catch (e) {
-      console.warn(`[ring] ${service} failed:`, e?.message || e);
-      return false;
+      const msg = e?.message || e?.error || String(e);
+      console.warn(`[ring] ${service} failed:`, msg);
+      return { ok: false, error: msg };
     }
   };
 
-  const onClick = (id) => {
-    // Optimistic UI — diff dispatch in ha-bridge will fire the real
-    // service. We also start a watchdog: if state.ring.mode is back to
-    // disarmed 4 s after asking for an armed mode, the integration
-    // probably refused due to open sensors.
+  const onClick = async (id) => {
+    setErrorText(null);
+    if (pendingRef.current) clearTimeout(pendingRef.current);
+
+    // Optimistic UI for snappy feedback.
     setState(s => ({
       ...s,
       ring: { ...(s.ring||{}), mode: id, lastChanged: new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), changedBy:'You' },
       locks: id === 'away' ? s.locks.map(l => ({...l, locked:true})) : s.locks,
     }));
-    if (pendingRef.current) clearTimeout(pendingRef.current);
+
+    const svc = SVC[id];
+    const result = await directCall(svc);
+    if (!result.ok) {
+      // Hard rejection from HA: usually means an open zone for arm
+      // commands. Offer the bypass option directly.
+      if (id !== 'disarmed') setBypassPrompt({ mode: id, reason: result.error });
+      else setErrorText(result.error);
+      return;
+    }
+
+    // Service accepted — but Ring sometimes silently no-ops when sensors
+    // are open. Watch for the entity to actually move off disarmed
+    // within ~6 s and raise the bypass dialog if it doesn't.
     if (id === 'disarmed') return;
     pendingRef.current = setTimeout(() => {
-      // Read fresh ring mode from HA via the same map ha-bridge uses.
-      const liveMode = (() => {
-        const ent = hass?.states?.[state.ring?.id];
-        if (!ent) return cur;
-        const st = ent.state;
-        if (st === 'disarmed' || st === 'disarming') return 'disarmed';
-        if (st === 'armed_away' || st === 'armed_vacation') return 'away';
-        if (typeof st === 'string' && st.startsWith('armed_')) return 'home';
-        if (st === 'arming' || st === 'pending') return id; // still working
-        return 'disarmed';
-      })();
-      if (liveMode === 'disarmed') setBypassPrompt({ mode: id });
-    }, 4000);
+      const ent = hassRef.current?.states?.[state.ring?.id];
+      const st = ent?.state || 'unknown';
+      const stillDisarmed = st === 'disarmed' || st === 'unavailable' || st === 'unknown';
+      if (stillDisarmed) {
+        setBypassPrompt({ mode: id, reason: 'Ring did not arm — likely an open door, window, or motion sensor.' });
+      }
+    }, 6000);
   };
 
   React.useEffect(() => () => { if (pendingRef.current) clearTimeout(pendingRef.current); }, []);
@@ -373,13 +440,14 @@ const RingModeSwitcher = ({ ctx, compact }) => {
     const id = bypassPrompt?.mode;
     setBypassPrompt(null);
     if (!id) return;
-    const svc = BYPASS_SVC[id];
-    if (!svc) return;
-    const ok = await directCall(svc);
-    if (!ok) {
-      // Fallback: try the regular service one more time in case the
-      // bypass variant isn't supported by this Ring integration version.
-      await directCall(SVC[id]);
+    // HA's standard "arm and bypass open zones" service. Ring's
+    // integration maps this to the same arm action with bypass enabled.
+    const result = await directCall('alarm_arm_custom_bypass');
+    if (!result.ok) {
+      // Fallback: retry the regular arm in case this integration
+      // version doesn't expose the bypass variant.
+      const retry = await directCall(SVC[id]);
+      if (!retry.ok) setErrorText(retry.error || 'Arming failed');
     }
   };
 
@@ -412,11 +480,19 @@ const RingModeSwitcher = ({ ctx, compact }) => {
           );
         })}
       </div>
+      {errorText && (
+        <div style={{
+          marginTop: 10, padding: '8px 10px', borderRadius: 8,
+          background: 'rgba(193,77,54,0.12)', border: '.5px solid rgba(193,77,54,0.45)',
+          color: '#e0a89a', fontSize: 11, lineHeight: 1.4,
+        }}>{errorText}</div>
+      )}
     </window.Card>
 
     {bypassPrompt && (
       <BypassDialog
         mode={bypassPrompt.mode}
+        reason={bypassPrompt.reason}
         p={p} fonts={fonts}
         onCancel={() => setBypassPrompt(null)}
         onConfirm={confirmBypass}
@@ -426,7 +502,7 @@ const RingModeSwitcher = ({ ctx, compact }) => {
   );
 };
 
-const BypassDialog = ({ mode, p, fonts, onCancel, onConfirm }) => (
+const BypassDialog = ({ mode, reason, p, fonts, onCancel, onConfirm }) => (
   <div
     onClick={onCancel}
     style={{
@@ -449,8 +525,12 @@ const BypassDialog = ({ mode, p, fonts, onCancel, onConfirm }) => (
         Arming failed — open sensors
       </div>
       <div style={{fontSize:13, color:p.fg2, lineHeight:1.5, marginBottom:16}}>
-        Ring couldn't arm <strong style={{color:p.fg}}>{mode === 'home' ? 'Home' : 'Away'}</strong> because at least one sensor is open
-        (door, window, or motion). Bypass the open sensors and arm anyway?
+        {reason || (
+          <>Ring couldn't arm <strong style={{color:p.fg}}>{mode === 'home' ? 'Home' : 'Away'}</strong> because at least one sensor is open.</>
+        )}
+        <div style={{marginTop:8, color:p.fg3, fontSize:12}}>
+          Bypass the open sensors and arm <strong style={{color:p.fg2}}>{mode === 'home' ? 'Home' : 'Away'}</strong> anyway?
+        </div>
       </div>
       <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
         <button onClick={onCancel} style={{
@@ -560,26 +640,30 @@ const TodaySection = ({ ctx }) => {
 const CamThumb = ({ c, ctx, live }) => {
   const { p, fonts } = ctx;
   const hass = React.useContext(HassContext);
-  // Live MJPEG stream URL when live=true; otherwise a cache-busted
-  // snapshot. Live takes precedence when available.
-  const streamUrl = useSignedCameraStream(live ? c.id : null, hass);
+  // Cache-bust the snapshot every 10 s so a still thumb still looks
+  // current. Skipped when we're rendering the live HLS player.
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
     if (live || !c.picture) return;
     const t = setInterval(() => setTick(x => x + 1), 10000);
     return () => clearInterval(t);
   }, [c.picture, live]);
-  const src = streamUrl
-    ? streamUrl
-    : c.picture
-      ? (c.picture + (c.picture.includes('?') ? '&' : '?') + 'hc=' + tick)
-      : null;
+  const stillSrc = c.picture
+    ? (c.picture + (c.picture.includes('?') ? '&' : '?') + 'hc=' + tick)
+    : null;
+  const showLive = !!live && c.online && hass;
 
   return (
     <div style={{aspectRatio:'16/10', borderRadius:10, position:'relative', overflow:'hidden', background:`linear-gradient(135deg, ${c.hue}, oklch(20% 0.04 25))`, color:'#fff'}}>
-      {src ? (
+      {showLive ? (
+        <CameraStream
+          entityId={c.id}
+          hass={hass}
+          style={{position:'absolute', inset:0}}
+        />
+      ) : stillSrc ? (
         <img
-          src={src}
+          src={stillSrc}
           alt={c.name}
           style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', display:'block'}}
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -588,8 +672,8 @@ const CamThumb = ({ c, ctx, live }) => {
         <div style={{position:'absolute', inset:0, backgroundImage:`repeating-linear-gradient(110deg, rgba(255,255,255,0.05) 0 12px, transparent 12px 24px)`}}/>
       )}
       {/* Dark gradient at top and bottom so the LIVE pill and label stay
-          legible over bright snapshots. */}
-      {src && <div style={{position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.55) 100%)'}}/>}
+          legible over bright frames. */}
+      {(showLive || stillSrc) && <div style={{position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.55) 100%)', pointerEvents:'none'}}/>}
       <div style={{position:'absolute', top:8, left:8, fontSize:10, padding:'2px 7px', borderRadius:999, background:'rgba(0,0,0,.55)', display:'flex', alignItems:'center', gap:5}}>
         <span style={{width:5, height:5, borderRadius:'50%', background: c.online ? '#ff5c5c' : '#666'}}/>{c.online ? 'LIVE' : 'OFF'}
       </div>
