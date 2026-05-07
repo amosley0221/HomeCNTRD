@@ -1,5 +1,35 @@
 // home-view.jsx — Categorized home page with section visibility toggle.
 
+import HassContext from './lib/hass-context.js';
+
+// Fetch a short-lived signed URL for HA's MJPEG camera_proxy_stream
+// endpoint. The URL embeds a signed auth token and expires after the
+// requested TTL — we re-sign every 30 minutes so live <img src> tags
+// don't drop. Returns null when no camera id or hass connection is
+// available, and on any auth/sign_path failure.
+function useSignedCameraStream(cameraId, hass) {
+  const [url, setUrl] = React.useState(null);
+  React.useEffect(() => {
+    if (!cameraId || !hass?.callApi) { setUrl(null); return; }
+    let alive = true;
+    const sign = async () => {
+      try {
+        const resp = await hass.callApi('POST', 'auth/sign_path', {
+          path: `/api/camera_proxy_stream/${cameraId}`,
+          expires: 1800, // 30 min
+        });
+        if (alive && resp?.path) setUrl(resp.path);
+      } catch (e) {
+        if (alive) console.warn(`[cam] sign_path failed for ${cameraId}:`, e?.message || e);
+      }
+    };
+    sign();
+    const t = setInterval(sign, 25 * 60 * 1000); // re-sign before expiry
+    return () => { alive = false; clearInterval(t); };
+  }, [cameraId, hass]);
+  return url;
+}
+
 const SECTIONS = [
   { id:'climate',  label:'Climate' },
   { id:'lights',   label:'Lighting' },
@@ -282,17 +312,79 @@ const RING_MODES = [
 
 const RingModeSwitcher = ({ ctx, compact }) => {
   const { p, fonts, state, setState } = ctx;
+  const hass = React.useContext(HassContext);
   const cur = state.ring?.mode || 'disarmed';
-  const set = (id) => {
+  const meta = RING_MODES.find(m => m.id === cur);
+
+  // When a sensor is open, Ring rejects alarm_arm_home / alarm_arm_away
+  // and the entity stays disarmed. We detect that by tracking what the
+  // user just clicked — if HA's reported state hasn't moved off
+  // disarmed within a few seconds, we surface a confirm dialog offering
+  // alarm_arm_custom_bypass (which is HA's standard "arm and bypass
+  // open zones" service).
+  const [bypassPrompt, setBypassPrompt] = React.useState(null); // { mode } | null
+  const pendingRef = React.useRef(null);
+
+  const SVC = { home: 'alarm_arm_home', away: 'alarm_arm_away', disarmed: 'alarm_disarm' };
+  const BYPASS_SVC = { home: 'alarm_arm_custom_bypass', away: 'alarm_arm_custom_bypass' };
+
+  const directCall = async (service) => {
+    if (!hass?.callService || !state.ring?.id) return false;
+    try {
+      await hass.callService('alarm_control_panel', service, { entity_id: state.ring.id });
+      return true;
+    } catch (e) {
+      console.warn(`[ring] ${service} failed:`, e?.message || e);
+      return false;
+    }
+  };
+
+  const onClick = (id) => {
+    // Optimistic UI — diff dispatch in ha-bridge will fire the real
+    // service. We also start a watchdog: if state.ring.mode is back to
+    // disarmed 4 s after asking for an armed mode, the integration
+    // probably refused due to open sensors.
     setState(s => ({
       ...s,
-      ring: { ...(s.ring||{}), mode:id, lastChanged: new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), changedBy:'You' },
-      // Away also locks everything
+      ring: { ...(s.ring||{}), mode: id, lastChanged: new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}), changedBy:'You' },
       locks: id === 'away' ? s.locks.map(l => ({...l, locked:true})) : s.locks,
     }));
+    if (pendingRef.current) clearTimeout(pendingRef.current);
+    if (id === 'disarmed') return;
+    pendingRef.current = setTimeout(() => {
+      // Read fresh ring mode from HA via the same map ha-bridge uses.
+      const liveMode = (() => {
+        const ent = hass?.states?.[state.ring?.id];
+        if (!ent) return cur;
+        const st = ent.state;
+        if (st === 'disarmed' || st === 'disarming') return 'disarmed';
+        if (st === 'armed_away' || st === 'armed_vacation') return 'away';
+        if (typeof st === 'string' && st.startsWith('armed_')) return 'home';
+        if (st === 'arming' || st === 'pending') return id; // still working
+        return 'disarmed';
+      })();
+      if (liveMode === 'disarmed') setBypassPrompt({ mode: id });
+    }, 4000);
   };
-  const meta = RING_MODES.find(m => m.id === cur);
+
+  React.useEffect(() => () => { if (pendingRef.current) clearTimeout(pendingRef.current); }, []);
+
+  const confirmBypass = async () => {
+    const id = bypassPrompt?.mode;
+    setBypassPrompt(null);
+    if (!id) return;
+    const svc = BYPASS_SVC[id];
+    if (!svc) return;
+    const ok = await directCall(svc);
+    if (!ok) {
+      // Fallback: try the regular service one more time in case the
+      // bypass variant isn't supported by this Ring integration version.
+      await directCall(SVC[id]);
+    }
+  };
+
   return (
+    <>
     <window.Card p={p} style={{padding: compact ? 12 : 16}}>
       <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}>
         <div style={{width:24, height:24, borderRadius:5, background:'#1f1f1f', color:'#fff', display:'grid', placeItems:'center', fontSize:9, fontWeight:700, flex:'none'}}>R</div>
@@ -306,7 +398,7 @@ const RingModeSwitcher = ({ ctx, compact }) => {
         {RING_MODES.map(m => {
           const active = m.id === cur;
           return (
-            <button key={m.id} onClick={() => set(m.id)} style={{
+            <button key={m.id} onClick={() => onClick(m.id)} style={{
               padding: compact ? '8px 6px' : '10px 8px', borderRadius:8,
               border:`.5px solid ${active ? m.color : p.border2}`,
               background: active ? `color-mix(in oklch, ${m.color} 14%, transparent)` : p.surface,
@@ -321,8 +413,60 @@ const RingModeSwitcher = ({ ctx, compact }) => {
         })}
       </div>
     </window.Card>
+
+    {bypassPrompt && (
+      <BypassDialog
+        mode={bypassPrompt.mode}
+        p={p} fonts={fonts}
+        onCancel={() => setBypassPrompt(null)}
+        onConfirm={confirmBypass}
+      />
+    )}
+    </>
   );
 };
+
+const BypassDialog = ({ mode, p, fonts, onCancel, onConfirm }) => (
+  <div
+    onClick={onCancel}
+    style={{
+      position:'fixed', inset:0, zIndex:200,
+      background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)',
+      display:'grid', placeItems:'center', padding:'16px',
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        maxWidth:380, width:'100%',
+        background:p.surface, color:p.fg,
+        border:`.5px solid ${p.border2}`, borderRadius:14,
+        padding:20, fontFamily:fonts.body,
+        boxShadow:'0 18px 40px rgba(0,0,0,0.5)',
+      }}
+    >
+      <div style={{fontFamily:fonts.display, fontSize:18, color:p.fg, marginBottom:8, fontWeight:500}}>
+        Arming failed — open sensors
+      </div>
+      <div style={{fontSize:13, color:p.fg2, lineHeight:1.5, marginBottom:16}}>
+        Ring couldn't arm <strong style={{color:p.fg}}>{mode === 'home' ? 'Home' : 'Away'}</strong> because at least one sensor is open
+        (door, window, or motion). Bypass the open sensors and arm anyway?
+      </div>
+      <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+        <button onClick={onCancel} style={{
+          padding:'8px 14px', borderRadius:8,
+          background:'transparent', border:`.5px solid ${p.border2}`,
+          color:p.fg, cursor:'pointer', fontFamily:'inherit', fontSize:12,
+        }}>Cancel</button>
+        <button onClick={onConfirm} style={{
+          padding:'8px 14px', borderRadius:8,
+          background:p.accent, border:`.5px solid ${p.accent}`,
+          color:'#fff', cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight:500,
+        }}>Bypass &amp; arm</button>
+      </div>
+    </div>
+  </div>
+);
 
 // ── SECURITY ────────────────────────────────────────────────────────────
 const SecuritySection = ({ ctx }) => {
@@ -413,19 +557,23 @@ const TodaySection = ({ ctx }) => {
   );
 };
 
-const CamThumb = ({ c, ctx }) => {
+const CamThumb = ({ c, ctx, live }) => {
   const { p, fonts } = ctx;
-  // HA's snapshot URL doesn't auto-refresh — append a cache-busting param
-  // that ticks every 10 s so we periodically re-pull the latest still.
+  const hass = React.useContext(HassContext);
+  // Live MJPEG stream URL when live=true; otherwise a cache-busted
+  // snapshot. Live takes precedence when available.
+  const streamUrl = useSignedCameraStream(live ? c.id : null, hass);
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
-    if (!c.picture) return;
+    if (live || !c.picture) return;
     const t = setInterval(() => setTick(x => x + 1), 10000);
     return () => clearInterval(t);
-  }, [c.picture]);
-  const src = c.picture
-    ? (c.picture + (c.picture.includes('?') ? '&' : '?') + 'hc=' + tick)
-    : null;
+  }, [c.picture, live]);
+  const src = streamUrl
+    ? streamUrl
+    : c.picture
+      ? (c.picture + (c.picture.includes('?') ? '&' : '?') + 'hc=' + tick)
+      : null;
 
   return (
     <div style={{aspectRatio:'16/10', borderRadius:10, position:'relative', overflow:'hidden', background:`linear-gradient(135deg, ${c.hue}, oklch(20% 0.04 25))`, color:'#fff'}}>
