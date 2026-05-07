@@ -97,7 +97,7 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
         height:'100%',
       }}>
         {!narrow && page !== 'home' && <Sidebar ctx={ctx} />}
-        <main style={{overflow:'auto', padding: narrow ? '16px 14px 14px' : (page === 'home' ? 0 : dens.pad), display:'flex', flexDirection:'column', gap: dens.gap, paddingBottom: narrow ? 80 : undefined}}>
+        <main style={{overflowY:'auto', overflowX:'hidden', minWidth: 0, padding: narrow ? '16px 14px 14px' : (page === 'home' ? 0 : dens.pad), display:'flex', flexDirection:'column', gap: dens.gap, paddingBottom: narrow ? 80 : undefined}}>
           {narrow && <MobileHeader ctx={ctx} />}
           {page === 'home'     && <window.PersonalDashboard ctx={ctx} onOpenMenu={() => setSidebarOpen(true)} />}
           {page === 'dashboard' && <window.HomeView ctx={ctx} />}

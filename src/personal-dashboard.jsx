@@ -216,7 +216,10 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
         gridTemplateColumns: narrow ? '1fr' : 'minmax(0,1fr) minmax(280px, 360px)',
         gap: narrow ? 14 : 22,
       }}>
-        {/* Left column — layout-driven tile grid */}
+        {/* Left column — layout-driven tile grid. On narrow viewports we
+            inject the calendar after the first tile (Weather) so the
+            common-case order is Weather → Calendar → everything else,
+            without losing the rest of the tile manager. */}
         <div>
           <TileGrid
             layout={layout}
@@ -224,6 +227,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             editMode={editMode}
             renderTile={renderTile}
             theme={tileTheme}
+            injectAfterFirst={narrow ? (
+              <CalendarColumn
+                calendar={state.calendar} events={allEvents}
+                accent={accent} fonts={fonts} surface={surface} surface2={surface2}
+                fg={fg} fg2={fg2} fg3={fg3} border={border}
+              />
+            ) : null}
           />
           {editMode && (
             <EditFooter
@@ -239,12 +249,15 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
           )}
         </div>
 
-        {/* Right column — calendar */}
-        <CalendarColumn
-          calendar={state.calendar} events={allEvents}
-          accent={accent} fonts={fonts} surface={surface} surface2={surface2}
-          fg={fg} fg2={fg2} fg3={fg3} border={border}
-        />
+        {/* Right column — calendar (wide layouts only; narrow renders it
+            inline above via injectAfterFirst). */}
+        {!narrow && (
+          <CalendarColumn
+            calendar={state.calendar} events={allEvents}
+            accent={accent} fonts={fonts} surface={surface} surface2={surface2}
+            fg={fg} fg2={fg2} fg3={fg3} border={border}
+          />
+        )}
       </div>
 
       <div style={{height: 80}}/>
@@ -255,7 +268,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
 
 // ── Tile manager: grid + per-tile edit overlay ────────────────────────────
 
-const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme }) => {
+const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme, injectAfterFirst }) => {
   const { narrow, accent, border, surface, fg, fg2, fg3, fonts } = theme;
   const visible = layout.filter(t => !t.hidden);
   const hidden = layout.filter(t => t.hidden);
@@ -290,27 +303,34 @@ const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme }) => {
         alignItems: 'start',
       }}>
         {visible.map((t, i) => (
-          <TileFrame
-            key={t.id}
-            tile={t}
-            index={i}
-            isFirst={i === 0}
-            isLast={i === visible.length - 1}
-            editMode={editMode}
-            isDragging={dragId === t.id}
-            narrow={narrow}
-            theme={theme}
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            onDragEnd={onDragEnd}
-            onMoveUp={() => updateLayout(moveTileUp(layout, t.id))}
-            onMoveDown={() => updateLayout(moveTileDown(layout, t.id))}
-            onResize={(span) => updateLayout(setTileSpan(layout, t.id, span))}
-            onHide={() => updateLayout(setTileHidden(layout, t.id, true))}
-          >
-            {renderTile(t.id)}
-          </TileFrame>
+          <React.Fragment key={t.id}>
+            <TileFrame
+              tile={t}
+              index={i}
+              isFirst={i === 0}
+              isLast={i === visible.length - 1}
+              editMode={editMode}
+              isDragging={dragId === t.id}
+              narrow={narrow}
+              theme={theme}
+              onDragStart={onDragStart}
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+              onDragEnd={onDragEnd}
+              onMoveUp={() => updateLayout(moveTileUp(layout, t.id))}
+              onMoveDown={() => updateLayout(moveTileDown(layout, t.id))}
+              onResize={(span) => updateLayout(setTileSpan(layout, t.id, span))}
+              onHide={() => updateLayout(setTileHidden(layout, t.id, true))}
+            >
+              {renderTile(t.id)}
+            </TileFrame>
+            {/* Slot for injected content (e.g. calendar on narrow). The
+                wrapper spans the full grid row so it doesn't get sucked
+                into a column. */}
+            {i === 0 && injectAfterFirst && (
+              <div style={{gridColumn: '1 / -1'}}>{injectAfterFirst}</div>
+            )}
+          </React.Fragment>
         ))}
       </div>
 

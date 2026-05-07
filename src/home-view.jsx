@@ -76,7 +76,7 @@ const HomeView = ({ ctx }) => {
 
 // ── CLIMATE (drag-to-select dial) ───────────────────────────────────────
 const ClimateSection = ({ ctx }) => {
-  const { p, fonts, state, setState } = ctx;
+  const { p, fonts, state, setState, narrow } = ctx;
   const t = state.thermostat;
   const set = (target) => setState(s => ({...s, thermostat:{...s.thermostat, target}}));
   const setMode = (mode) => setState(s => ({...s, thermostat:{...s.thermostat, mode}}));
@@ -124,7 +124,7 @@ const ClimateSection = ({ ctx }) => {
 
   return (
     <window.Section title="Climate" subtitle="Hallway · Nest" p={p} fonts={fonts}>
-      <window.Card p={p} style={{padding:24, display:'grid', gridTemplateColumns:'auto 1fr', gap:30, alignItems:'center'}}>
+      <window.Card p={p} style={{padding: narrow ? 18 : 24, display:'grid', gridTemplateColumns: narrow ? '1fr' : 'auto 1fr', gap: narrow ? 18 : 30, alignItems:'center', justifyItems: narrow ? 'center' : 'stretch'}}>
         <div ref={ringRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
           style={{width:SIZE, height:SIZE, position:'relative', cursor: dragging ? 'grabbing' : 'grab', touchAction:'none', userSelect:'none', flex:'none'}}>
           <svg width={SIZE} height={SIZE} style={{position:'absolute', inset:0}}>
@@ -150,8 +150,8 @@ const ClimateSection = ({ ctx }) => {
           </svg>
         </div>
 
-        <div style={{display:'flex', flexDirection:'column', gap:14}}>
-          <div style={{display:'flex', gap:18, fontSize:12, color:p.fg2}}>
+        <div style={{display:'flex', flexDirection:'column', gap:14, width: narrow ? '100%' : 'auto'}}>
+          <div style={{display:'flex', gap:18, fontSize:12, color:p.fg2, flexWrap:'wrap'}}>
             <div><div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase'}}>Inside</div><div style={{fontFamily:fonts.display, fontSize:22, color:p.fg, marginTop:2}}>{t.temp}°</div></div>
             <div><div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase'}}>Humidity</div><div style={{fontFamily:fonts.display, fontSize:22, color:p.fg, marginTop:2}}>{t.humidity}%</div></div>
             <div><div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase'}}>Outside</div><div style={{fontFamily:fonts.display, fontSize:22, color:p.fg, marginTop:2}}>{state.weather.temp}°</div></div>
@@ -354,12 +354,12 @@ const SecuritySection = ({ ctx }) => {
 
 // ── CAR & GARAGE ────────────────────────────────────────────────────────
 const CarSection = ({ ctx }) => {
-  const { p, fonts, dens, state, setPage } = ctx;
+  const { p, fonts, dens, state, setPage, narrow } = ctx;
   const t = state.tesla;
   const garageOpen = state.garage.doors.filter(d => d.open).length;
   return (
     <window.Section title="Car & garage" p={p} fonts={fonts}>
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:dens.tileGap}}>
+      <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap:dens.tileGap}}>
         <window.Card p={p} style={{padding:16, cursor:'pointer'}} onClick={() => setPage('car')}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
             <div style={{fontSize:10, letterSpacing:'.1em', textTransform:'uppercase', color:p.fg3}}>Tesla · Model 3</div>
@@ -399,11 +399,11 @@ const CarSection = ({ ctx }) => {
 
 // ── TODAY ───────────────────────────────────────────────────────────────
 const TodaySection = ({ ctx }) => {
-  const { p, fonts, dens, state, setPage } = ctx;
+  const { p, fonts, dens, state, setPage, narrow } = ctx;
   return (
     <window.Section title="Today" subtitle={`${state.calendar.length} events · ${state.alarms.filter(a=>a.on).length} alarms`} p={p} fonts={fonts}
       action={<button onClick={() => setPage('calendar')} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>Calendar →</button>}>
-      <div style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:dens.tileGap}}>
+      <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '2fr 1fr', gap:dens.tileGap}}>
         <window.Card p={p} style={{padding:16}}>
           <div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase', marginBottom:10}}>Schedule</div>
           {state.calendar.slice(0,5).map((e, i) => (
