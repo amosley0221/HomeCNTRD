@@ -3,11 +3,12 @@
 import HassContext from './lib/hass-context.js';
 import Hls from 'hls.js';
 
-// Live camera player. Reads frontend_stream_type off the entity to pick
-// between WebRTC (Ring, Nest, Reolink-via-go2rtc) and HLS (most others),
-// then sets up the matching pipeline. HA exposes both transport types
-// over the same WS connection — we just have to use the right message
-// shape and SDP/playlist plumbing.
+// Live camera player. Cloud-camera integrations (Ring, Nest, Reolink-via-
+// HA) advertise streaming through one of three transports: subscribe-
+// based WebRTC, legacy WebRTC, or HLS. The transports HA exposes for a
+// given camera vary by integration version, so we just try each in order
+// until one connects, logging the outcome to in-app diagnostics so we
+// can see exactly what's available per camera.
 const CameraStream = ({ entityId, hass, style }) => {
   const videoRef = React.useRef(null);
   const [error, setError] = React.useState(null);
@@ -16,16 +17,7 @@ const CameraStream = ({ entityId, hass, style }) => {
     setError(null);
     const video = videoRef.current;
     if (!video || !hass?.connection || !entityId) return;
-    const ent = hass.states?.[entityId];
-    const streamType = ent?.attributes?.frontend_stream_type
-      || (ent?.attributes?.supported_features ? 'hls' : 'hls');
-
-    let cleanup = () => {};
-    if (streamType === 'web_rtc' || streamType === 'webrtc') {
-      cleanup = startWebRTC(entityId, hass, video, setError);
-    } else {
-      cleanup = startHLS(entityId, hass, video, setError);
-    }
+    const cleanup = startCameraStream(entityId, hass, video, setError);
     return () => { try { cleanup && cleanup(); } catch {} };
   }, [entityId, hass]);
 
@@ -44,150 +36,186 @@ const CameraStream = ({ entityId, hass, style }) => {
   });
 };
 
-// HLS path: HA's camera/stream WS returns a signed playlist URL that we
-// hand off to Hls.js (or feed natively on Safari / iOS).
-function startHLS(entityId, hass, video, setError) {
-  let hls = null;
-  let timer = null;
+function camDiag(entityId, msg) {
+  if (typeof window === 'undefined') return;
+  if (!window.__hcDiag) window.__hcDiag = [];
+  window.__hcDiag.push({ ts: Date.now(), kind: 'info', message: `[cam ${entityId}] ${msg}` });
+  while (window.__hcDiag.length > 50) window.__hcDiag.shift();
+}
+
+function startCameraStream(entityId, hass, video, setError) {
   let alive = true;
-  const fetchAndAttach = async () => {
-    try {
-      const resp = await hass.connection.sendMessagePromise({
-        type: 'camera/stream', entity_id: entityId, format: 'hls',
-      });
-      if (!alive || !resp?.url) return;
-      const url = resp.url;
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.play().catch(() => {});
-        return;
+  let cleanup = null;
+
+  const run = async () => {
+    // Order matters: WebRTC works for cloud cameras (Ring/Nest/etc),
+    // HLS works for local/RTSP and integrations with stream support.
+    // We attempt each, fully tearing down before falling through.
+    const errors = [];
+    for (const method of [trySubscribeWebRTC, tryLegacyWebRTC, tryHLS]) {
+      if (!alive) return;
+      try {
+        const result = await method(entityId, hass, video);
+        if (alive && result) {
+          camDiag(entityId, `streaming via ${result.kind}`);
+          cleanup = result.cleanup;
+          return;
+        }
+      } catch (e) {
+        const msg = e?.message || String(e);
+        errors.push(`${method.label || method.name}: ${msg}`);
+        camDiag(entityId, `${method.label || method.name} failed — ${msg}`);
       }
-      if (Hls.isSupported()) {
-        if (hls) { hls.destroy(); hls = null; }
-        hls = new Hls({ liveDurationInfinity: true, lowLatencyMode: true });
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-        hls.on(Hls.Events.ERROR, (_e, data) => {
-          if (data?.fatal) {
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-            else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-            else { hls.destroy(); hls = null; }
-          }
-        });
-      } else {
-        setError('HLS playback not supported in this browser');
-      }
-    } catch (e) {
-      if (alive) setError(e?.message || String(e));
+    }
+    if (alive) {
+      setError(errors.length
+        ? errors[errors.length - 1] // surface the last (HLS) error since it's typically the most descriptive
+        : 'No supported stream method');
     }
   };
-  fetchAndAttach();
-  // HA's signed stream URL stays valid for ~5 min — re-fetch periodically
-  // so a long viewing session doesn't drop.
-  timer = setInterval(fetchAndAttach, 4 * 60 * 1000);
+  run();
+
   return () => {
     alive = false;
-    if (timer) clearInterval(timer);
-    if (hls) try { hls.destroy(); } catch {}
-    try { video.removeAttribute('src'); video.load(); } catch {}
+    if (cleanup) try { cleanup(); } catch {}
   };
 }
 
-// WebRTC path: HA negotiates an SDP offer/answer through a single WS
-// command. Ring (and most modern cloud-camera integrations) only
-// expose this transport — HLS is rejected with "does not support
-// play stream service".
-function startWebRTC(entityId, hass, video, setError) {
-  let pc = null;
-  let alive = true;
-  let unsub = null;
+// New subscribe-based WebRTC handshake. Streams session/answer/candidate
+// messages over a single WS subscription.
+async function trySubscribeWebRTC(entityId, hass, video) {
+  const pc = newPC();
+  attachToVideo(pc, video);
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'recvonly' });
+  await pc.setLocalDescription(await pc.createOffer());
+  await waitIce(pc);
 
-  const start = async () => {
-    try {
-      pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      });
-      pc.ontrack = (e) => {
-        if (e.streams?.[0]) video.srcObject = e.streams[0];
-      };
-      pc.addTransceiver('video', { direction: 'recvonly' });
-      pc.addTransceiver('audio', { direction: 'recvonly' });
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      // Wait for ICE gathering to finish so the SDP we hand HA contains
-      // every candidate. Cap at 3 s — most browsers complete in well
-      // under a second; we don't want to block forever on a stuck host.
-      await new Promise((resolve) => {
-        if (pc.iceGatheringState === 'complete') return resolve();
-        const handler = () => {
-          if (pc.iceGatheringState === 'complete') {
-            pc.removeEventListener('icegatheringstatechange', handler);
-            resolve();
-          }
-        };
-        pc.addEventListener('icegatheringstatechange', handler);
-        setTimeout(resolve, 3000);
-      });
-      if (!alive) return;
-
-      // Newer HA versions use a subscribe-based handshake under
-      // camera/webrtc/offer that streams session/answer/candidate
-      // messages. Older versions answer once via camera/web_rtc_offer.
-      // Try the newer subscribe API first; fall back if HA doesn't
-      // know it.
-      let answered = false;
-      try {
-        unsub = await hass.connection.subscribeMessage(
-          (msg) => {
-            if (!alive || answered) return;
-            if (msg?.type === 'answer' && msg.answer) {
-              answered = true;
-              pc.setRemoteDescription({ type: 'answer', sdp: msg.answer })
-                .catch((e) => setError(e?.message || String(e)));
-            } else if (msg?.type === 'error') {
-              setError(msg.message || 'WebRTC negotiation error');
-            } else if (msg?.type === 'candidate' && msg.candidate) {
-              pc.addIceCandidate({ candidate: msg.candidate, sdpMLineIndex: 0 }).catch(() => {});
-            }
-          },
-          { type: 'camera/webrtc/offer', entity_id: entityId, offer: pc.localDescription.sdp },
-        );
-      } catch (e) {
-        // Fall back to the legacy one-shot command.
-        try {
-          const resp = await hass.connection.sendMessagePromise({
-            type: 'camera/web_rtc_offer',
-            entity_id: entityId,
-            offer: pc.localDescription.sdp,
-          });
-          if (!alive) return;
-          if (resp?.answer) {
-            await pc.setRemoteDescription({ type: 'answer', sdp: resp.answer });
-          } else {
-            setError('No SDP answer returned by HA');
-          }
-        } catch (e2) {
-          if (alive) setError(e2?.message || String(e2));
-        }
+  let answered = false;
+  const unsub = await hass.connection.subscribeMessage(
+    (msg) => {
+      if (!msg) return;
+      if (msg.type === 'answer' && msg.answer && !answered) {
+        answered = true;
+        pc.setRemoteDescription({ type: 'answer', sdp: msg.answer }).catch(() => {});
+      } else if (msg.type === 'candidate' && msg.candidate) {
+        pc.addIceCandidate({ candidate: msg.candidate, sdpMLineIndex: 0 }).catch(() => {});
+      } else if (msg.type === 'error') {
+        throw new Error(msg.message || 'WebRTC error');
       }
-    } catch (e) {
-      if (alive) setError(e?.message || String(e));
-    }
+    },
+    { type: 'camera/webrtc/offer', entity_id: entityId, offer: pc.localDescription.sdp },
+  );
+  // Subscribe returned successfully — wait briefly for an answer; if
+  // none arrives, treat as failure so we can fall through.
+  await waitForAnswer(pc, 5000);
+  if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
+    try { unsub(); } catch {}
+    pc.close();
+    throw new Error('WebRTC connection failed');
+  }
+  return {
+    kind: 'webrtc-subscribe',
+    cleanup: () => { try { unsub(); } catch {}; teardown(pc, video); },
   };
-  start();
+}
+trySubscribeWebRTC.label = 'WebRTC (subscribe)';
 
-  return () => {
-    alive = false;
-    if (unsub) try { unsub(); } catch {}
-    if (pc) try { pc.close(); } catch {}
-    if (video.srcObject) {
-      try { video.srcObject.getTracks().forEach(t => t.stop()); } catch {}
-      video.srcObject = null;
+// Legacy one-shot WebRTC. Older HA versions answer with a single
+// camera/web_rtc_offer response containing the SDP answer.
+async function tryLegacyWebRTC(entityId, hass, video) {
+  const pc = newPC();
+  attachToVideo(pc, video);
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'recvonly' });
+  await pc.setLocalDescription(await pc.createOffer());
+  await waitIce(pc);
+
+  const resp = await hass.connection.sendMessagePromise({
+    type: 'camera/web_rtc_offer',
+    entity_id: entityId,
+    offer: pc.localDescription.sdp,
+  });
+  if (!resp?.answer) { pc.close(); throw new Error('no SDP answer'); }
+  await pc.setRemoteDescription({ type: 'answer', sdp: resp.answer });
+  await waitForAnswer(pc, 5000);
+  if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
+    pc.close(); throw new Error('WebRTC connection failed');
+  }
+  return { kind: 'webrtc-legacy', cleanup: () => teardown(pc, video) };
+}
+tryLegacyWebRTC.label = 'WebRTC (legacy)';
+
+// HLS fallback for cameras that ARE backed by a real stream component.
+async function tryHLS(entityId, hass, video) {
+  const resp = await hass.connection.sendMessagePromise({
+    type: 'camera/stream', entity_id: entityId, format: 'hls',
+  });
+  if (!resp?.url) throw new Error('no playlist URL');
+  // Native HLS on Safari / iOS first.
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = resp.url;
+    video.play().catch(() => {});
+    return { kind: 'hls-native', cleanup: () => { try { video.removeAttribute('src'); video.load(); } catch {} } };
+  }
+  if (!Hls.isSupported()) throw new Error('HLS not supported');
+  const hls = new Hls({ liveDurationInfinity: true, lowLatencyMode: true });
+  hls.loadSource(resp.url);
+  hls.attachMedia(video);
+  hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+  hls.on(Hls.Events.ERROR, (_e, data) => {
+    if (data?.fatal) {
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+      else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+      else hls.destroy();
     }
-  };
+  });
+  return { kind: 'hls', cleanup: () => { try { hls.destroy(); } catch {} } };
+}
+tryHLS.label = 'HLS';
+
+// ── WebRTC plumbing helpers ────────────────────────────────────────────────
+function newPC() {
+  return new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+}
+function attachToVideo(pc, video) {
+  pc.ontrack = (e) => { if (e.streams?.[0]) video.srcObject = e.streams[0]; };
+}
+function waitIce(pc) {
+  return new Promise((resolve) => {
+    if (pc.iceGatheringState === 'complete') return resolve();
+    const handler = () => {
+      if (pc.iceGatheringState === 'complete') {
+        pc.removeEventListener('icegatheringstatechange', handler);
+        resolve();
+      }
+    };
+    pc.addEventListener('icegatheringstatechange', handler);
+    setTimeout(resolve, 3000);
+  });
+}
+function waitForAnswer(pc, ms) {
+  return new Promise((resolve) => {
+    if (pc.connectionState === 'connected' || pc.iceConnectionState === 'connected') return resolve();
+    const handler = () => {
+      if (['connected', 'completed'].includes(pc.iceConnectionState) ||
+          ['connected'].includes(pc.connectionState)) {
+        pc.removeEventListener('connectionstatechange', handler);
+        pc.removeEventListener('iceconnectionstatechange', handler);
+        resolve();
+      }
+    };
+    pc.addEventListener('connectionstatechange', handler);
+    pc.addEventListener('iceconnectionstatechange', handler);
+    setTimeout(resolve, ms);
+  });
+}
+function teardown(pc, video) {
+  try { pc.close(); } catch {}
+  if (video?.srcObject) {
+    try { video.srcObject.getTracks().forEach(t => t.stop()); } catch {}
+    video.srcObject = null;
+  }
 }
 
 const SECTIONS = [
@@ -379,11 +407,28 @@ const ClimateSection = ({ ctx }) => {
               ));
             })()}
           </div>
+          {/* Live HVAC action — surfaces what the system is actually
+              doing (heating / cooling / idle / fan-only) right now,
+              regardless of which top-level mode the user picked.
+              Useful especially on Nest where the only top-level modes
+              are Auto and Off. */}
+          {t.action && t.action !== 'idle' && t.action !== 'off' && (
+            <div style={{display:'flex', alignItems:'center', gap:8, fontSize:12, color:p.fg2}}>
+              <span style={{
+                width:8, height:8, borderRadius:'50%',
+                background: t.action === 'heating' ? '#d8843e' : t.action === 'cooling' ? '#5aa6c7' : p.fg3,
+                boxShadow: `0 0 10px 1px ${t.action === 'heating' ? 'rgba(216,132,62,0.55)' : t.action === 'cooling' ? 'rgba(90,166,199,0.55)' : 'transparent'}`,
+                animation: 'pulseDot 1.6s ease-in-out infinite',
+              }}/>
+              <span style={{textTransform:'capitalize'}}>Currently {t.action}</span>
+            </div>
+          )}
           <div style={{fontSize:11, color:p.fg3, fontStyle:'italic', fontFamily:fonts.display}}>
             Drag the dial to set the target temperature. {state.weather.summary.toLowerCase()} outside.
           </div>
         </div>
       </window.Card>
+      <style>{`@keyframes pulseDot { 0%,100% { opacity:0.6 } 50% { opacity:1 } }`}</style>
     </window.Section>
   );
 };

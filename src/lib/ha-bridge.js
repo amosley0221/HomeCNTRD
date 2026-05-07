@@ -151,10 +151,13 @@ function translate(states) {
       case 'climate':
         if (!out.thermostat) {
           const a = e.attributes || {};
-          // For dual-setpoint modes (heat_cool / auto) the entity reports
-          // target_temp_low and target_temp_high instead of a single
-          // temperature. Display the midpoint and remember both bounds
-          // so the dispatcher can re-build the right service call.
+          // HA's TARGET_TEMPERATURE_RANGE bit (2) marks support for the
+          // dual-setpoint API. Nest in HEAT_COOL mode often DOESN'T set
+          // it — the integration only accepts a single `temperature`,
+          // not target_temp_low/high. We use this flag in the dispatcher
+          // below to pick the right service shape.
+          const features = a.supported_features || 0;
+          const supportsRange = (features & 2) !== 0;
           const target = a.temperature
             ?? ((a.target_temp_low != null && a.target_temp_high != null)
                 ? Math.round((a.target_temp_low + a.target_temp_high) / 2)
@@ -166,7 +169,9 @@ function translate(states) {
             targetLow: a.target_temp_low ?? null,
             targetHigh: a.target_temp_high ?? null,
             mode: e.state || 'auto',
+            action: a.hvac_action || null, // 'heating' | 'cooling' | 'idle' | null
             hvacModes: a.hvac_modes || ['off', 'heat_cool', 'cool', 'heat', 'auto'],
+            supportsRange,
             minTemp: a.min_temp ?? 50,
             maxTemp: a.max_temp ?? 90,
             humidity: a.current_humidity ?? null,
@@ -578,7 +583,12 @@ function diffAndDispatch(prev, next, hass) {
       // target_temp_high; single-setpoint modes use temperature. Nest
       // in particular rejects {temperature: x} when in heat_cool mode.
       const setTempForMode = (mode) => {
-        if (mode === 'heat_cool' || mode === 'auto') {
+        // Dual-setpoint payload only when the entity actually advertises
+        // TARGET_TEMPERATURE_RANGE. Nest in heat_cool mode commonly
+        // exposes hvac_modes=['off','heat_cool'] but supported_features=1
+        // (single setpoint) — sending target_temp_low/high then trips
+        // HA's "entity does not support it" validator.
+        if ((mode === 'heat_cool' || mode === 'auto') && next.thermostat.supportsRange) {
           return { entity_id: id, target_temp_low: target - 2, target_temp_high: target + 2 };
         }
         return { entity_id: id, temperature: target };
