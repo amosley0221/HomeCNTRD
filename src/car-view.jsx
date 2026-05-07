@@ -9,16 +9,18 @@
 //   2. Tesla's public configurator compositor URL     ← live render
 //   3. Inline SVG silhouette                          ← always works
 
-// Tesla's public configurator compositor. Options chosen for a Pearl
-// White 2020 Model 3 with 19" Sport wheels (silver) and a black interior.
-//   $MT311 — Model 3 Long Range
-//   $PPSW  — Pearl White paint
-//   $IBB1  — Black interior
-//   $WY19B — 19" Sport wheels (silver)
+// Tesla's public configurator compositor. Some option combinations cause
+// the compositor to drop the wheels in 3-quarter view, so we ask for a
+// side view (STUD_SIDE) which always renders them. For a 2020 Pearl
+// White Model 3 with the 19" Sport wheel option:
+//   $MTY03 — Model 3 Long Range AWD
+//   $PPSW  — Pearl White
+//   $IPB1  — Premium black interior
+//   $W39B  — 19" Sport wheels (silver)
 const TESLA_COMPOSITOR_URL =
   'https://static-assets.tesla.com/configurator/compositor' +
-  '?context=design_studio_2&bkba_opt=1&view=STUD_3QTR&size=1920' +
-  '&model=m3&options=$MT311,$PPSW,$IBB1,$WY19B';
+  '?context=design_studio_2&bkba_opt=2&view=STUD_SIDE&size=1920' +
+  '&model=m3&options=$MTY03,$PPSW,$IPB1,$W39B';
 
 const CarView = ({ ctx }) => {
   const { p, fonts, dens, state, setState } = ctx;
@@ -99,8 +101,8 @@ const CarView = ({ ctx }) => {
                 onError={onImgError}
                 style={{
                   position:'absolute', top:'50%', left:'50%',
-                  transform:'translate(-50%, -55%)',
-                  width:'88%', height:'auto', maxHeight:'78%',
+                  transform:'translate(-50%, -60%)',
+                  width:'92%', height:'auto', maxHeight:'72%',
                   objectFit:'contain',
                   filter: p.dark ? 'drop-shadow(0 8px 24px rgba(0,0,0,.55))' : 'drop-shadow(0 8px 18px rgba(0,0,0,.18))',
                 }}

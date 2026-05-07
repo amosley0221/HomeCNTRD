@@ -180,6 +180,10 @@ function translate(states) {
           online: e.state !== 'unavailable',
           motion: false,
           hue: 'oklch(60% 0.10 200)',
+          // HA exposes a snapshot at entity_picture with a signed token —
+          // safe to drop straight into an <img src>. Relative URLs resolve
+          // against the HA origin (which is what's serving our panel).
+          picture: e.attributes?.entity_picture || null,
         });
         break;
 
@@ -200,10 +204,26 @@ function translate(states) {
 
       case 'alarm_control_panel':
         if (!out.ring) {
-          const map = { armed_home: 'home', armed_away: 'away', armed_night: 'home', disarmed: 'disarmed' };
+          // HA's alarm states cover steady states (disarmed/armed_home/away/
+          // night/vacation) plus transitional ones (arming/pending/disarming/
+          // triggered). Our 3-mode UI is home/away/disarmed, so map the
+          // transitionals to a best-guess steady state — preferring
+          // attributes.next_state when the integration exposes it — instead
+          // of falling through to "disarmed" (which would visibly flip the
+          // pill back during the 30 s arming countdown).
+          const st = e.state;
+          const next = e.attributes?.next_state;
+          let mode;
+          if (st === 'disarmed' || st === 'disarming') mode = 'disarmed';
+          else if (st === 'armed_away' || st === 'armed_vacation') mode = 'away';
+          else if (st && st.startsWith('armed_')) mode = 'home';
+          else if (st === 'arming' || st === 'pending') {
+            mode = next === 'armed_away' || next === 'armed_vacation' ? 'away' : 'home';
+          }
+          else if (st === 'triggered') mode = 'home';
+          else mode = 'disarmed';
           out.ring = {
-            id,
-            mode: map[e.state] || 'disarmed',
+            id, mode,
             lastChanged: friendlyTime(e.last_changed),
             changedBy: 'HA',
           };

@@ -415,14 +415,38 @@ const TodaySection = ({ ctx }) => {
 
 const CamThumb = ({ c, ctx }) => {
   const { p, fonts } = ctx;
+  // HA's snapshot URL doesn't auto-refresh — append a cache-busting param
+  // that ticks every 10 s so we periodically re-pull the latest still.
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!c.picture) return;
+    const t = setInterval(() => setTick(x => x + 1), 10000);
+    return () => clearInterval(t);
+  }, [c.picture]);
+  const src = c.picture
+    ? (c.picture + (c.picture.includes('?') ? '&' : '?') + 'hc=' + tick)
+    : null;
+
   return (
     <div style={{aspectRatio:'16/10', borderRadius:10, position:'relative', overflow:'hidden', background:`linear-gradient(135deg, ${c.hue}, oklch(20% 0.04 25))`, color:'#fff'}}>
-      <div style={{position:'absolute', inset:0, backgroundImage:`repeating-linear-gradient(110deg, rgba(255,255,255,0.05) 0 12px, transparent 12px 24px)`}}/>
-      <div style={{position:'absolute', top:8, left:8, fontSize:10, padding:'2px 7px', borderRadius:999, background:'rgba(0,0,0,.5)', display:'flex', alignItems:'center', gap:5}}>
+      {src ? (
+        <img
+          src={src}
+          alt={c.name}
+          style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', display:'block'}}
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+      ) : (
+        <div style={{position:'absolute', inset:0, backgroundImage:`repeating-linear-gradient(110deg, rgba(255,255,255,0.05) 0 12px, transparent 12px 24px)`}}/>
+      )}
+      {/* Dark gradient at top and bottom so the LIVE pill and label stay
+          legible over bright snapshots. */}
+      {src && <div style={{position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.55) 100%)'}}/>}
+      <div style={{position:'absolute', top:8, left:8, fontSize:10, padding:'2px 7px', borderRadius:999, background:'rgba(0,0,0,.55)', display:'flex', alignItems:'center', gap:5}}>
         <span style={{width:5, height:5, borderRadius:'50%', background: c.online ? '#ff5c5c' : '#666'}}/>{c.online ? 'LIVE' : 'OFF'}
       </div>
       {c.motion && <div style={{position:'absolute', top:8, right:8, fontSize:10, padding:'2px 7px', borderRadius:999, background:'rgba(255,92,92,.85)'}}>MOTION</div>}
-      <div style={{position:'absolute', bottom:8, left:10, fontFamily:fonts.display, fontSize:13, fontStyle:'italic'}}>{c.name}</div>
+      <div style={{position:'absolute', bottom:8, left:10, fontFamily:fonts.display, fontSize:13, fontStyle:'italic', textShadow:'0 1px 4px rgba(0,0,0,.7)'}}>{c.name}</div>
     </div>
   );
 };

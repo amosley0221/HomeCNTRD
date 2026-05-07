@@ -33,21 +33,9 @@ const CamerasView = ({ ctx }) => {
           ))}
         </div>
       </div>
-      <window.Section title="Recent activity" p={p} fonts={fonts}>
-        {[
-          { t:'7:38 PM', cam:'Front Door', what:'Person at front door · package delivered', dot:p.accent },
-          { t:'5:14 PM', cam:'Driveway', what:"Vehicle pulled in · Frances's Subaru", dot:'oklch(60% 0.13 145)' },
-          { t:'2:02 PM', cam:'Back Yard', what:'Motion · likely a deer', dot:p.fg3 },
-          { t:'12:38 PM', cam:'Garage', what:'Door opened · Frances', dot:'oklch(60% 0.13 145)' },
-        ].map((row,i) => (
-          <div key={i} style={{display:'flex', alignItems:'center', gap:14, padding:'12px 14px', borderRadius:10, background:p.surface2, border:`.5px solid ${p.border}`, marginBottom:8}}>
-            <div style={{width:60, fontSize:12, color:p.fg2, fontVariantNumeric:'tabular-nums'}}>{row.t}</div>
-            <div style={{width:6, height:6, borderRadius:'50%', background:row.dot}}/>
-            <div style={{flex:1, fontSize:13, color:p.fg}}>{row.what}</div>
-            <div style={{fontSize:11, color:p.fg3, fontStyle:'italic'}}>{row.cam}</div>
-          </div>
-        ))}
-      </window.Section>
+      {/* Recent activity is sourced from HA's logbook — coming soon.
+          Until that's wired in, motion state is shown live on each thumb
+          via the MOTION pill (cross-linked from binary_sensor.*_motion). */}
       <div style={{height:60}}/>
     </>
   );
