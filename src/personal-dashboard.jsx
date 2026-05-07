@@ -134,6 +134,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const renderTile = (id) => {
     switch (id) {
       case 'weather': return <WeatherCard weather={state.weather} hass={hass} {...tileTheme}/>;
+      case 'car':     return <CarCard hass={hass} {...tileTheme}/>;
       case 'sports':  return <SportsCard {...tileTheme}/>;
       case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
       case 'todo':    return <TodoCard todos={state.todos} {...tileTheme}/>;
@@ -601,6 +602,301 @@ const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2,
     </div>
   );
 };
+
+// ── Section: Car (Tessie) ─────────────────────────────────────────────────
+//
+// Reads from / writes to the Tessie integration. Entity ids follow the
+// pattern <prefix>_<thing> where the prefix is the slugified Tesla name.
+// Change CAR_PREFIX if you rename the car in the Tesla app.
+const CAR_PREFIX = 'tone';
+
+const CarCard = ({ hass, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow }) => {
+  // Force a re-render when hass.states changes. The HassContext value is
+  // the same object reference across updates, so we listen for the
+  // bridge's tick (which the rest of the dashboard already drives).
+  const [, force] = React.useReducer(x => x + 1, 0);
+  React.useEffect(() => {
+    if (!hass) return;
+    const t = setInterval(force, 5000); // refresh local view every 5s
+    return () => clearInterval(t);
+  }, [hass]);
+
+  const stateOf = (id) => hass?.states?.[id];
+  const val = (id) => stateOf(id)?.state ?? null;
+  const num = (id) => {
+    const s = val(id);
+    if (s === null || s === undefined || s === 'unavailable' || s === 'unknown') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  };
+  const attr = (id, key) => stateOf(id)?.attributes?.[key];
+  const exists = (id) => !!stateOf(id);
+
+  const callService = async (domain, service, data = {}) => {
+    if (!hass?.callService) return;
+    try { await hass.callService(domain, service, data); }
+    catch (err) { console.error(`[car] ${domain}.${service} failed:`, err); }
+  };
+
+  // Reads
+  const battery = num(`sensor.${CAR_PREFIX}_battery_level`);
+  const range = num(`sensor.${CAR_PREFIX}_battery_range`);
+  const rangeUnit = attr(`sensor.${CAR_PREFIX}_battery_range`, 'unit_of_measurement') || 'mi';
+  const charging = val(`sensor.${CAR_PREFIX}_charging`);
+  const isCharging = charging === 'Charging';
+  const timeToFull = num(`sensor.${CAR_PREFIX}_time_to_full_charge`); // hours
+  const inside = num(`sensor.${CAR_PREFIX}_inside_temperature`);
+  const outside = num(`sensor.${CAR_PREFIX}_outside_temperature`);
+  const tempUnit = attr(`sensor.${CAR_PREFIX}_inside_temperature`, 'unit_of_measurement') || '°F';
+
+  const lockId = `lock.${CAR_PREFIX}`;
+  const lockState = val(lockId);
+  const isLocked = lockState === 'locked';
+
+  const climateId = `climate.${CAR_PREFIX}_climate`;
+  const climateState = val(climateId);
+  const climateOn = climateState && climateState !== 'off' && climateState !== 'unavailable' && climateState !== 'unknown';
+  const climateTarget = attr(climateId, 'temperature');
+  const climateMin = attr(climateId, 'min_temp') ?? 60;
+  const climateMax = attr(climateId, 'max_temp') ?? 82;
+
+  const frunkId = `cover.${CAR_PREFIX}_frunk`;
+  const trunkId = `cover.${CAR_PREFIX}_trunk`;
+  const chargePortId = `cover.${CAR_PREFIX}_charge_port_door`;
+  const sentryId = `switch.${CAR_PREFIX}_sentry_mode`;
+  const defrostId = `switch.${CAR_PREFIX}_defrost`;
+
+  // No data yet — show a friendly placeholder rather than a broken card.
+  if (!hass || !exists(`sensor.${CAR_PREFIX}_battery_level`)) {
+    return (
+      <Card surface={surface} border={border}>
+        <CardHeader title="Car" right={null} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <div style={{fontSize:12, color:fg3, lineHeight: 1.5}}>
+          Waiting for Tessie data. If this persists, check that the Tessie integration is active in HA and that the car name's slug is <code style={{color:fg2}}>{CAR_PREFIX}</code>.
+        </div>
+      </Card>
+    );
+  }
+
+  const carName = attr(`sensor.${CAR_PREFIX}_battery_level`, 'friendly_name')?.replace(/ Battery level$/i, '') || 'Tone';
+  const batteryColor = battery === null
+    ? fg3
+    : battery <= 20 ? '#c14d36' : battery <= 40 ? '#d8843e' : accent;
+
+  return (
+    <Card surface={surface} border={border}>
+      {/* Header */}
+      <div style={{display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom: 14, gap: 8}}>
+        <div style={{fontFamily: fonts.display, fontSize: 18, color: fg, fontWeight: 500}}>{carName}</div>
+        <div style={{display:'flex', alignItems:'center', gap: 8}}>
+          {isCharging && (
+            <span style={{
+              fontSize: 10, padding: '2px 8px', borderRadius: 999,
+              background: `${accent}22`, color: accent, fontWeight: 500,
+              letterSpacing: '.04em', textTransform: 'uppercase',
+            }}>Charging</span>
+          )}
+          <span style={{fontSize: 11, color: isLocked ? fg2 : '#d8843e'}}>
+            {isLocked ? 'Locked' : 'Unlocked'}
+          </span>
+        </div>
+      </div>
+
+      {/* Battery + range row */}
+      <div style={{display:'flex', alignItems:'center', gap: narrow ? 14 : 22, marginBottom: 16, flexWrap:'wrap'}}>
+        <div style={{flex: 1, minWidth: 200}}>
+          <div style={{display:'flex', alignItems:'baseline', gap: 8, marginBottom: 6}}>
+            <div style={{fontFamily: fonts.display, fontSize: narrow ? 36 : 44, lineHeight: 1, color: fg, fontWeight: 400, fontVariantNumeric:'tabular-nums'}}>
+              {battery !== null ? `${Math.round(battery)}%` : '—'}
+            </div>
+            {range !== null && (
+              <div style={{fontSize: 13, color: fg3, fontVariantNumeric:'tabular-nums'}}>
+                · {Math.round(range)} {rangeUnit}
+              </div>
+            )}
+          </div>
+          {/* Battery bar */}
+          <div style={{width: '100%', height: 6, background: 'rgba(241,234,217,0.06)', borderRadius: 3, overflow:'hidden'}}>
+            <div style={{
+              width: `${Math.max(0, Math.min(100, battery ?? 0))}%`,
+              height: '100%', background: batteryColor,
+              transition: 'width 600ms ease',
+            }}/>
+          </div>
+          {isCharging && timeToFull !== null && timeToFull > 0 && (
+            <div style={{fontSize: 11, color: fg3, marginTop: 6, fontVariantNumeric:'tabular-nums'}}>
+              {formatTimeToFull(timeToFull)} until full
+            </div>
+          )}
+        </div>
+
+        {/* Temps */}
+        {(inside !== null || outside !== null) && (
+          <div style={{display:'flex', gap: 14, flex:'none'}}>
+            {inside !== null && (
+              <Stat label="Inside" value={`${Math.round(inside)}${tempUnit}`} fonts={fonts} fg={fg} fg3={fg3}/>
+            )}
+            {outside !== null && (
+              <Stat label="Outside" value={`${Math.round(outside)}${tempUnit}`} fonts={fonts} fg={fg} fg3={fg3}/>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Climate set point — only if climate is on */}
+      {climateOn && climateTarget !== undefined && climateTarget !== null && (
+        <div style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between', gap: 10,
+          padding: '10px 12px', borderRadius: 10, marginBottom: 12,
+          background: `${accent}11`, border: `.5px solid ${accent}33`,
+        }}>
+          <div>
+            <div style={{fontSize: 10, color: accent, letterSpacing:'.06em', textTransform:'uppercase', fontWeight: 600, marginBottom: 2}}>Climate target</div>
+            <div style={{fontFamily: fonts.display, fontSize: 22, color: fg, fontVariantNumeric:'tabular-nums'}}>
+              {Math.round(climateTarget)}{tempUnit}
+            </div>
+          </div>
+          <div style={{display:'flex', gap: 6}}>
+            <TempBtn onClick={() => callService('climate', 'set_temperature', { entity_id: climateId, temperature: Math.max(climateMin, climateTarget - 1) })} border={border} fg={fg2}>−</TempBtn>
+            <TempBtn onClick={() => callService('climate', 'set_temperature', { entity_id: climateId, temperature: Math.min(climateMax, climateTarget + 1) })} border={border} fg={fg2}>+</TempBtn>
+          </div>
+        </div>
+      )}
+
+      {/* Action grid */}
+      <div style={{
+        display:'grid',
+        gridTemplateColumns: `repeat(${narrow ? 2 : 3}, 1fr)`,
+        gap: 8,
+      }}>
+        {exists(lockId) && (
+          <CarBtn
+            label={isLocked ? 'Unlock' : 'Lock'}
+            icon={isLocked ? '🔓' : '🔒'}
+            active={!isLocked}
+            onClick={() => callService('lock', isLocked ? 'unlock' : 'lock', { entity_id: lockId })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(climateId) && (
+          <CarBtn
+            label={climateOn ? 'Climate off' : 'Climate on'}
+            icon={climateOn ? '🌡️' : '🌬️'}
+            active={climateOn}
+            onClick={() => callService('climate', climateOn ? 'turn_off' : 'turn_on', { entity_id: climateId })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(frunkId) && (
+          <CarBtn
+            label="Frunk"
+            sub={val(frunkId) === 'open' ? 'Open' : 'Closed'}
+            icon="🚗"
+            active={val(frunkId) === 'open'}
+            onClick={() => callService('cover', val(frunkId) === 'open' ? 'close_cover' : 'open_cover', { entity_id: frunkId })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(trunkId) && (
+          <CarBtn
+            label="Trunk"
+            sub={val(trunkId) === 'open' ? 'Open' : 'Closed'}
+            icon="🧳"
+            active={val(trunkId) === 'open'}
+            onClick={() => callService('cover', val(trunkId) === 'open' ? 'close_cover' : 'open_cover', { entity_id: trunkId })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(chargePortId) && (
+          <CarBtn
+            label="Charge port"
+            sub={val(chargePortId) === 'open' ? 'Open' : 'Closed'}
+            icon="🔌"
+            active={val(chargePortId) === 'open'}
+            onClick={() => callService('cover', val(chargePortId) === 'open' ? 'close_cover' : 'open_cover', { entity_id: chargePortId })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(sentryId) && (
+          <CarBtn
+            label="Sentry"
+            sub={val(sentryId) === 'on' ? 'On' : 'Off'}
+            icon="👁️"
+            active={val(sentryId) === 'on'}
+            onClick={() => callService('switch', val(sentryId) === 'on' ? 'turn_off' : 'turn_on', { entity_id: sentryId })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(defrostId) && (
+          <CarBtn
+            label="Defrost"
+            sub={val(defrostId) === 'on' ? 'On' : 'Off'}
+            icon="❄️"
+            active={val(defrostId) === 'on'}
+            onClick={() => callService('switch', val(defrostId) === 'on' ? 'turn_off' : 'turn_on', { entity_id: defrostId })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(`button.${CAR_PREFIX}_flash_lights`) && (
+          <CarBtn
+            label="Flash"
+            icon="💡"
+            onClick={() => callService('button', 'press', { entity_id: `button.${CAR_PREFIX}_flash_lights` })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+        {exists(`button.${CAR_PREFIX}_honk_horn`) && (
+          <CarBtn
+            label="Honk"
+            icon="📣"
+            onClick={() => callService('button', 'press', { entity_id: `button.${CAR_PREFIX}_honk_horn` })}
+            accent={accent} surface={surface2} border={border} fg={fg} fg3={fg3}
+          />
+        )}
+      </div>
+    </Card>
+  );
+};
+
+const Stat = ({ label, value, fonts, fg, fg3 }) => (
+  <div style={{textAlign:'right'}}>
+    <div style={{fontSize: 9.5, color: fg3, letterSpacing:'.06em', textTransform:'uppercase', marginBottom: 2}}>{label}</div>
+    <div style={{fontFamily: fonts.display, fontSize: 16, color: fg, fontVariantNumeric:'tabular-nums'}}>{value}</div>
+  </div>
+);
+
+const TempBtn = ({ children, onClick, border, fg }) => (
+  <button onClick={onClick} style={{
+    width: 30, height: 30, borderRadius: 8,
+    background: 'transparent', border: `.5px solid ${border}`,
+    color: fg, fontSize: 16, cursor: 'pointer', fontFamily: 'inherit',
+    display:'inline-flex', alignItems:'center', justifyContent:'center',
+  }}>{children}</button>
+);
+
+const CarBtn = ({ label, sub, icon, active, onClick, accent, surface, border, fg, fg3 }) => (
+  <button onClick={onClick} style={{
+    padding: '12px 10px', borderRadius: 10,
+    background: active ? `${accent}1a` : surface,
+    border: `.5px solid ${active ? `${accent}66` : border}`,
+    color: fg, cursor: 'pointer', fontFamily: 'inherit',
+    display:'flex', flexDirection:'column', alignItems:'flex-start', gap: 4,
+    textAlign: 'left',
+  }}>
+    <span style={{fontSize: 18, lineHeight: 1}}>{icon}</span>
+    <span style={{fontSize: 12, fontWeight: 500, color: fg}}>{label}</span>
+    {sub && <span style={{fontSize: 10, color: active ? accent : fg3, letterSpacing:'.04em', textTransform:'uppercase'}}>{sub}</span>}
+  </button>
+);
+
+function formatTimeToFull(hours) {
+  if (!hours || hours <= 0) return '';
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
 
 // ── Section: Todo ─────────────────────────────────────────────────────────
 const TodoCard = ({ todos, accent, fonts, surface, fg, fg2, fg3, border }) => {
