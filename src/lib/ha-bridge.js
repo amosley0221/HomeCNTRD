@@ -150,12 +150,26 @@ function translate(states) {
 
       case 'climate':
         if (!out.thermostat) {
+          const a = e.attributes || {};
+          // For dual-setpoint modes (heat_cool / auto) the entity reports
+          // target_temp_low and target_temp_high instead of a single
+          // temperature. Display the midpoint and remember both bounds
+          // so the dispatcher can re-build the right service call.
+          const target = a.temperature
+            ?? ((a.target_temp_low != null && a.target_temp_high != null)
+                ? Math.round((a.target_temp_low + a.target_temp_high) / 2)
+                : 72);
           out.thermostat = {
             id,
-            temp: e.attributes?.current_temperature ?? 70,
-            target: e.attributes?.temperature ?? e.attributes?.target_temp_high ?? 72,
+            temp: a.current_temperature ?? 70,
+            target,
+            targetLow: a.target_temp_low ?? null,
+            targetHigh: a.target_temp_high ?? null,
             mode: e.state || 'auto',
-            humidity: e.attributes?.current_humidity ?? 42,
+            hvacModes: a.hvac_modes || ['off', 'heat_cool', 'cool', 'heat', 'auto'],
+            minTemp: a.min_temp ?? 50,
+            maxTemp: a.max_temp ?? 90,
+            humidity: a.current_humidity ?? null,
           };
         }
         break;
@@ -556,19 +570,43 @@ function diffAndDispatch(prev, next, hass) {
       diagPush({ ts: Date.now(), kind: 'skip',
         message: `thermostat change ignored — no climate.* entity in HA. Add a climate integration (Nest/Ecobee/etc.) and the dial will start firing set_temperature.` });
     } else {
-      // If the thermostat is OFF and the user just dragged the target dial,
-      // most integrations (Nest in particular) silently no-op the
-      // set_temperature call. Bumping HVAC into 'auto' first means the new
-      // target actually sticks.
-      if (prev.thermostat.target !== next.thermostat.target) {
-        const wasOff = prev.thermostat.mode === 'off' || prev.thermostat.mode === 'unavailable';
-        if (wasOff) {
-          call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: 'auto' });
+      const id = next.thermostat.id;
+      const supported = next.thermostat.hvacModes || [];
+      const target = next.thermostat.target;
+      // Build the right set_temperature payload for the active mode.
+      // Dual-setpoint modes (heat_cool/auto) need target_temp_low and
+      // target_temp_high; single-setpoint modes use temperature. Nest
+      // in particular rejects {temperature: x} when in heat_cool mode.
+      const setTempForMode = (mode) => {
+        if (mode === 'heat_cool' || mode === 'auto') {
+          return { entity_id: id, target_temp_low: target - 2, target_temp_high: target + 2 };
         }
-        call('climate', 'set_temperature', { entity_id: next.thermostat.id, temperature: next.thermostat.target });
-      }
+        return { entity_id: id, temperature: target };
+      };
+
       if (prev.thermostat.mode !== next.thermostat.mode) {
-        call('climate', 'set_hvac_mode', { entity_id: next.thermostat.id, hvac_mode: next.thermostat.mode });
+        if (supported.length && !supported.includes(next.thermostat.mode)) {
+          diagPush({ ts: Date.now(), kind: 'skip',
+            message: `HVAC mode "${next.thermostat.mode}" not supported by this thermostat. Supported: ${supported.join(', ')}.` });
+        } else {
+          call('climate', 'set_hvac_mode', { entity_id: id, hvac_mode: next.thermostat.mode });
+        }
+      }
+      if (prev.thermostat.target !== next.thermostat.target) {
+        // If currently off (or unavailable), pick a reasonable supported
+        // mode to switch into so the new target actually sticks.
+        const wasOff = prev.thermostat.mode === 'off' || prev.thermostat.mode === 'unavailable';
+        let activeMode = next.thermostat.mode;
+        if (wasOff || activeMode === 'off' || activeMode === 'unavailable') {
+          activeMode =
+            (supported.includes('heat_cool') && 'heat_cool') ||
+            (supported.includes('auto') && 'auto') ||
+            (supported.includes('cool') && 'cool') ||
+            (supported.includes('heat') && 'heat') ||
+            null;
+          if (activeMode) call('climate', 'set_hvac_mode', { entity_id: id, hvac_mode: activeMode });
+        }
+        if (activeMode) call('climate', 'set_temperature', setTempForMode(activeMode));
       }
     }
   }

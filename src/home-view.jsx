@@ -3,74 +3,33 @@
 import HassContext from './lib/hass-context.js';
 import Hls from 'hls.js';
 
-// Live HLS player. Asks HA over the WS bus for a short-lived HLS playlist
-// URL and plays it via Hls.js (or native HLS on Safari/iOS). HA's Ring
-// integration exposes its cameras via HLS only — there's no MJPEG path
-// that works generically across cloud-camera integrations.
+// Live camera player. Reads frontend_stream_type off the entity to pick
+// between WebRTC (Ring, Nest, Reolink-via-go2rtc) and HLS (most others),
+// then sets up the matching pipeline. HA exposes both transport types
+// over the same WS connection — we just have to use the right message
+// shape and SDP/playlist plumbing.
 const CameraStream = ({ entityId, hass, style }) => {
   const videoRef = React.useRef(null);
-  const [streamUrl, setStreamUrl] = React.useState(null);
   const [error, setError] = React.useState(null);
 
-  // Ask HA for the HLS playlist URL. The returned URL embeds a signed
-  // auth token; HA keeps the underlying stream alive for ~5 min after
-  // last access. We re-fetch every 4 min so the stream never drops.
   React.useEffect(() => {
-    if (!hass?.connection || !entityId) { setStreamUrl(null); return; }
-    let alive = true;
-    const fetchUrl = async () => {
-      try {
-        const resp = await hass.connection.sendMessagePromise({
-          type: 'camera/stream',
-          entity_id: entityId,
-          format: 'hls',
-        });
-        if (alive && resp?.url) { setStreamUrl(resp.url); setError(null); }
-      } catch (e) {
-        if (alive) setError(e?.message || String(e));
-      }
-    };
-    fetchUrl();
-    const t = setInterval(fetchUrl, 4 * 60 * 1000);
-    return () => { alive = false; clearInterval(t); };
+    setError(null);
+    const video = videoRef.current;
+    if (!video || !hass?.connection || !entityId) return;
+    const ent = hass.states?.[entityId];
+    const streamType = ent?.attributes?.frontend_stream_type
+      || (ent?.attributes?.supported_features ? 'hls' : 'hls');
+
+    let cleanup = () => {};
+    if (streamType === 'web_rtc' || streamType === 'webrtc') {
+      cleanup = startWebRTC(entityId, hass, video, setError);
+    } else {
+      cleanup = startHLS(entityId, hass, video, setError);
+    }
+    return () => { try { cleanup && cleanup(); } catch {} };
   }, [entityId, hass]);
 
-  React.useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !streamUrl) return;
-
-    // iOS / Safari support HLS natively — feed the playlist straight in.
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = streamUrl;
-      video.play().catch(() => {});
-      return () => { video.removeAttribute('src'); video.load(); };
-    }
-
-    // Everything else: use Hls.js for the playlist + segment plumbing.
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        liveDurationInfinity: true,
-        lowLatencyMode: true,
-        // HA segments are protected by a signed token in the URL; the HLS
-        // engine just needs to be told the manifest URL. Default fetch
-        // settings work.
-      });
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-      hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data?.fatal) {
-          // For fatal errors, try to recover once before giving up.
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-          else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-          else hls.destroy();
-        }
-      });
-      return () => hls.destroy();
-    }
-  }, [streamUrl]);
-
-  if (error && !streamUrl) {
+  if (error) {
     return React.createElement('div', {
       style: { ...style, display:'grid', placeItems:'center', color:'rgba(255,255,255,0.6)', fontSize:11, padding:8, textAlign:'center' },
     }, `Live stream unavailable: ${error}`);
@@ -84,6 +43,152 @@ const CameraStream = ({ entityId, hass, style }) => {
     style: { display:'block', width:'100%', height:'100%', objectFit:'cover', ...style },
   });
 };
+
+// HLS path: HA's camera/stream WS returns a signed playlist URL that we
+// hand off to Hls.js (or feed natively on Safari / iOS).
+function startHLS(entityId, hass, video, setError) {
+  let hls = null;
+  let timer = null;
+  let alive = true;
+  const fetchAndAttach = async () => {
+    try {
+      const resp = await hass.connection.sendMessagePromise({
+        type: 'camera/stream', entity_id: entityId, format: 'hls',
+      });
+      if (!alive || !resp?.url) return;
+      const url = resp.url;
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+        video.play().catch(() => {});
+        return;
+      }
+      if (Hls.isSupported()) {
+        if (hls) { hls.destroy(); hls = null; }
+        hls = new Hls({ liveDurationInfinity: true, lowLatencyMode: true });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+        hls.on(Hls.Events.ERROR, (_e, data) => {
+          if (data?.fatal) {
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+            else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+            else { hls.destroy(); hls = null; }
+          }
+        });
+      } else {
+        setError('HLS playback not supported in this browser');
+      }
+    } catch (e) {
+      if (alive) setError(e?.message || String(e));
+    }
+  };
+  fetchAndAttach();
+  // HA's signed stream URL stays valid for ~5 min — re-fetch periodically
+  // so a long viewing session doesn't drop.
+  timer = setInterval(fetchAndAttach, 4 * 60 * 1000);
+  return () => {
+    alive = false;
+    if (timer) clearInterval(timer);
+    if (hls) try { hls.destroy(); } catch {}
+    try { video.removeAttribute('src'); video.load(); } catch {}
+  };
+}
+
+// WebRTC path: HA negotiates an SDP offer/answer through a single WS
+// command. Ring (and most modern cloud-camera integrations) only
+// expose this transport — HLS is rejected with "does not support
+// play stream service".
+function startWebRTC(entityId, hass, video, setError) {
+  let pc = null;
+  let alive = true;
+  let unsub = null;
+
+  const start = async () => {
+    try {
+      pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      });
+      pc.ontrack = (e) => {
+        if (e.streams?.[0]) video.srcObject = e.streams[0];
+      };
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Wait for ICE gathering to finish so the SDP we hand HA contains
+      // every candidate. Cap at 3 s — most browsers complete in well
+      // under a second; we don't want to block forever on a stuck host.
+      await new Promise((resolve) => {
+        if (pc.iceGatheringState === 'complete') return resolve();
+        const handler = () => {
+          if (pc.iceGatheringState === 'complete') {
+            pc.removeEventListener('icegatheringstatechange', handler);
+            resolve();
+          }
+        };
+        pc.addEventListener('icegatheringstatechange', handler);
+        setTimeout(resolve, 3000);
+      });
+      if (!alive) return;
+
+      // Newer HA versions use a subscribe-based handshake under
+      // camera/webrtc/offer that streams session/answer/candidate
+      // messages. Older versions answer once via camera/web_rtc_offer.
+      // Try the newer subscribe API first; fall back if HA doesn't
+      // know it.
+      let answered = false;
+      try {
+        unsub = await hass.connection.subscribeMessage(
+          (msg) => {
+            if (!alive || answered) return;
+            if (msg?.type === 'answer' && msg.answer) {
+              answered = true;
+              pc.setRemoteDescription({ type: 'answer', sdp: msg.answer })
+                .catch((e) => setError(e?.message || String(e)));
+            } else if (msg?.type === 'error') {
+              setError(msg.message || 'WebRTC negotiation error');
+            } else if (msg?.type === 'candidate' && msg.candidate) {
+              pc.addIceCandidate({ candidate: msg.candidate, sdpMLineIndex: 0 }).catch(() => {});
+            }
+          },
+          { type: 'camera/webrtc/offer', entity_id: entityId, offer: pc.localDescription.sdp },
+        );
+      } catch (e) {
+        // Fall back to the legacy one-shot command.
+        try {
+          const resp = await hass.connection.sendMessagePromise({
+            type: 'camera/web_rtc_offer',
+            entity_id: entityId,
+            offer: pc.localDescription.sdp,
+          });
+          if (!alive) return;
+          if (resp?.answer) {
+            await pc.setRemoteDescription({ type: 'answer', sdp: resp.answer });
+          } else {
+            setError('No SDP answer returned by HA');
+          }
+        } catch (e2) {
+          if (alive) setError(e2?.message || String(e2));
+        }
+      }
+    } catch (e) {
+      if (alive) setError(e?.message || String(e));
+    }
+  };
+  start();
+
+  return () => {
+    alive = false;
+    if (unsub) try { unsub(); } catch {}
+    if (pc) try { pc.close(); } catch {}
+    if (video.srcObject) {
+      try { video.srcObject.getTracks().forEach(t => t.stop()); } catch {}
+      video.srcObject = null;
+    }
+  };
+}
 
 const SECTIONS = [
   { id:'climate',  label:'Climate' },
@@ -241,15 +346,38 @@ const ClimateSection = ({ ctx }) => {
             <div><div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase'}}>Humidity</div><div style={{fontFamily:fonts.display, fontSize:22, color:p.fg, marginTop:2}}>{t.humidity}%</div></div>
             <div><div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase'}}>Outside</div><div style={{fontFamily:fonts.display, fontSize:22, color:p.fg, marginTop:2}}>{state.weather.temp}°</div></div>
           </div>
-          <div style={{display:'flex', gap:8}}>
-            {['cool','auto','heat','off'].map(m => (
-              <button key={m} onClick={() => setMode(m)} style={{
-                flex:1, padding:'10px 0', textTransform:'capitalize',
-                border:`.5px solid ${m===t.mode ? p.accent : p.border2}`,
-                background: m===t.mode ? p.accentSoft : 'transparent',
-                color: m===t.mode ? p.accent : p.fg2, borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:fonts.body
-              }}>{m}</button>
-            ))}
+          <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+            {(() => {
+              // Render only the modes the underlying climate entity
+              // actually supports. Nest exposes ['off', 'heat_cool'];
+              // most other thermostats expose cool/heat/auto/off.
+              const supported = t.hvacModes || [];
+              // Avoid duplicate "Auto" rows when both heat_cool and auto
+              // are advertised by the same entity (rare but possible).
+              const seen = new Set();
+              const rows = [];
+              const order = ['cool', 'heat_cool', 'auto', 'heat', 'off', 'fan_only', 'dry'];
+              const labelFor = (m) => ({
+                cool: 'Cool', heat: 'Heat', heat_cool: 'Auto', auto: 'Auto',
+                off: 'Off', fan_only: 'Fan', dry: 'Dry',
+              })[m] || m;
+              for (const m of order) {
+                if (!supported.includes(m)) continue;
+                const lbl = labelFor(m);
+                if (seen.has(lbl)) continue;
+                seen.add(lbl);
+                rows.push({ id: m, label: lbl });
+              }
+              if (!rows.length) rows.push({ id: 'off', label: 'Off' });
+              return rows.map(r => (
+                <button key={r.id} onClick={() => setMode(r.id)} style={{
+                  flex:'1 1 60px', padding:'10px 0',
+                  border:`.5px solid ${r.id===t.mode ? p.accent : p.border2}`,
+                  background: r.id===t.mode ? p.accentSoft : 'transparent',
+                  color: r.id===t.mode ? p.accent : p.fg2, borderRadius:8, fontSize:12, cursor:'pointer', fontFamily:fonts.body
+                }}>{r.label}</button>
+              ));
+            })()}
           </div>
           <div style={{fontSize:11, color:p.fg3, fontStyle:'italic', fontFamily:fonts.display}}>
             Drag the dial to set the target temperature. {state.weather.summary.toLowerCase()} outside.
@@ -557,9 +685,11 @@ const SecuritySection = ({ ctx }) => {
   return (
     <window.Section title="Security & access" subtitle={`${ringMeta.label} · ${allLocked ? 'all locked' : 'something is open'}`} p={p} fonts={fonts}
       action={<button onClick={() => setState(s => ({...s, locks: s.locks.map(l => ({...l, locked:true}))}))} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>Lock all</button>}>
-      <div style={{marginBottom:dens.tileGap}}>
-        <RingModeSwitcher ctx={ctx}/>
-      </div>
+      {state.ring?.id && (
+        <div style={{marginBottom:dens.tileGap}}>
+          <RingModeSwitcher ctx={ctx}/>
+        </div>
+      )}
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:dens.tileGap}}>
         {state.locks.map(l => (
           <window.Card key={l.id} p={p} style={{padding:14, display:'flex', alignItems:'center', gap:12}}>

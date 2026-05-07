@@ -65,9 +65,14 @@ const CamerasView = ({ ctx }) => {
               <button key={b} style={{padding:'8px 14px', borderRadius:8, border:`.5px solid ${p.border2}`, background:p.surface2, color:p.fg, fontSize:12, cursor:'pointer', fontFamily:fonts.body}}>{b}</button>
             ))}
           </div>
-          <div style={{marginTop:12}}>
-            <window.RingModeSwitcher ctx={ctx}/>
-          </div>
+          {/* Only show the alarm switcher when HA actually exposes a Ring
+              Alarm panel — Ring camera/doorbell setups without the Alarm
+              Pro / Base Station won't have an alarm_control_panel entity. */}
+          {state.ring?.id && (
+            <div style={{marginTop:12}}>
+              <window.RingModeSwitcher ctx={ctx}/>
+            </div>
+          )}
         </div>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, alignContent:'start'}}>
           {state.cameras.map(c => (
