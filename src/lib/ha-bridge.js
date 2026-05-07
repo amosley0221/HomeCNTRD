@@ -65,6 +65,14 @@ function translate(states) {
 
   const entities = Object.values(states);
 
+  // Detect the Tessie-managed Tesla up front so we can keep its
+  // car-climate entity out of state.thermostat (the house thermostat).
+  // The Tesla cabin climate is handled separately under state.tesla and
+  // the Car page; mixing it into the Nest tile means the Dashboard dial
+  // unintentionally sets the car's HVAC.
+  const teslaPrefix = detectTeslaPrefix(states);
+  const teslaClimateId = teslaPrefix ? `climate.${teslaPrefix}_climate` : null;
+
   for (const e of entities) {
     const id = e.entity_id;
     const domain = id.split('.')[0];
@@ -149,6 +157,10 @@ function translate(states) {
         break;
 
       case 'climate':
+        // Skip the Tesla cabin-climate entity — it's already represented
+        // on the Car page via state.tesla, and using it as the house
+        // thermostat would route Dashboard dial drags into the car HVAC.
+        if (teslaClimateId && id === teslaClimateId) break;
         if (!out.thermostat) {
           const a = e.attributes || {};
           // HA's TARGET_TEMPERATURE_RANGE bit (2) marks support for the
@@ -354,10 +366,9 @@ function translate(states) {
     return { ...c, motion: motionMap.get(k) ?? c.motion };
   });
 
-  // Tesla via Tessie. We auto-detect the entity prefix by finding a
-  // battery_range sensor that pairs with a lock at the same prefix —
-  // that combination uniquely identifies a Tessie-managed Tesla.
-  const teslaPrefix = detectTeslaPrefix(states);
+  // Tesla via Tessie. teslaPrefix was detected up top so we could exclude
+  // the car-climate entity from state.thermostat; here we use it again
+  // to actually populate state.tesla.
   if (teslaPrefix) {
     out.tesla = buildTesla(states, teslaPrefix);
   }
