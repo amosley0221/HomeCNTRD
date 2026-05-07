@@ -97,53 +97,93 @@ function startCameraStream(entityId, hassRef, video, setError) {
 }
 
 // New subscribe-based WebRTC handshake. Streams session/answer/candidate
-// messages over a single WS subscription.
+// messages over a single WS subscription, with trickle-ICE both ways
+// (local candidates POSTed back to HA as we discover them, remote
+// candidates applied as they arrive). Cloud cameras (Ring, Nest) live
+// behind NAT and need the TURN servers HA returns from
+// camera/webrtc/get_client_config — without them, only local-network
+// cameras are reachable and the rest just stall on a placeholder.
 async function trySubscribeWebRTC(entityId, hass, video) {
-  const pc = newPC();
+  const config = await getWebRTCConfig(entityId, hass);
+  const pc = new RTCPeerConnection(config);
   attachToVideo(pc, video);
   pc.addTransceiver('video', { direction: 'recvonly' });
   pc.addTransceiver('audio', { direction: 'recvonly' });
   await pc.setLocalDescription(await pc.createOffer());
-  await waitIce(pc);
 
-  let answered = false;
+  let sessionId = null;
+  const pendingCandidates = [];
+  const sendCandidate = async (cand) => {
+    if (!sessionId) { pendingCandidates.push(cand); return; }
+    try {
+      await hass.connection.sendMessagePromise({
+        type: 'camera/webrtc/candidate',
+        entity_id: entityId,
+        session_id: sessionId,
+        candidate: { candidate: cand.candidate, sdpMid: cand.sdpMid, sdpMLineIndex: cand.sdpMLineIndex },
+      });
+    } catch {}
+  };
+  const onIce = (e) => { if (e.candidate) sendCandidate(e.candidate); };
+  pc.addEventListener('icecandidate', onIce);
+
+  let unsubError = null;
   const unsub = await hass.connection.subscribeMessage(
-    (msg) => {
+    async (msg) => {
       if (!msg) return;
-      if (msg.type === 'answer' && msg.answer && !answered) {
-        answered = true;
-        pc.setRemoteDescription({ type: 'answer', sdp: msg.answer }).catch(() => {});
+      if (msg.type === 'session') {
+        sessionId = msg.session_id;
+        // Flush any candidates we gathered before HA gave us a session.
+        for (const c of pendingCandidates.splice(0)) await sendCandidate(c);
+      } else if (msg.type === 'answer' && msg.answer) {
+        try { await pc.setRemoteDescription({ type: 'answer', sdp: msg.answer }); } catch {}
       } else if (msg.type === 'candidate' && msg.candidate) {
-        pc.addIceCandidate({ candidate: msg.candidate, sdpMLineIndex: 0 }).catch(() => {});
+        try {
+          const c = typeof msg.candidate === 'string' ? msg.candidate : msg.candidate.candidate;
+          await pc.addIceCandidate({
+            candidate: c,
+            sdpMid: msg.candidate?.sdpMid ?? msg.sdpMid ?? '0',
+            sdpMLineIndex: msg.candidate?.sdpMLineIndex ?? msg.sdpMLineIndex ?? 0,
+          });
+        } catch {}
       } else if (msg.type === 'error') {
-        throw new Error(msg.message || 'WebRTC error');
+        unsubError = msg.message || 'WebRTC error';
       }
     },
     { type: 'camera/webrtc/offer', entity_id: entityId, offer: pc.localDescription.sdp },
   );
-  // Subscribe returned successfully — wait briefly for an answer; if
-  // none arrives, treat as failure so we can fall through.
-  await waitForAnswer(pc, 5000);
-  if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
+
+  await waitForAnswer(pc, 8000);
+  if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed' || unsubError) {
+    pc.removeEventListener('icecandidate', onIce);
     try { unsub(); } catch {}
     pc.close();
-    throw new Error('WebRTC connection failed');
+    throw new Error(unsubError || 'WebRTC connection failed');
   }
   return {
     kind: 'webrtc-subscribe',
-    cleanup: () => { try { unsub(); } catch {}; teardown(pc, video); },
+    cleanup: () => {
+      pc.removeEventListener('icecandidate', onIce);
+      try { unsub(); } catch {}
+      teardown(pc, video);
+    },
   };
 }
 trySubscribeWebRTC.label = 'WebRTC (subscribe)';
 
 // Legacy one-shot WebRTC. Older HA versions answer with a single
-// camera/web_rtc_offer response containing the SDP answer.
+// camera/web_rtc_offer response containing the SDP answer. We still
+// fetch ICE config first so cameras behind NAT can connect via the
+// integration-supplied TURN servers.
 async function tryLegacyWebRTC(entityId, hass, video) {
-  const pc = newPC();
+  const config = await getWebRTCConfig(entityId, hass);
+  const pc = new RTCPeerConnection(config);
   attachToVideo(pc, video);
   pc.addTransceiver('video', { direction: 'recvonly' });
   pc.addTransceiver('audio', { direction: 'recvonly' });
   await pc.setLocalDescription(await pc.createOffer());
+  // Legacy command needs the full SDP up front since there's no
+  // bidirectional candidate channel.
   await waitIce(pc);
 
   const resp = await hass.connection.sendMessagePromise({
@@ -153,13 +193,28 @@ async function tryLegacyWebRTC(entityId, hass, video) {
   });
   if (!resp?.answer) { pc.close(); throw new Error('no SDP answer'); }
   await pc.setRemoteDescription({ type: 'answer', sdp: resp.answer });
-  await waitForAnswer(pc, 5000);
+  await waitForAnswer(pc, 8000);
   if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
     pc.close(); throw new Error('WebRTC connection failed');
   }
   return { kind: 'webrtc-legacy', cleanup: () => teardown(pc, video) };
 }
 tryLegacyWebRTC.label = 'WebRTC (legacy)';
+
+// Fetch ICE servers (STUN/TURN) and transport policy from HA. The Ring
+// integration populates this with the cloud TURN relay credentials
+// needed to reach cameras behind NAT. Falls back to a public STUN if
+// HA doesn't know how to populate the config (e.g. local-only cameras).
+async function getWebRTCConfig(entityId, hass) {
+  try {
+    const resp = await hass.connection.sendMessagePromise({
+      type: 'camera/webrtc/get_client_config',
+      entity_id: entityId,
+    });
+    if (resp?.configuration?.iceServers?.length) return resp.configuration;
+  } catch {}
+  return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+}
 
 // HLS fallback for cameras that ARE backed by a real stream component.
 async function tryHLS(entityId, hass, video) {
