@@ -14,7 +14,7 @@
 // backing entities show an empty state with a one-line hint pointing at
 // the integration to install.
 
-const PersonalDashboard = ({ ctx }) => {
+const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const { p, fonts, state, user, narrow, setPage } = ctx;
   const accent = p.accent;
   const surface = '#1a1612';
@@ -45,11 +45,30 @@ const PersonalDashboard = ({ ctx }) => {
       minHeight: '100%', padding: narrow ? '20px 16px' : '32px 36px',
     }}>
       {/* Header */}
-      <div style={{marginBottom: narrow ? 24 : 36}}>
-        <div style={{fontSize: 11, color: fg3, letterSpacing:'.12em', textTransform:'uppercase', marginBottom: 6}}>{dayName} · {dateStr}</div>
-        <div style={{fontFamily: display, fontSize: narrow ? 30 : 40, lineHeight: 1.05, color: fg, fontWeight: 500}}>
-          {greet()}, <em style={{fontStyle:'italic', color: accent, fontWeight: 400}}>{user?.firstName || 'there'}.</em>
+      <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap: 14, marginBottom: narrow ? 24 : 36}}>
+        <div>
+          <div style={{fontSize: 11, color: fg3, letterSpacing:'.12em', textTransform:'uppercase', marginBottom: 6}}>{dayName} · {dateStr}</div>
+          <div style={{fontFamily: display, fontSize: narrow ? 30 : 40, lineHeight: 1.05, color: fg, fontWeight: 500}}>
+            {greet()}, <em style={{fontStyle:'italic', color: accent, fontWeight: 400}}>{user?.firstName || 'there'}.</em>
+          </div>
         </div>
+
+        {/* Hamburger — only shown on wide viewports where we've hidden the
+            inline sidebar. Tap to slide it in as a drawer. On narrow
+            viewports the bottom nav already covers this so we hide the
+            button. */}
+        {!narrow && onOpenMenu && (
+          <button onClick={onOpenMenu} aria-label="Open menu" style={{
+            width: 42, height: 42, borderRadius: 10, flex: 'none',
+            background: surface, border: `.5px solid ${border}`,
+            color: fg, cursor: 'pointer',
+            display:'grid', placeItems:'center',
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              <path d="M3 6h18M3 12h18M3 18h18"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       <div style={{

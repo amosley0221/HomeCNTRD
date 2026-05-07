@@ -10,6 +10,7 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
   const [state, setState] = window.useHomeState();
   const [page, setPage] = React.useState('home');           // home | music | cameras | calendar | car | garage | devices | settings
   const [room, setRoom] = React.useState('living');
+  const [sidebarOpen, setSidebarOpen] = React.useState(false); // for drawer mode on the new Home
   const [agentOpen, setAgentOpen] = React.useState(false);
   const [unread, setUnread] = React.useState(0);
   const [thinking, setThinking] = React.useState(false);
@@ -89,11 +90,16 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
     }}>
       {bgImage && <div style={{position:'absolute',inset:0,background:dark?'rgba(20,15,12,.78)':'rgba(248,243,235,.84)',backdropFilter:'blur(2px)'}} />}
       {state.dnd.active && <DndBanner ctx={ctx} />}
-      <div style={{position:'relative', display:'grid', gridTemplateColumns: narrow ? '1fr' : '232px 1fr', gridTemplateRows: narrow ? '1fr 64px' : '1fr', height:'100%'}}>
-        {!narrow && <Sidebar ctx={ctx} />}
-        <main style={{overflow:'auto', padding: narrow ? '16px 14px 14px' : dens.pad, display:'flex', flexDirection:'column', gap: dens.gap, paddingBottom: narrow ? 80 : undefined}}>
+      <div style={{
+        position:'relative', display:'grid',
+        gridTemplateColumns: (narrow || page === 'home') ? '1fr' : '232px 1fr',
+        gridTemplateRows: narrow ? '1fr 64px' : '1fr',
+        height:'100%',
+      }}>
+        {!narrow && page !== 'home' && <Sidebar ctx={ctx} />}
+        <main style={{overflow:'auto', padding: narrow ? '16px 14px 14px' : (page === 'home' ? 0 : dens.pad), display:'flex', flexDirection:'column', gap: dens.gap, paddingBottom: narrow ? 80 : undefined}}>
           {narrow && <MobileHeader ctx={ctx} />}
-          {page === 'home'     && <window.PersonalDashboard ctx={ctx} />}
+          {page === 'home'     && <window.PersonalDashboard ctx={ctx} onOpenMenu={() => setSidebarOpen(true)} />}
           {page === 'dashboard' && <window.HomeView ctx={ctx} />}
           {page === 'music'    && <window.MusicView ctx={ctx} />}
           {page === 'cameras'  && <window.CamerasView ctx={ctx} />}
@@ -106,6 +112,25 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
         </main>
         {narrow && <BottomNav ctx={ctx} />}
       </div>
+
+      {/* Drawer-style sidebar — only used on the new Home (where we hide
+          the inline rail to give the personal dashboard full width). Tap
+          the hamburger button on the dashboard, or any nav item, to
+          dismiss. */}
+      {!narrow && page === 'home' && sidebarOpen && (
+        <>
+          <div onClick={() => setSidebarOpen(false)} style={{
+            position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:60,
+            backdropFilter:'blur(2px)', WebkitBackdropFilter:'blur(2px)',
+          }}/>
+          <div style={{
+            position:'fixed', left:0, top:0, bottom:0, width:232, zIndex:61,
+            boxShadow:'8px 0 32px rgba(0,0,0,.4)',
+          }}>
+            <Sidebar ctx={{ ...ctx, setPage: (id) => { setPage(id); setSidebarOpen(false); } }} />
+          </div>
+        </>
+      )}
       <window.NowPlayingBar ctx={ctx} />
       <AgentBubble ctx={ctx} open={agentOpen} setOpen={setAgentOpen} unread={unread}
         messages={messages} thinking={thinking} draft={draft} setDraft={setDraft}
