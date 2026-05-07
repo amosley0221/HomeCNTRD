@@ -3,7 +3,7 @@
 // Black background, tangerine accents, two-column layout (main + calendar).
 
 import HassContext from './lib/hass-context.js';
-import { fetchAllScores } from './lib/sports.js';
+import { fetchAllScores, LEAGUES as SPORT_LEAGUES } from './lib/sports.js';
 
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const { p, fonts, state, user, narrow, setPage } = ctx;
@@ -176,12 +176,12 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             fg={fg} fg2={fg2} fg3={fg3} border={border} narrow={narrow}
           />
 
-          <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap: narrow ? 14 : 18}}>
-            <TodoCard todos={state.todos} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
+          <div style={{display:'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap: narrow ? 14 : 18, alignItems: 'start'}}>
             <SportsCard accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
+            <NewsCard news={state.news} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
           </div>
 
-          <NewsCard news={state.news} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
+          <TodoCard todos={state.todos} accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
 
           <NotesCard accent={accent} fonts={fonts} surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} />
         </div>
@@ -351,12 +351,12 @@ const TodoCard = ({ todos, accent, fonts, surface, fg, fg2, fg3, border }) => {
 };
 
 // ── Section: Sports ───────────────────────────────────────────────────────
-const SPORTS_LIMIT = 6;
-
 const SportsCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
   // null = first load in flight; [] = loaded but no games today
   const [games, setGames] = React.useState(null);
   const [error, setError] = React.useState(null);
+  const [expanded, setExpanded] = React.useState(false);
+  const [leagueFilter, setLeagueFilter] = React.useState('all');
 
   React.useEffect(() => {
     let alive = true;
@@ -376,10 +376,46 @@ const SportsCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
     return () => { alive = false; clearInterval(t); ctl?.abort(); };
   }, []);
 
+  // Decide which games to show. Default view: favorites only, padded with
+  // upcoming/live games to a minimum of 3. Expanded view: top 12 across
+  // all leagues. League filter overrides everything: show that league's
+  // full schedule (capped to keep the column tight).
+  const { visible, hiddenCount } = React.useMemo(() => {
+    if (!games || !games.length) return { visible: [], hiddenCount: 0 };
+    if (leagueFilter !== 'all') {
+      const filtered = games.filter(g => g.leagueId === leagueFilter);
+      const cap = expanded ? filtered.length : 6;
+      return { visible: filtered.slice(0, cap), hiddenCount: Math.max(0, filtered.length - cap) };
+    }
+    if (expanded) {
+      const cap = 12;
+      return { visible: games.slice(0, cap), hiddenCount: Math.max(0, games.length - cap) };
+    }
+    const favs = games.filter(g => g.isFavorite);
+    let pick;
+    if (favs.length >= 3) {
+      pick = favs;
+    } else {
+      const fillers = games.filter(g =>
+        !g.isFavorite && (g.status.state === 'in' || g.status.state === 'pre')
+      );
+      pick = [...favs, ...fillers].slice(0, Math.max(3, favs.length));
+    }
+    return { visible: pick, hiddenCount: Math.max(0, games.length - pick.length) };
+  }, [games, leagueFilter, expanded]);
+
+  // Only list leagues in the filter dropdown that actually have games on
+  // the wire — saves the user from picking "Boxing" and finding nothing.
+  const availableLeagues = React.useMemo(() => {
+    if (!games) return [];
+    const set = new Set(games.map(g => g.leagueId));
+    return SPORT_LEAGUES.filter(L => set.has(L.id));
+  }, [games]);
+
   if (games === null) {
     return (
       <Card surface={surface} border={border}>
-        <CardHeader title="Sports" right={<span style={{fontSize:11, color:fg3}}>Loading…</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <SportsHeader fonts={fonts} fg={fg} fg2={fg2} border={border} availableLeagues={[]} leagueFilter="all" setLeagueFilter={() => {}}/>
         <div style={{fontSize:12, color:fg3}}>Pulling scores from ESPN…</div>
       </Card>
     );
@@ -388,7 +424,7 @@ const SportsCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
   if (error && !games.length) {
     return (
       <Card surface={surface} border={border}>
-        <CardHeader title="Sports" right={null} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <SportsHeader fonts={fonts} fg={fg} fg2={fg2} border={border} availableLeagues={[]} leagueFilter="all" setLeagueFilter={() => {}}/>
         <div style={{fontSize:12, color:fg3}}>Couldn't reach ESPN: {error}</div>
       </Card>
     );
@@ -397,32 +433,70 @@ const SportsCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
   if (!games.length) {
     return (
       <Card surface={surface} border={border}>
-        <CardHeader title="Sports" right={null} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <SportsHeader fonts={fonts} fg={fg} fg2={fg2} border={border} availableLeagues={[]} leagueFilter="all" setLeagueFilter={() => {}}/>
         <div style={{fontSize:12, color:fg3}}>Nothing on the docket right now.</div>
       </Card>
     );
   }
 
-  const visible = games.slice(0, SPORTS_LIMIT);
-  const favCount = games.filter(g => g.isFavorite).length;
-  const liveCount = games.filter(g => g.status.state === 'in').length;
-  const meta = [
-    favCount && `${favCount} fav${favCount === 1 ? '' : 's'}`,
-    liveCount && `${liveCount} live`,
-    `${games.length} total`,
-  ].filter(Boolean).join(' · ');
-
   return (
     <Card surface={surface} border={border}>
-      <CardHeader title="Sports" right={<span style={{fontSize:11, color:fg3}}>{meta}</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
-      <div style={{display:'flex', flexDirection:'column', gap: 8}}>
-        {visible.map(g => (
-          <GameRow key={g.id} g={g} accent={accent} fonts={fonts} fg={fg} fg2={fg2} fg3={fg3} border={border}/>
-        ))}
-      </div>
+      <SportsHeader fonts={fonts} fg={fg} fg2={fg2} border={border}
+        availableLeagues={availableLeagues}
+        leagueFilter={leagueFilter}
+        setLeagueFilter={(v) => { setLeagueFilter(v); setExpanded(false); }}
+      />
+      {visible.length > 0 ? (
+        <div style={{display:'flex', flexDirection:'column', gap: 8}}>
+          {visible.map(g => (
+            <GameRow key={g.id} g={g} accent={accent} fonts={fonts} fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+          ))}
+        </div>
+      ) : (
+        <div style={{fontSize:12, color:fg3, padding:'8px 0'}}>
+          {leagueFilter === 'all'
+            ? 'No favorite or upcoming games right now.'
+            : `No ${SPORT_LEAGUES.find(L => L.id === leagueFilter)?.name || ''} games today.`}
+        </div>
+      )}
+
+      {(hiddenCount > 0 || expanded) && (
+        <button onClick={() => setExpanded(v => !v)} style={{
+          marginTop: 10, width: '100%', padding: '7px 10px',
+          borderRadius: 7, background: 'transparent', cursor: 'pointer',
+          border: `.5px solid ${border}`, color: fg2,
+          fontSize: 11, fontFamily: 'inherit', letterSpacing: '.04em', textTransform: 'uppercase',
+        }}>
+          {expanded
+            ? 'Show less'
+            : `Show more${hiddenCount ? ` (${hiddenCount})` : ''}`}
+        </button>
+      )}
     </Card>
   );
 };
+
+const SportsHeader = ({ fonts, fg, fg2, border, availableLeagues, leagueFilter, setLeagueFilter }) => (
+  <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 10, gap: 8}}>
+    <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500}}>Sports</div>
+    <select
+      value={leagueFilter}
+      onChange={(e) => setLeagueFilter(e.target.value)}
+      aria-label="Filter by league"
+      style={{
+        background: 'rgba(241,234,217,0.04)', color: fg2,
+        border: `.5px solid ${border}`, borderRadius: 6,
+        fontSize: 11, padding: '4px 8px', fontFamily: 'inherit',
+        cursor: 'pointer',
+      }}
+    >
+      <option value="all">All leagues</option>
+      {availableLeagues.map(L => (
+        <option key={L.id} value={L.id}>{L.name}</option>
+      ))}
+    </select>
+  </div>
+);
 
 const GameRow = ({ g, accent, fonts, fg, fg2, fg3, border }) => {
   const isLive = g.status.state === 'in';
