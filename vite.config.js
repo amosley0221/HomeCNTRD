@@ -9,6 +9,11 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react({ jsxRuntime: 'automatic' })],
+  // Copy static/ verbatim into dist/ so files there land next to
+  // homecntrd.js. Currently used for the Porcupine wake-word model
+  // (porcupine_params.pv) — drop both files into HA's /config/www/
+  // and HA serves them at /local/homecntrd.js + /local/porcupine_params.pv.
+  publicDir: 'static',
   // React's UMD/ESM build references process.env.NODE_ENV at runtime to pick
   // dev vs prod assertions. In Vite's lib mode those references are NOT
   // replaced by default (the assumption is downstream bundlers will do it).

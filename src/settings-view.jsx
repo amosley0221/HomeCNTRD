@@ -1,5 +1,7 @@
 // settings-view.jsx — Full settings page (mirrors Tweaks but as a real settings page)
 
+import * as wakeWord from './lib/wake-word.js';
+
 const SettingsView = ({ ctx }) => {
   const { p, fonts, dens } = ctx;
   // settings live on parent App via setTweak; here we expose them through a context prop
@@ -158,9 +160,7 @@ const SettingsView = ({ ctx }) => {
               </div>
             </SettingRow>
 
-            <SettingRow p={p} fonts={fonts} label="Voice activation" desc="Wake on 'Hey HomeCNTRD'" inline>
-              <window.Toggle p={p} on={settings.wake !== false} onChange={(v) => setSetting('wake', v)}/>
-            </SettingRow>
+            <WakeWordSettings p={p} fonts={fonts}/>
             <SettingRow p={p} fonts={fonts} label="Suggestions on home" desc="Show suggested commands when you open the agent" inline>
               <window.Toggle p={p} on={settings.suggestions !== false} onChange={(v) => setSetting('suggestions', v)}/>
             </SettingRow>
@@ -419,5 +419,59 @@ const SettingRow = ({ p, fonts, label, desc, children, inline }) => (
     {children}
   </div>
 );
+
+// Wake-word ("Jarvis") settings — Picovoice access key + on/off toggle.
+// Stored in localStorage (homecntrd:voice) since the EDITMODE-tweak path
+// doesn't persist on real HomeCNTRD installs.
+const WakeWordSettings = ({ p, fonts }) => {
+  const [voice, setVoice] = React.useState(() => wakeWord.loadVoiceSettings());
+  const [status, setStatus] = React.useState(() => wakeWord.getState());
+  const [showKey, setShowKey] = React.useState(false);
+  const [draftKey, setDraftKey] = React.useState(voice.accessKey);
+
+  React.useEffect(() => wakeWord.onStateChange((s, error) => setStatus({ state: s, error })), []);
+  React.useEffect(() => wakeWord.onVoiceSettingsChange((v) => { setVoice(v); setDraftKey(v.accessKey); }), []);
+
+  const save = (patch) => setVoice(wakeWord.saveVoiceSettings(patch));
+
+  const statusLabel = (() => {
+    if (!voice.accessKey) return { color: p.fg3, text: 'Add a Picovoice access key to enable' };
+    if (!voice.enabled)   return { color: p.fg3, text: 'Off' };
+    if (status.state === 'starting')  return { color: p.fg2, text: 'Starting…' };
+    if (status.state === 'listening') return { color: 'oklch(60% 0.13 145)', text: '● Listening for "Jarvis"' };
+    if (status.state === 'error')     return { color: '#e0a89a', text: `Error: ${status.error?.message || 'unknown'}` };
+    return { color: p.fg3, text: 'Idle' };
+  })();
+
+  return (
+    <>
+      <SettingRow p={p} fonts={fonts}
+        label="Voice activation"
+        desc={`Listen continuously for "Jarvis" while HomeCNTRD is open. Powered by Picovoice Porcupine, runs on-device.`}
+        inline>
+        <window.Toggle p={p} on={voice.enabled} onChange={(v) => save({ enabled: v })}/>
+      </SettingRow>
+      <SettingRow p={p} fonts={fonts}
+        label="Picovoice access key"
+        desc={<>Free key from <a href="https://console.picovoice.ai/" target="_blank" rel="noreferrer" style={{color:p.accent}}>console.picovoice.ai</a> — required to use the wake-word engine.</>}>
+        <div style={{display:'flex', gap:8, alignItems:'center'}}>
+          <input type={showKey ? 'text' : 'password'} value={draftKey}
+            onChange={(e) => setDraftKey(e.target.value)}
+            onBlur={() => { if (draftKey !== voice.accessKey) save({ accessKey: draftKey.trim() }); }}
+            placeholder="Paste your AccessKey"
+            style={{flex:1, padding:'9px 12px', borderRadius:8, border:`.5px solid ${p.border2}`,
+              background:p.surface, color:p.fg, fontSize:13, fontFamily:'inherit', outline:'none'}}/>
+          <button onClick={() => setShowKey(s => !s)} style={{
+            padding:'8px 12px', borderRadius:8, border:`.5px solid ${p.border2}`,
+            background:'transparent', color:p.fg2, cursor:'pointer', fontSize:11, fontFamily:fonts.body,
+          }}>{showKey ? 'Hide' : 'Show'}</button>
+        </div>
+        <div style={{fontSize:11, color: statusLabel.color, marginTop:8, fontStyle:'italic'}}>
+          {statusLabel.text}
+        </div>
+      </SettingRow>
+    </>
+  );
+};
 
 window.SettingsView = SettingsView;

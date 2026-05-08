@@ -3,7 +3,8 @@
 import HassContext from './lib/hass-context.js';
 import { askAgent } from './lib/ai.js';
 import { parseIntent } from './lib/intents.js';
-import { speak as speakText, cancelSpeak } from './lib/voice.js';
+import { speak as speakText, cancelSpeak, listenOnce } from './lib/voice.js';
+import * as wakeWord from './lib/wake-word.js';
 
 const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibleDevices, settings, setSetting, user, patchUser, doLogout, narrow, openBrowser }) => {
   const hass = React.useContext(HassContext);
@@ -77,6 +78,57 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
     if (!agentOpen) setUnread(u => u + 1);
   };
   const openAgent = () => { setAgentOpen(true); setUnread(0); };
+
+  // ── Wake-word ("Jarvis") integration ───────────────────────────────
+  // Bootstraps Porcupine on mount when the user has enabled it + saved a
+  // Picovoice access key. On detection, we briefly stop wake-listening,
+  // open the agent panel, run a one-shot speech recognition, feed the
+  // transcript through send(), and restart wake-listening.
+  const sendRef = React.useRef(send);
+  React.useEffect(() => { sendRef.current = send; }, [send]);
+  const [wakeStatus, setWakeStatus] = React.useState({ state: 'idle', error: null });
+  React.useEffect(() => wakeWord.onStateChange((s, error) => setWakeStatus({ state: s, error })), []);
+
+  const handleWakeRef = React.useRef(null);
+  handleWakeRef.current = async () => {
+    // Pause wake-word so it doesn't re-trigger on our TTS prompt or the
+    // user's own speech, and so its mic capture doesn't fight with the
+    // browser's SpeechRecognition.
+    await wakeWord.stop();
+    setAgentOpen(true);
+    setUnread(0);
+    // Tiny audible confirmation so the user knows we heard the wake.
+    try { cancelSpeak(); speakText('Yes?', { rate: 1.05 }); } catch {}
+    let transcript = '';
+    try {
+      transcript = await listenOnce({});
+    } catch {} // No speech / aborted — silently restart wake.
+    if (transcript) {
+      try { sendRef.current?.(transcript); } catch {}
+    }
+    // Restart wake if it's still meant to be on.
+    const cfg = wakeWord.loadVoiceSettings();
+    if (cfg.enabled && cfg.accessKey) {
+      try { await wakeWord.start(cfg.accessKey); } catch {}
+    }
+  };
+
+  React.useEffect(() => {
+    return wakeWord.onWake(() => { handleWakeRef.current?.(); });
+  }, []);
+
+  // Boot wake-word from saved settings, then react to settings changes.
+  React.useEffect(() => {
+    const apply = (cfg) => {
+      if (cfg.enabled && cfg.accessKey) {
+        wakeWord.start(cfg.accessKey).catch(() => {});
+      } else {
+        wakeWord.stop();
+      }
+    };
+    apply(wakeWord.loadVoiceSettings());
+    return wakeWord.onVoiceSettingsChange(apply);
+  }, []);
 
   const visible = visibleDevices || { lights:true, music:true, cameras:true, climate:true, locks:true, scenes:true, calendar:true, weather:true, alarms:true, tv:true };
   const ctx = { p, fonts, dens, state, setState, room, setRoom, page, setPage, visible, accent, dark, settings, setSetting, user, patchUser, doLogout, narrow };
