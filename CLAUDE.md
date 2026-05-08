@@ -67,9 +67,12 @@ ha core restart                      # ~30s
 2. `melspectrogram.onnx`
 3. `embedding_model.onnx`
 4. `hey_jarvis.onnx`
+5. `ort-wasm-simd-threaded.wasm` — onnxruntime-web's WASM runtime
+6. `ort-wasm-simd-threaded.mjs` — Emscripten loader for the WASM
 
-The `.onnx` files don't change between releases — only re-wget the JS
-bundle for normal updates.
+Files 2–6 are stable artefacts that don't change between HomeCNTRD
+releases. Only re-wget `homecntrd.js` for normal updates. Re-wget the
+ORT files only when bumping the `onnxruntime-web` dep.
 
 ### `panel_custom` block (in `configuration.yaml`)
 
@@ -140,14 +143,21 @@ buffer; once full, run the classifier; threshold 0.5 with hysteresis
 ~70 MB bundled) or as external files (via the
 `onnxruntime-web-use-extern-wasm` export condition). Vite's
 `resolve.conditions` in `vite.config.js` picks the external variant.
-We point `ort.env.wasm.wasmPaths` at JSDelivr's CDN.
+We import from the `onnxruntime-web/wasm` subpath — this is the slim
+build without JSEP/WebGPU support, which we don't need for these
+models and which fetches just two runtime files:
+`ort-wasm-simd-threaded.wasm` (~13 MB) and `.mjs` (~24 KB).
 
-**Version-pin gotcha:** the URL must match the *installed*
-onnxruntime-web version exactly. ORT's WASM filenames are versioned;
-fetching from a mismatched version path 404s silently and
-`InferenceSession.create()` hangs forever. If you bump the
-`onnxruntime-web` dep, also bump the URL in `wake-word.js`. Both are
-labelled in comments.
+**WASM is hosted locally at `/local/`, not from a CDN.** First attempt
+used JSDelivr; iOS Companion (WKWebView) silently hung on the
+cross-origin dynamic import of the WASM loader, leaving the UI on
+"Loading runtime model…" forever with no error surfaced. Local hosting
+also makes wake word work offline, consistent with the rest of
+HomeCNTRD. Both ORT files ship via `static/` like the .onnx models.
+
+If you bump the `onnxruntime-web` dep, re-copy the two
+`ort-wasm-simd-threaded.{wasm,mjs}` files from
+`node_modules/onnxruntime-web/dist/` into `static/`.
 
 ### Lifecycle
 

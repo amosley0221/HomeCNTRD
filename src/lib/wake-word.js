@@ -22,15 +22,17 @@
 // Settings persistence (homecntrd:voice in localStorage) is shared with
 // the older Porcupine implementation so users keep their toggle state.
 
-import * as ort from 'onnxruntime-web';
+import * as ort from 'onnxruntime-web/wasm';
 
-// Load ORT's WASM binaries from a CDN so we don't have to ship them
-// alongside homecntrd.js. JSDelivr serves with permissive CORS and the
-// HA box already needs internet for the rest of HomeCNTRD anyway. The
-// version pin must match the installed onnxruntime-web exactly — ORT
-// generates per-version WASM filenames and fetches will 404 silently
-// if the JS↔WASM versions drift.
-ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.25.1/dist/';
+// Serve ORT's WASM runtime from /local/ alongside our other assets,
+// not from a CDN. Cross-origin dynamic imports from JSDelivr were
+// hanging silently on iOS WKWebView (the Companion app), leaving the
+// "Loading runtime model…" status stuck forever. Hosting locally also
+// makes wake word work fully offline. We use the slim "/wasm" import
+// variant of onnxruntime-web (no JSEP/WebGPU support, which we don't
+// need for these models) — that one fetches `ort-wasm-simd-threaded.wasm`
+// and `ort-wasm-simd-threaded.mjs`, both shipped via static/.
+ort.env.wasm.wasmPaths = '/local/';
 ort.env.wasm.numThreads = 1;
 
 const MODELS_BASE = '/local/';
