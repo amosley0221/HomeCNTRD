@@ -6,11 +6,7 @@
 // Tap once to expand into a panel with bigger art + position slider +
 // volume; tap again or the X to collapse.
 
-// Fallback context so useContext is callable even before ha-panel.jsx
-// has assigned window.HassContext. Once ha-panel.jsx sets the real
-// context, the next render swaps it in. Hooks must always be called
-// in the same order, so we can't conditionally skip useContext.
-const EmptyHassContext = React.createContext(null);
+import HassContext from './lib/hass-context.js';
 
 const NowPlayingBar = ({ ctx }) => {
   const { p, fonts, state, narrow, page } = ctx;
@@ -18,7 +14,7 @@ const NowPlayingBar = ({ ctx }) => {
   // All hooks must run unconditionally on every render. They sit above
   // the page/playing early returns so React's hook-order check stays
   // happy when the user navigates between pages or playback stops.
-  const hass = React.useContext(window.HassContext || EmptyHassContext);
+  const hass = React.useContext(HassContext);
   const [expanded, setExpanded] = React.useState(false);
   const [focused, setFocused] = React.useState(null);
 
