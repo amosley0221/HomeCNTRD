@@ -246,3 +246,35 @@ verbatim into `dist/`) over inlined base64.
 - **Branch convention:** all work on `main`. The branch name
   `claude/implement-index-html-PekYP` referenced in some session
   contexts is leftover scaffolding — push to `main`.
+
+## Open / deferred work
+
+### Wake word stuck on iPad HA Companion
+
+Voice activation works in Safari on iPhone and iPad, and works in
+the HA Companion on iPhone, but fails in the Companion on iPad —
+it sticks on "Awaiting microphone permission…" indefinitely and
+iOS never shows a permission prompt.
+
+**Already ruled out:**
+- Companion app version (user uninstalled + reinstalled fresh).
+- iOS-level mic permission (granted under Settings → Home Assistant).
+- System-wide mic mute (no Control Center toggle exists).
+- Code-path bug (all three ONNX models load successfully before
+  `getUserMedia` is called).
+
+**Most promising untried lead:** the iPhone Companion may be on an
+HTTPS Tailscale or Nabu Casa origin while the iPad Companion is on
+plain `http://192.168.68.76:8123`. WKWebView gates `getUserMedia`
+much more strictly than mobile Safari for insecure origins.
+
+**Next-session diagnostic:** compare the Internal/External URL
+values in HA Settings → System → Network and which network each
+Companion is currently on.
+
+**Workaround for the user today:** Safari + Add to Home Screen on
+iPad gives a near-Companion experience with the mic working.
+
+**Files to revisit if we ship an in-app Companion-detection notice:**
+- `src/lib/voice.js` — add an `isHACompanionApp()` helper.
+- `src/settings-view.jsx` — gate `WakeWordSettings` on it.
