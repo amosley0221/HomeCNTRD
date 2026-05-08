@@ -131,13 +131,25 @@ function translate(states) {
             id, room, name, type: 'sonos', playing, vol,
             group: e.attributes?.group_members?.[0] || null,
             trackId: null,                  // prototype expected an ID into TRACKS; we don't have that
+            // media_position is the position when HA last updated. To
+            // get the live position we add (Date.now() - progressUpdatedAt).
             progress: e.attributes?.media_position || 0,
+            progressUpdatedAt: e.attributes?.media_position_updated_at
+              ? new Date(e.attributes.media_position_updated_at).getTime()
+              : null,
             duration: e.attributes?.media_duration || 0,
             queue: [],
             // supported_features bitmask — used by the music page to
             // gate group/ungroup actions (only speakers with the
             // GROUPING feature flag = 524288 should participate).
             supportedFeatures: e.attributes?.supported_features || 0,
+            // Marker attributes the music page uses as a fallback
+            // detector when the entity registry's platform field isn't
+            // reliable (some HA setups don't populate it for our user).
+            // sonos_group is unique to the Sonos integration; mass_player_id
+            // / mass_state are specific to Music Assistant entities.
+            isSonosAttr: 'sonos_group' in (e.attributes || {}),
+            isMAAttr: !!(e.attributes?.mass_player_id || e.attributes?.mass_state || e.attributes?.queue_id),
             haMediaTitle: e.attributes?.media_title || null,
             haMediaArtist: e.attributes?.media_artist || null,
             haMediaAlbum: e.attributes?.media_album_name || null,

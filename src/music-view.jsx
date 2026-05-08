@@ -11,6 +11,15 @@ const ALLOWED_PLATFORMS = new Set([...MA_PLATFORMS, ...SONOS_PLATFORMS]);
 const PLATFORM_PREF = ['music_assistant', 'mass', 'sonos'];
 
 const INFINITY_KEY = 'homecntrd_infinity_v1';
+const HIDDEN_KEY = 'homecntrd_music_hidden_v1';
+
+function loadHidden() {
+  try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function saveHidden(set) {
+  try { localStorage.setItem(HIDDEN_KEY, JSON.stringify([...set])); } catch {}
+}
 
 function pushDiag(msg) {
   if (typeof window === 'undefined') return;
@@ -41,8 +50,15 @@ const MusicView = ({ ctx }) => {
       setPlatforms(m);
       setPlatformsLoaded(true);
       const summary = (state.speakers || [])
-        .map(s => `${s.name}=${m[s.id] || '?'}`).join(', ');
-      pushDiag(`music: speaker platforms — ${summary || '(none)'}`);
+        .map(s => {
+          const tags = [];
+          if (s.isSonosAttr) tags.push('sonos_attr');
+          if (s.isMAAttr) tags.push('ma_attr');
+          if ((s.supportedFeatures & GROUPING_FEATURE) !== 0) tags.push('group');
+          if ((s.supportedFeatures & SEARCH_FEATURE) !== 0) tags.push('search');
+          return `${s.name}[${s.id}]=${m[s.id] || '?'}${tags.length ? '(' + tags.join('+') + ')' : ''}`;
+        }).join(' | ');
+      pushDiag(`music: speakers — ${summary || '(none)'}`);
     };
     if (hass.entities && Object.keys(hass.entities).length) {
       const m = {};
@@ -65,18 +81,46 @@ const MusicView = ({ ctx }) => {
     return () => { alive = false; };
   }, [conn]); // refetch only on reconnect, not on every state push
 
-  // Strict filter: drop everything that isn't a Sonos or MA-managed
-  // entity. If MA is present, drop the underlying Sonos natives too —
-  // MA mirrors every Sonos speaker as its own entity, and library://
-  // URIs only resolve through MA.
-  const speakers = React.useMemo(() => {
-    if (!state.speakers?.length || !platformsLoaded) return [];
-    let pool = state.speakers.filter(s => ALLOWED_PLATFORMS.has(platforms[s.id]));
+  // User-managed hide list, persisted to localStorage. Lets the user
+  // banish speakers the auto-filter can't catch (some platforms aren't
+  // reported reliably by every HA setup).
+  const [hidden, setHiddenRaw] = React.useState(loadHidden);
+  const setHidden = React.useCallback((updater) => {
+    setHiddenRaw(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      saveHidden(next);
+      return next;
+    });
+  }, []);
+  const [manageOpen, setManageOpen] = React.useState(false);
+
+  // Strict filter with two layers:
+  //   1. Auto: keep only entities that look like Sonos or MA-managed
+  //      (registry platform OR attribute markers). MA wins over Sonos
+  //      natives when both exist.
+  //   2. Manual: respect the user's hide list.
+  // Returns { visible, autoVisible } so the Manage panel can show the
+  // full auto-filtered set with hidden entries clearly separable.
+  const { visible, autoVisible } = React.useMemo(() => {
+    const empty = { visible: [], autoVisible: [] };
+    if (!state.speakers?.length || !platformsLoaded) return empty;
+
+    const looksSonos = (s) => SONOS_PLATFORMS.has(platforms[s.id]) || s.isSonosAttr;
+    const looksMA = (s) => MA_PLATFORMS.has(platforms[s.id]) || s.isMAAttr;
+
+    let pool = state.speakers.filter(s => looksSonos(s) || looksMA(s));
     if (pool.length === 0) {
+      // Last-ditch fallback if attribute markers + registry both miss
+      // (rare). Accept anything with the GROUPING feature bit. The
+      // Manage panel still lets the user trim.
       pool = state.speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
     }
-    const hasMA = pool.some(s => MA_PLATFORMS.has(platforms[s.id]));
-    if (hasMA) pool = pool.filter(s => MA_PLATFORMS.has(platforms[s.id]));
+    const hasMA = pool.some(looksMA);
+    if (hasMA) pool = pool.filter(looksMA);
+
+    // Dedupe by friendly name — keep the entity from the most-preferred
+    // platform. Falls back to attribute-marker preference (MA over
+    // Sonos) when registry platforms are missing.
     const groups = new Map();
     for (const s of pool) {
       const key = (s.name || s.id).toLowerCase().trim();
@@ -88,10 +132,19 @@ const MusicView = ({ ctx }) => {
         const match = group.find(s => platforms[s.id] === pref);
         if (match) return match;
       }
+      const ma = group.find(s => s.isMAAttr);
+      if (ma) return ma;
+      const sonos = group.find(s => s.isSonosAttr);
+      if (sonos) return sonos;
       return group[0];
     };
-    return Array.from(groups.values()).map(pickBest);
-  }, [state.speakers, platforms, platformsLoaded]);
+    const auto = Array.from(groups.values()).map(pickBest);
+    return {
+      autoVisible: auto,
+      visible: auto.filter(s => !hidden.has(s.id)),
+    };
+  }, [state.speakers, platforms, platformsLoaded, hidden]);
+  const speakers = visible;
 
   // Active speaker selection. Hooks must be unconditional, so these
   // sit above the loading / empty-state early returns even though they
@@ -168,7 +221,10 @@ const MusicView = ({ ctx }) => {
         </div>
 
         <SpeakersPanel ctx={ctx} hassRef={hassRef} speakers={speakers}
-          activeId={activeId} setActiveId={setActiveId}/>
+          activeId={activeId} setActiveId={setActiveId}
+          hidden={hidden} setHidden={setHidden}
+          autoVisible={autoVisible}
+          manageOpen={manageOpen} setManageOpen={setManageOpen}/>
       </div>
       <div style={{height:60}}/>
     </>
@@ -193,12 +249,22 @@ const NowPlayingCard = ({ ctx, hassRef, speaker }) => {
 
   React.useEffect(() => {
     if (!speaker) return;
-    const key = `${speaker.id}|${title}|${speaker.progress}`;
+    // HA stamps media_position at the time it was reported. To get the
+    // current position we add the elapsed wall-clock time since that
+    // stamp (only while playing). Without this the slider snaps back to
+    // wherever HA last polled, which on Sonos can lag 30+ seconds.
+    const stampedPos = speaker.progress || 0;
+    const stampedAt = speaker.progressUpdatedAt;
+    const now = Date.now();
+    const livePos = (isPlaying && stampedAt)
+      ? stampedPos + Math.max(0, (now - stampedAt) / 1000)
+      : stampedPos;
+    const key = `${speaker.id}|${title}|${stampedAt || stampedPos}`;
     if (key !== lastSeenRef.current.key) {
-      lastSeenRef.current = { pos: speaker.progress || 0, at: Date.now(), key };
-      if (!seeking) setTickPos(speaker.progress || 0);
+      lastSeenRef.current = { pos: livePos, at: now, key };
+      if (!seeking) setTickPos(Math.min(speaker.duration || livePos, livePos));
     }
-  }, [speaker?.id, title, speaker?.progress, seeking, speaker]);
+  }, [speaker?.id, title, speaker?.progress, speaker?.progressUpdatedAt, seeking, isPlaying, speaker]);
 
   React.useEffect(() => {
     if (!isPlaying || seeking) return;
@@ -705,9 +771,13 @@ const ItemTile = ({ item, onClick, ctx }) => {
 };
 
 // ── Speakers panel ────────────────────────────────────────────────────────
-const SpeakersPanel = ({ ctx, hassRef, speakers, activeId, setActiveId }) => {
+const SpeakersPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
+                         hidden, setHidden, autoVisible, manageOpen, setManageOpen }) => {
   const { p, fonts } = ctx;
   const groupable = speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
+  // Speakers the auto-filter wanted to show but the user has hidden.
+  // Surfaces them in the Manage panel so they're easy to restore.
+  const hiddenSpeakers = (autoVisible || []).filter(s => hidden?.has?.(s.id));
 
   const call = (entityId, service, data) => {
     const hass = hassRef.current;
@@ -739,7 +809,35 @@ const SpeakersPanel = ({ ctx, hassRef, speakers, activeId, setActiveId }) => {
       <div style={{padding: '14px 16px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8}}>
         <div style={{flex: 1, fontFamily: fonts.display, fontSize: 15, color: p.fg, fontWeight: 500}}>Playing on</div>
         <div style={{fontSize: 11, color: p.fg3}}>{speakers.filter(s => s.playing).length} of {speakers.length}</div>
+        <button onClick={() => setManageOpen(v => !v)} style={{
+          padding: '4px 10px', borderRadius: 6,
+          background: manageOpen ? p.accentSoft : 'transparent',
+          border: `.5px solid ${manageOpen ? p.accent : p.border2}`,
+          color: manageOpen ? p.accent : p.fg2,
+          cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+        }}>{manageOpen ? 'Done' : 'Manage'}</button>
       </div>
+
+      {manageOpen && hiddenSpeakers.length > 0 && (
+        <div style={{padding: '10px 14px', borderBottom: `.5px solid ${p.border}`, background: 'rgba(241,234,217,0.02)'}}>
+          <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8}}>
+            Hidden ({hiddenSpeakers.length})
+          </div>
+          <div style={{display: 'flex', flexWrap: 'wrap', gap: 6}}>
+            {hiddenSpeakers.map(sp => (
+              <button key={sp.id}
+                onClick={() => setHidden(prev => { const next = new Set(prev); next.delete(sp.id); return next; })}
+                style={{
+                  padding: '5px 10px', borderRadius: 6,
+                  background: 'transparent', border: `.5px solid ${p.border2}`,
+                  color: p.fg2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                }}>
+                + {sp.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{maxHeight: 540, overflowY: 'auto'}}>
         {speakers.map(sp => {
           const isActive = sp.id === activeId;
@@ -768,6 +866,16 @@ const SpeakersPanel = ({ ctx, hassRef, speakers, activeId, setActiveId }) => {
                     cursor: 'pointer', display: 'grid', placeItems: 'center', flex: 'none', fontSize: 11}}>
                   {sp.playing ? '❚❚' : '▶'}
                 </button>
+                {manageOpen && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setHidden(prev => { const next = new Set(prev); next.add(sp.id); return next; }); }}
+                    title="Hide this speaker"
+                    style={{width: 24, height: 24, borderRadius: '50%', border: `.5px solid ${p.border2}`,
+                      background: 'transparent', color: p.fg3, cursor: 'pointer',
+                      display: 'grid', placeItems: 'center', flex: 'none', fontSize: 12}}>
+                    ×
+                  </button>
+                )}
               </div>
               <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
                 <window.Icon name="speaker" size={11} style={{color: p.fg3}}/>

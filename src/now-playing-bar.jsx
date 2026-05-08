@@ -32,12 +32,18 @@ const NowPlayingBar = ({ ctx }) => {
 
   React.useEffect(() => {
     if (!primary) return;
-    const key = `${primary.id}|${primary.haMediaTitle}|${primary.progress}`;
+    const stampedPos = primary.progress || 0;
+    const stampedAt = primary.progressUpdatedAt;
+    const now = Date.now();
+    const livePos = (primary.playing && stampedAt)
+      ? stampedPos + Math.max(0, (now - stampedAt) / 1000)
+      : stampedPos;
+    const key = `${primary.id}|${primary.haMediaTitle}|${stampedAt || stampedPos}`;
     if (key !== lastSeenRef.current.key) {
-      lastSeenRef.current = { pos: primary.progress || 0, at: Date.now(), key };
-      setTickPos(primary.progress || 0);
+      lastSeenRef.current = { pos: livePos, at: now, key };
+      setTickPos(Math.min(primary.duration || livePos, livePos));
     }
-  }, [primary?.id, primary?.haMediaTitle, primary?.progress, primary]);
+  }, [primary?.id, primary?.haMediaTitle, primary?.progress, primary?.progressUpdatedAt, primary?.playing, primary]);
 
   React.useEffect(() => {
     if (!isPlaying) return;
