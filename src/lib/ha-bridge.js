@@ -130,6 +130,11 @@ function translate(states) {
           out.speakers.push({
             id, room, name, type: 'sonos', playing, vol,
             group: e.attributes?.group_members?.[0] || null,
+            // Full group_members array. Sonos mirrors this on every
+            // member (leader and followers all have the same list), so
+            // the music page can determine "is this speaker grouped with
+            // the active one?" by intersecting with the active's list.
+            groupMembers: e.attributes?.group_members || [],
             trackId: null,                  // prototype expected an ID into TRACKS; we don't have that
             // media_position is the position when HA last updated. To
             // get the live position we add (Date.now() - progressUpdatedAt).

@@ -260,7 +260,7 @@ const iconBtn = (p) => ({
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit',
 });
 
-// ── NowPlayingHero — large player with art-tinted background ──────────────
+// ── NowPlayingHero — full-bleed album art with text fading over it ────────
 const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
   const { p, fonts, narrow } = ctx;
 
@@ -318,67 +318,52 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
   return (
     <div style={{
       position: 'relative', overflow: 'hidden',
-      borderRadius: 16, minHeight: narrow ? 360 : 380,
-      background: p.surface,
+      borderRadius: 16, minHeight: narrow ? 380 : 440,
+      // Full-bleed album art as the card background. When there's no
+      // art (idle, or radio without art), fall back to a tangerine
+      // gradient so the card is never blank.
+      background: art
+        ? `center / cover no-repeat url("${art}"), oklch(15% 0.03 25)`
+        : `linear-gradient(135deg, ${p.accent}, oklch(20% 0.05 25))`,
     }}>
-      {/* Album-art tinted background — blurred and darkened so the
-          foreground stays legible. */}
-      {art && (
-        <>
-          <div aria-hidden style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: `url("${art}")`,
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            filter: 'blur(60px) saturate(1.5) brightness(0.5)',
-            transform: 'scale(1.3)', // mask the blur edge feathering
-            zIndex: 0,
-          }}/>
-          <div aria-hidden style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(13,11,9,0.78) 100%)',
-            zIndex: 1,
-          }}/>
-        </>
-      )}
+      {/* Top fade — keeps the eyebrow + title legible against bright art. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 30%, rgba(0,0,0,0.0) 50%, rgba(0,0,0,0.45) 78%, rgba(0,0,0,0.85) 100%)',
+        pointerEvents: 'none',
+      }}/>
 
       <div style={{
-        position: 'relative', zIndex: 2,
-        padding: narrow ? '20px 18px 18px' : '28px 32px 24px',
-        display: 'flex', flexDirection: 'column', gap: narrow ? 16 : 20,
-        height: '100%', minHeight: narrow ? 360 : 380,
+        position: 'relative', zIndex: 1,
+        padding: narrow ? '20px 18px 20px' : '24px 28px 24px',
+        display: 'flex', flexDirection: 'column',
+        height: '100%', minHeight: narrow ? 380 : 440,
         color: '#fff',
       }}>
-        {/* Top: track info on left, big art on right */}
-        <div style={{display: 'grid', gridTemplateColumns: narrow ? '1fr' : '1fr auto', gap: narrow ? 16 : 28, alignItems: 'flex-start'}}>
-          <div style={{minWidth: 0, order: narrow ? 2 : 1}}>
-            <div style={{fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 8}}>
-              {isIdle ? 'Idle' : isPlaying ? 'Playing' : 'Paused'} · {speaker.name}
-            </div>
-            <div style={{fontFamily: fonts.display, fontSize: narrow ? 26 : 34, fontWeight: 500, lineHeight: 1.1, marginBottom: 6,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-              {title || 'Nothing playing'}
-            </div>
-            {(album || artist) && (
-              <div style={{fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 2,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                {album || artist}
-              </div>
-            )}
-            {album && artist && (
-              <div style={{fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2, fontStyle:'italic',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                {artist}
-              </div>
-            )}
-          </div>
-          {/* Album art tile */}
+        {/* Top: status + title + artist */}
+        <div style={{minWidth: 0}}>
           <div style={{
-            order: narrow ? 1 : 2,
-            width: narrow ? 160 : 200, height: narrow ? 160 : 200,
-            borderRadius: 12, flex: 'none', alignSelf: narrow ? 'center' : 'flex-start',
-            background: art ? `center / cover no-repeat url("${art}"), oklch(15% 0.05 25)` : `linear-gradient(135deg, ${p.accent}, oklch(20% 0.05 25))`,
-            boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
-          }}/>
+            fontSize: 11, color: 'rgba(255,255,255,0.85)',
+            letterSpacing: '.14em', textTransform: 'uppercase',
+            marginBottom: 10,
+            textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+          }}>
+            {isIdle ? 'Idle' : isPlaying ? 'Playing' : 'Paused'} · {speaker.name}
+          </div>
+          <div style={{
+            fontFamily: fonts.display,
+            fontSize: narrow ? 30 : 38, fontWeight: 500,
+            lineHeight: 1.05, marginBottom: 6,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            textShadow: '0 2px 8px rgba(0,0,0,0.55)',
+          }}>{title || 'Nothing playing'}</div>
+          {(artist || album) && (
+            <div style={{
+              fontSize: 14, color: 'rgba(255,255,255,0.92)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              textShadow: '0 1px 6px rgba(0,0,0,0.6)',
+            }}>{[artist, album].filter(Boolean).join(' · ')}</div>
+          )}
         </div>
 
         <div style={{flex: 1}}/>
@@ -394,7 +379,9 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
               onMouseUp={(e) => { call('media_seek', { seek_position: +e.target.value }); setSeeking(false); }}
               onTouchEnd={(e) => { call('media_seek', { seek_position: +e.target.value }); setSeeking(false); }}
               style={{width: '100%', accentColor: '#fff', height: 3}}/>
-            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 6, fontVariantNumeric: 'tabular-nums'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 11,
+              color: 'rgba(255,255,255,0.85)', marginTop: 6, fontVariantNumeric: 'tabular-nums',
+              textShadow: '0 1px 3px rgba(0,0,0,0.5)'}}>
               <span>{fmtTime(displayPos)}</span>
               <span>{fmtTime(dur)}</span>
             </div>
@@ -402,10 +389,10 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
         )}
 
         {/* Controls */}
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14}}>
-          <HeroBtn onClick={() => call('media_previous_track')} icon="‹‹" size={42}/>
-          <HeroBtn onClick={() => call('media_play_pause')} icon={isPlaying ? '❚❚' : '▶'} size={62} primary/>
-          <HeroBtn onClick={() => call('media_next_track')} icon="››" size={42}/>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 14}}>
+          <HeroBtn onClick={() => call('media_previous_track')} icon="‹‹" size={44}/>
+          <HeroBtn onClick={() => call('media_play_pause')} icon={isPlaying ? '❚❚' : '▶'} size={64} primary/>
+          <HeroBtn onClick={() => call('media_next_track')} icon="››" size={44}/>
         </div>
       </div>
     </div>
@@ -424,32 +411,55 @@ const HeroBtn = ({ onClick, icon, size, primary }) => (
 );
 
 // ── Up next ───────────────────────────────────────────────────────────────
+//
+// Pulls the queue from whichever service backs the active speaker. MA
+// exposes music_assistant.get_queue with a richer schema; Sonos's
+// underlying integration uses sonos.get_queue. Try MA first since the
+// active speaker is usually the MA mirror; fall back to Sonos.
 const QueueCard = ({ ctx, conn, speaker }) => {
   const { p, fonts } = ctx;
   const [queue, setQueue] = React.useState(null);
-  const [unsupported, setUnsupported] = React.useState(false);
   const titleKey = speaker?.haMediaTitle || '';
   const speakerId = speaker?.id;
 
   React.useEffect(() => {
     if (!conn || !speakerId) { setQueue(null); return; }
     let alive = true;
-    (async () => {
+    const tryService = async (domain, service) => {
       try {
         const resp = await conn.sendMessagePromise({
-          type: 'call_service', domain: 'sonos', service: 'get_queue',
-          service_data: { entity_id: speakerId }, return_response: true,
+          type: 'call_service', domain, service,
+          service_data: { entity_id: speakerId },
+          return_response: true,
         });
-        if (!alive) return;
-        const arr = resp?.response?.[speakerId];
-        setQueue(Array.isArray(arr) ? arr : []);
-        setUnsupported(false);
-      } catch { if (alive) { setQueue([]); setUnsupported(true); } }
+        return resp?.response?.[speakerId] ?? resp?.response ?? null;
+      } catch { return null; }
+    };
+    (async () => {
+      // MA's queue payload looks like { items: [{ name, artists, album,
+      // image, ... }, ...] }; Sonos's is a bare array of { title,
+      // artist, album, thumbnail }. Normalise to the latter shape.
+      const ma = await tryService('music_assistant', 'get_queue');
+      if (alive && ma) {
+        const items = Array.isArray(ma) ? ma : (ma.items || ma.queue_items || []);
+        if (Array.isArray(items)) {
+          setQueue(items.map(it => ({
+            title: it.title || it.name || '',
+            artist: (it.artists?.[0]?.name) || it.artist || '',
+            album: (it.album?.name) || it.album || '',
+            thumbnail: it.image || it.thumbnail || null,
+          })));
+          return;
+        }
+      }
+      const sonos = await tryService('sonos', 'get_queue');
+      if (alive && Array.isArray(sonos)) { setQueue(sonos); return; }
+      if (alive) setQueue([]);
     })();
     return () => { alive = false; };
   }, [conn, speakerId, titleKey]);
 
-  if (unsupported || !queue || queue.length === 0) return null;
+  if (!queue || queue.length === 0) return null;
   const currentTitle = (speaker.haMediaTitle || '').toLowerCase();
   const currentIdx = queue.findIndex(q => (q.title || '').toLowerCase() === currentTitle);
   const upcoming = (currentIdx >= 0 ? queue.slice(currentIdx + 1) : queue).slice(0, 6);
@@ -480,7 +490,7 @@ const QueueCard = ({ ctx, conn, speaker }) => {
   );
 };
 
-// ── Right column: room chooser ────────────────────────────────────────────
+// ── Right column: room chooser with inline grouping & manage ───────────────
 const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                      hidden, setHidden, autoVisible, manageOpen, setManageOpen }) => {
   const { p, fonts } = ctx;
@@ -488,36 +498,46 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
   const groupable = speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
   const hiddenSpeakers = (autoVisible || []).filter(s => hidden?.has?.(s.id));
   const active = speakers.find(s => s.id === activeId) || speakers[0];
+  const activeGroup = active?.groupMembers || [];
 
   const call = (entityId, service, data) => {
     const hass = hassRef.current;
     if (!hass?.callService) return;
     try { hass.callService('media_player', service, { entity_id: entityId, ...data }); } catch {}
   };
+  // Is this speaker grouped with the currently-active speaker?
+  // Either it's the leader or shares the active's group_members list
+  // (Sonos mirrors the list across all members).
+  const inActiveGroup = (sp) => sp.id !== active?.id && activeGroup.includes(sp.id);
+
+  // Toggle membership: add to / remove from the active's group.
+  const toggleGroup = (sp) => {
+    if (!active || sp.id === active.id) return;
+    if (inActiveGroup(sp)) {
+      call(sp.id, 'unjoin');
+    } else {
+      call(active.id, 'join', { group_members: [sp.id] });
+    }
+  };
+
   const groupAll = () => {
-    const hass = hassRef.current;
-    if (!groupable.length || !hass?.callService) return;
-    const leader = groupable.find(s => s.id === activeId) || groupable[0];
-    const followers = groupable.filter(s => s.id !== leader.id).map(s => s.id);
+    if (!groupable.length || !active) return;
+    const followers = groupable.filter(s => s.id !== active.id).map(s => s.id);
     if (!followers.length) return;
-    try { hass.callService('media_player', 'join', { entity_id: leader.id, group_members: followers }); } catch {}
+    call(active.id, 'join', { group_members: followers });
   };
-  const ungroupAll = () => {
-    const hass = hassRef.current;
-    if (!groupable.length || !hass?.callService) return;
-    try { hass.callService('media_player', 'unjoin', { entity_id: groupable.map(s => s.id) }); } catch {}
-  };
-  const pauseAll = () => {
-    const hass = hassRef.current;
-    const playing = speakers.filter(s => s.playing).map(s => s.id);
-    if (!playing.length || !hass?.callService) return;
-    try { hass.callService('media_player', 'media_pause', { entity_id: playing }); } catch {}
-  };
+
+  const groupedNames = groupable
+    .filter(s => s.id !== active?.id && inActiveGroup(s))
+    .map(s => s.name);
+  const subtitleParts = [active?.name || ''];
+  if (groupedNames.length === 1) subtitleParts[0] += ` + ${groupedNames[0]}`;
+  else if (groupedNames.length > 1) subtitleParts[0] += ` + ${groupedNames.length}`;
 
   return (
     <window.Card p={p} style={{padding: 0, overflow: 'visible'}}>
       <div style={{padding: '12px 14px', display: 'grid', gap: 8}}>
-        {/* Choose Room dropdown */}
+        {/* Choose Room dropdown — also hosts grouping toggles + manage */}
         <div style={{position: 'relative'}}>
           <button onClick={() => setChooserOpen(v => !v)} style={{
             width: '100%', padding: '12px 14px', borderRadius: 10,
@@ -526,9 +546,12 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
             <span style={{flex: 1, minWidth: 0}}>
-              <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2}}>Choose</div>
-              <div style={{fontSize: 14, fontWeight: 500, color: p.fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                {active?.name || 'Room'}
+              <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2}}>
+                Playing on
+              </div>
+              <div style={{fontSize: 14, fontWeight: 500, color: p.fg,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                {subtitleParts[0] || 'Room'}
               </div>
             </span>
             <span style={{fontSize: 11, color: p.fg3, transform: chooserOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 120ms ease'}}>▾</span>
@@ -538,35 +561,113 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
               position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
               background: p.surface2, border: `.5px solid ${p.border2}`, borderRadius: 10,
               boxShadow: '0 18px 40px rgba(0,0,0,0.4)', zIndex: 30,
-              maxHeight: 320, overflowY: 'auto',
+              maxHeight: 480, overflowY: 'auto',
             }}>
+              {/* Header with manage toggle */}
+              <div style={{
+                padding: '10px 14px', borderBottom: `.5px solid ${p.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{fontSize: 11, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 500}}>
+                  {manageOpen ? 'Manage speakers' : 'Tap to switch · Group to add'}
+                </div>
+                <button onClick={() => setManageOpen(v => !v)} style={{
+                  padding: '4px 10px', borderRadius: 6,
+                  background: manageOpen ? p.accentSoft : 'transparent',
+                  border: `.5px solid ${manageOpen ? p.accent : p.border2}`,
+                  color: manageOpen ? p.accent : p.fg2,
+                  cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                }}>{manageOpen ? 'Done' : 'Manage'}</button>
+              </div>
+
               {speakers.map(sp => {
-                const isActive = sp.id === activeId;
+                const isActive = sp.id === active?.id;
+                const grouped = inActiveGroup(sp);
+                const canGroup = !isActive && (sp.supportedFeatures & GROUPING_FEATURE) !== 0;
                 return (
                   <div key={sp.id}
-                    onClick={() => { setActiveId(sp.id); setChooserOpen(false); }}
                     style={{
-                      padding: '10px 14px', cursor: 'pointer',
+                      padding: '10px 14px',
                       display: 'flex', alignItems: 'center', gap: 10,
                       background: isActive ? p.warm : 'transparent',
                       borderLeft: isActive ? `2px solid ${p.accent}` : '2px solid transparent',
+                      borderBottom: `.5px solid ${p.border}`,
                     }}>
-                    <div style={{width: 28, height: 28, borderRadius: 5, flex: 'none',
-                      background: sp.haEntityPicture ? `center / cover no-repeat url("${sp.haEntityPicture}"), oklch(20% 0.05 25)` : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
-                    <div style={{flex: 1, minWidth: 0}}>
-                      <div style={{fontSize: 13, color: p.fg, fontWeight: 500}}>{sp.name}</div>
-                      <div style={{fontSize: 11, color: p.fg3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                        {sp.playing && sp.haMediaTitle ? sp.haMediaTitle : 'Idle'}
+                    <button onClick={() => { if (!manageOpen) { setActiveId(sp.id); setChooserOpen(false); } }}
+                      disabled={manageOpen}
+                      style={{
+                        flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
+                        padding: 0, border: 0, background: 'transparent',
+                        cursor: manageOpen ? 'default' : 'pointer', textAlign: 'left',
+                      }}>
+                      <div style={{width: 30, height: 30, borderRadius: 5, flex: 'none',
+                        background: sp.haEntityPicture
+                          ? `center / cover no-repeat url("${sp.haEntityPicture}"), oklch(20% 0.05 25)`
+                          : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
+                      <div style={{flex: 1, minWidth: 0}}>
+                        <div style={{fontSize: 13, color: p.fg, fontWeight: 500,
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                          {sp.name}
+                          {isActive && <span style={{fontSize: 9, padding: '2px 6px', borderRadius: 999, background: p.accent, color: '#fff', fontWeight: 600, letterSpacing: '.04em'}}>NOW</span>}
+                          {grouped && <span style={{fontSize: 9, padding: '2px 6px', borderRadius: 999, background: 'rgba(241,234,217,0.1)', color: p.fg2, fontWeight: 500, letterSpacing: '.04em'}}>GROUPED</span>}
+                        </div>
+                        <div style={{fontSize: 11, color: p.fg3, marginTop: 1,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                          {sp.playing && sp.haMediaTitle ? sp.haMediaTitle : 'Idle'}
+                        </div>
                       </div>
-                    </div>
-                    {sp.playing && <span style={{width: 6, height: 6, borderRadius: '50%', background: 'oklch(60% 0.14 145)', flex: 'none'}}/>}
+                    </button>
+                    {!manageOpen && canGroup && (
+                      <button onClick={(e) => { e.stopPropagation(); toggleGroup(sp); }}
+                        title={grouped ? 'Remove from group' : 'Add to group'}
+                        style={{
+                          padding: '5px 10px', borderRadius: 6,
+                          background: grouped ? p.accentSoft : 'transparent',
+                          border: `.5px solid ${grouped ? p.accent : p.border2}`,
+                          color: grouped ? p.accent : p.fg2,
+                          cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                        }}>{grouped ? '✓ Grouped' : '+ Group'}</button>
+                    )}
+                    {manageOpen && (
+                      <button onClick={(e) => { e.stopPropagation(); setHidden(prev => { const n = new Set(prev); n.add(sp.id); return n; }); }}
+                        title="Hide this speaker"
+                        style={{
+                          width: 24, height: 24, borderRadius: '50%',
+                          border: `.5px solid ${p.border2}`,
+                          background: 'transparent', color: p.fg3, cursor: 'pointer', fontSize: 12,
+                        }}>×</button>
+                    )}
                   </div>
                 );
               })}
+
+              {/* Restore hidden — only when manage mode is on */}
+              {manageOpen && hiddenSpeakers.length > 0 && (
+                <div style={{padding: '10px 14px', borderBottom: `.5px solid ${p.border}`,
+                  background: 'rgba(241,234,217,0.02)'}}>
+                  <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6}}>
+                    Hidden — tap to restore
+                  </div>
+                  <div style={{display: 'flex', flexWrap: 'wrap', gap: 4}}>
+                    {hiddenSpeakers.map(sp => (
+                      <button key={sp.id}
+                        onClick={() => setHidden(prev => { const n = new Set(prev); n.delete(sp.id); return n; })}
+                        style={{
+                          padding: '4px 10px', borderRadius: 6,
+                          background: p.surface, border: `.5px solid ${p.border2}`,
+                          color: p.fg2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                        }}>+ {sp.name}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
+        {/* "Play in all Rooms" quick action — joins every groupable
+            speaker to the active speaker's stream. */}
         <button onClick={groupAll} disabled={groupable.length < 2} style={{
           width: '100%', padding: '12px 14px', borderRadius: 10,
           background: p.surface, border: `.5px solid ${p.border2}`, color: p.fg,
@@ -580,117 +681,10 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
           </span>
           <span style={{fontSize: 13}}>⌂</span>
         </button>
-
-        {/* Quick speaker chips */}
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(86px, 1fr))', gap: 6, marginTop: 4}}>
-          {speakers.slice(0, 8).map((sp, i) => (
-            <button key={sp.id} onClick={() => setActiveId(sp.id)}
-              title={sp.name}
-              style={{
-                aspectRatio: '1', borderRadius: 12, padding: 8,
-                border: sp.id === activeId ? `1.5px solid ${p.accent}` : `.5px solid ${p.border2}`,
-                background: SPEAKER_TINTS[i % SPEAKER_TINTS.length],
-                color: '#fff', cursor: 'pointer', fontFamily: 'inherit',
-                display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-end',
-                gap: 4, position: 'relative', overflow: 'hidden',
-                fontSize: 11, fontWeight: 500, textAlign: 'left', lineHeight: 1.1,
-              }}>
-              <span style={{fontSize: 18, opacity: 0.85}}>{ROOM_ICON_FOR(sp.name)}</span>
-              <span style={{
-                fontSize: 11, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.4)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%',
-              }}>{sp.name}</span>
-              {sp.playing && <span style={{position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: '50%', background: '#fff'}}/>}
-            </button>
-          ))}
-        </div>
-
-        {/* Manage / actions */}
-        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 4}}>
-          <button onClick={pauseAll} style={smallBtn(p)}>Pause all</button>
-          <button onClick={ungroupAll} disabled={!groupable.length} style={smallBtn(p, !groupable.length)}>Ungroup</button>
-          <button onClick={() => setManageOpen(v => !v)} style={{
-            ...smallBtn(p, false, manageOpen),
-            background: manageOpen ? p.accentSoft : 'transparent',
-            color: manageOpen ? p.accent : p.fg,
-          }}>{manageOpen ? 'Done' : 'Manage'}</button>
-        </div>
-
-        {/* Manage panel — hide/show speakers */}
-        {manageOpen && (
-          <div style={{padding: 8, borderRadius: 8, background: 'rgba(241,234,217,0.02)', border: `.5px dashed ${p.border}`}}>
-            <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6}}>
-              Tap × to hide a speaker
-            </div>
-            <div style={{display: 'flex', flexDirection: 'column', gap: 4}}>
-              {speakers.map(sp => (
-                <div key={sp.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '6px 8px', borderRadius: 6, background: p.surface,
-                }}>
-                  <span style={{flex: 1, fontSize: 12, color: p.fg}}>{sp.name}</span>
-                  <button onClick={() => setHidden(prev => { const n = new Set(prev); n.add(sp.id); return n; })}
-                    style={{width: 22, height: 22, borderRadius: '50%', border: `.5px solid ${p.border2}`,
-                      background: 'transparent', color: p.fg3, cursor: 'pointer', fontSize: 11}}>×</button>
-                </div>
-              ))}
-            </div>
-            {hiddenSpeakers.length > 0 && (
-              <>
-                <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', margin: '10px 0 6px'}}>
-                  Hidden — tap to restore
-                </div>
-                <div style={{display: 'flex', flexWrap: 'wrap', gap: 4}}>
-                  {hiddenSpeakers.map(sp => (
-                    <button key={sp.id}
-                      onClick={() => setHidden(prev => { const n = new Set(prev); n.delete(sp.id); return n; })}
-                      style={{
-                        padding: '4px 10px', borderRadius: 6,
-                        background: p.surface, border: `.5px solid ${p.border2}`,
-                        color: p.fg2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-                      }}>+ {sp.name}</button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
     </window.Card>
   );
 };
-
-const smallBtn = (p, disabled, active) => ({
-  padding: '8px 4px', borderRadius: 7,
-  border: `.5px solid ${active ? p.accent : p.border2}`,
-  background: 'transparent',
-  color: p.fg, fontSize: 11, cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.4 : 1, fontFamily: 'inherit',
-});
-
-const SPEAKER_TINTS = [
-  'linear-gradient(135deg, #4a8c5a, #2f5c3c)',
-  'linear-gradient(135deg, #6a8cc4, #3c5982)',
-  'linear-gradient(135deg, #c97478, #8c4548)',
-  'linear-gradient(135deg, #d4a35a, #8c6730)',
-  'linear-gradient(135deg, #b56fc4, #6e3f82)',
-  'linear-gradient(135deg, #d88c5a, #8c5430)',
-  'linear-gradient(135deg, #5fb0a8, #2f7872)',
-  'linear-gradient(135deg, #c4a05f, #826636)',
-];
-function ROOM_ICON_FOR(name) {
-  const n = (name || '').toLowerCase();
-  if (/bed|sleep/.test(n)) return '🛏️';
-  if (/bath|shower/.test(n)) return '🛁';
-  if (/kitch|dining|food/.test(n)) return '🍽️';
-  if (/office|study|desk/.test(n)) return '💻';
-  if (/garage|car/.test(n)) return '🚗';
-  if (/turntable|vinyl/.test(n)) return '💿';
-  if (/move|portable/.test(n)) return '🎒';
-  if (/living|family|den/.test(n)) return '🛋️';
-  if (/outdoor|patio|yard/.test(n)) return '🌳';
-  return '🔊';
-}
 
 // ── Playlists card — pinned/customizable ──────────────────────────────────
 const PlaylistsCard = ({ ctx, hassRef, conn, speakerId, playMedia, isMA }) => {
