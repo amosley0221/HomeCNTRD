@@ -6,47 +6,61 @@
 // Tap once to expand into a panel with bigger art + position slider +
 // volume; tap again or the X to collapse.
 
+// Fallback context so useContext is callable even before ha-panel.jsx
+// has assigned window.HassContext. Once ha-panel.jsx sets the real
+// context, the next render swaps it in. Hooks must always be called
+// in the same order, so we can't conditionally skip useContext.
+const EmptyHassContext = React.createContext(null);
+
 const NowPlayingBar = ({ ctx }) => {
   const { p, fonts, state, narrow, page } = ctx;
-  const [expanded, setExpanded] = React.useState(false);
-  const [focused, setFocused] = React.useState(null); // pinned speaker id
-  const hass = window.HassContext ? React.useContext(window.HassContext) : null;
 
-  // Hidden on the music page (full controls live there) and when no
-  // speaker is actively playing.
-  if (page === 'music') return null;
+  // All hooks must run unconditionally on every render. They sit above
+  // the page/playing early returns so React's hook-order check stays
+  // happy when the user navigates between pages or playback stops.
+  const hass = React.useContext(window.HassContext || EmptyHassContext);
+  const [expanded, setExpanded] = React.useState(false);
+  const [focused, setFocused] = React.useState(null);
 
   const playing = (state.speakers || []).filter(s => s.playing);
   const primary = focused
     ? state.speakers.find(s => s.id === focused) || playing[0]
     : playing[0];
 
+  // Position interpolation. Always declared even when there's nothing
+  // to play; the effect bails internally.
+  const [tickPos, setTickPos] = React.useState(0);
+  const lastSeenRef = React.useRef({ pos: 0, at: Date.now(), key: '' });
+  const dur = primary?.duration || 0;
+  const isPlaying = !!primary?.playing;
+
+  React.useEffect(() => {
+    if (!primary) return;
+    const key = `${primary.id}|${primary.haMediaTitle}|${primary.progress}`;
+    if (key !== lastSeenRef.current.key) {
+      lastSeenRef.current = { pos: primary.progress || 0, at: Date.now(), key };
+      setTickPos(primary.progress || 0);
+    }
+  }, [primary?.id, primary?.haMediaTitle, primary?.progress, primary]);
+
+  React.useEffect(() => {
+    if (!isPlaying) return;
+    const i = setInterval(() => {
+      const dt = (Date.now() - lastSeenRef.current.at) / 1000;
+      setTickPos(Math.min(dur || 0, lastSeenRef.current.pos + dt));
+    }, 500);
+    return () => clearInterval(i);
+  }, [isPlaying, primary?.id, dur]);
+
+  // Hidden on the music page (full controls live there) and when no
+  // speaker is actively playing. These run AFTER every hook above.
+  if (page === 'music') return null;
   if (!primary) return null;
 
   const title = primary.haMediaTitle || 'Playing';
   const artist = primary.haMediaArtist || '';
   const album = primary.haMediaAlbum || '';
   const art = primary.haEntityPicture || null;
-  const dur = primary.duration || 0;
-  // Local position counter so the progress bar moves smoothly between
-  // HA updates (which only fire every couple of seconds).
-  const [tickPos, setTickPos] = React.useState(primary.progress || 0);
-  const lastSeenRef = React.useRef({ pos: primary.progress || 0, at: Date.now(), key: '' });
-  React.useEffect(() => {
-    const key = `${primary.id}|${primary.haMediaTitle}|${primary.progress}`;
-    if (key !== lastSeenRef.current.key) {
-      lastSeenRef.current = { pos: primary.progress || 0, at: Date.now(), key };
-      setTickPos(primary.progress || 0);
-    }
-  }, [primary.id, primary.haMediaTitle, primary.progress]);
-  React.useEffect(() => {
-    if (!primary.playing) return;
-    const i = setInterval(() => {
-      const dt = (Date.now() - lastSeenRef.current.at) / 1000;
-      setTickPos(Math.min(dur || 0, lastSeenRef.current.pos + dt));
-    }, 500);
-    return () => clearInterval(i);
-  }, [primary.playing, primary.id, dur]);
 
   const call = (id, service, data) => {
     if (!hass?.callService) return;
