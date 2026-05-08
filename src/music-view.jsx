@@ -142,9 +142,31 @@ const MusicView = ({ ctx }) => {
 
   // ── Active speaker, infinity, manage panel ─────────────────────────
   const [activeId, setActiveId] = React.useState(null);
+  // Track when the user explicitly tapped to switch speakers, so the
+  // auto-track-playing logic below doesn't yank them off an idle
+  // speaker they just selected (e.g., to start playback there).
+  const lastUserSwitchRef = React.useRef(0);
+  const userSwitchSpeaker = React.useCallback((id) => {
+    lastUserSwitchRef.current = Date.now();
+    setActiveId(id);
+  }, []);
   React.useEffect(() => {
     if (!speakers.length) return;
-    if (!activeId || !speakers.find(s => s.id === activeId)) setActiveId(speakers[0].id);
+    const current = speakers.find(s => s.id === activeId);
+    // No active or stale — pick a playing speaker if one exists, else first.
+    if (!current) {
+      const firstPlaying = speakers.find(s => s.playing);
+      setActiveId((firstPlaying || speakers[0]).id);
+      return;
+    }
+    // Active is idle and someone else is playing — follow the music
+    // unless the user just hand-picked this speaker (within 30 s).
+    if (!current.playing) {
+      const recent = (Date.now() - lastUserSwitchRef.current) < 30000;
+      if (recent) return;
+      const firstPlaying = speakers.find(s => s.playing);
+      if (firstPlaying && firstPlaying.id !== activeId) setActiveId(firstPlaying.id);
+    }
   }, [speakers, activeId]);
   const [infinity, setInfinityRaw] = React.useState(() => {
     try { return localStorage.getItem(INFINITY_KEY) === '1'; } catch { return false; }
@@ -265,7 +287,7 @@ const MusicView = ({ ctx }) => {
         {/* Right column */}
         <div style={{display:'flex', flexDirection:'column', gap:dens.gap, minWidth: 0}}>
           <RoomPanel ctx={ctx} hassRef={hassRef} speakers={speakers} activeId={activeId}
-            setActiveId={setActiveId} hidden={hidden} setHidden={setHidden}
+            setActiveId={userSwitchSpeaker} hidden={hidden} setHidden={setHidden}
             autoVisible={autoVisible}
             manageOpen={manageOpen} setManageOpen={setManageOpen}/>
           <PlaylistsCard ctx={ctx} hassRef={hassRef} conn={conn} speakerId={active?.id}
