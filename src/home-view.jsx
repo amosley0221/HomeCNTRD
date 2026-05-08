@@ -633,13 +633,21 @@ const SpeakersSection = ({ ctx }) => {
   const { p, fonts, dens, state } = ctx;
   const hass = React.useContext(HassContext);
 
-  // Dedupe Sonos + Music Assistant entries by name. When an MA mirror
-  // exists for a room, prefer it (matches the Music page logic).
+  // Dashboard speaker tiles should only show real Sonos rooms, not the
+  // MacBook / Cast / display media_players that Music Assistant also
+  // surfaces. Build the list by name from entities flagged as Sonos
+  // (isSonosAttr === sonos_group attribute is present), then prefer the
+  // MA mirror per name so service calls go through MA when available.
   const speakers = React.useMemo(() => {
     if (!state.speakers?.length) return [];
-    let pool = state.speakers.filter(s => s.isMAAttr || s.isSonosAttr);
-    if (!pool.length) pool = state.speakers;
-    if (pool.some(s => s.isMAAttr)) pool = pool.filter(s => s.isMAAttr);
+    const sonosNames = new Set();
+    for (const s of state.speakers) {
+      if (s.isSonosAttr) sonosNames.add((s.name || s.id).toLowerCase().trim());
+    }
+    if (!sonosNames.size) return [];
+    const pool = state.speakers.filter(s =>
+      sonosNames.has((s.name || s.id).toLowerCase().trim())
+    );
     const seen = new Map();
     for (const s of pool) {
       const key = (s.name || s.id).toLowerCase().trim();

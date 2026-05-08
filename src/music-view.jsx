@@ -1097,7 +1097,16 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
         }
         const resp = await conn.sendMessagePromise(msg);
         if (!alive) return;
-        setItems((resp?.children || []).filter(isMusicItem));
+        const children = resp?.children || [];
+        const filtered = children.filter(isMusicItem);
+        // Surface response shape so users can spot truncation when a
+        // big library (artists, albums, tracks) gets capped by MA. The
+        // node title + counts are enough to diagnose without leaking PII.
+        const label = head?.title || 'root';
+        const first = filtered[0]?.title || '∅';
+        const last = filtered[filtered.length - 1]?.title || '∅';
+        pushDiag(`music: browse "${label}" — ${filtered.length}/${children.length} items (${first} → ${last})`);
+        setItems(filtered);
       } catch (e) { if (alive) setError(e?.message || String(e)); }
     })();
     return () => { alive = false; };
