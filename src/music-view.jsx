@@ -512,34 +512,47 @@ const QueueCard = ({ ctx, conn, speaker }) => {
       // artist, album, thumbnail }. Normalise to the latter shape.
       const ma = await tryService('music_assistant', 'get_queue');
       if (alive && ma.ok) {
-        // Try common response shapes:
-        //   resp.response.[entityId].items
-        //   resp.response.items
-        //   resp.response.[entityId] (array)
-        //   resp.response (array)
         const cand = ma.response?.[speakerId] ?? ma.response;
-        const items = Array.isArray(cand) ? cand : (cand?.items || cand?.queue_items || cand?.tracks);
-        pushDiag(`music: MA queue — ${Array.isArray(items) ? items.length + ' items' : 'no items array (got: ' + (cand ? Object.keys(cand).join(',') : 'null') + ')'}`);
-        if (Array.isArray(items) && items.length) {
-          setQueue(items.map(it => ({
-            title: it.title || it.name || '',
-            artist: (it.artists?.[0]?.name) || it.artist || '',
-            album: (it.album?.name) || it.album || '',
-            thumbnail: it.image || it.thumbnail || it.media_image_url || null,
-          })));
+        // items can be: array, object dict, null/undefined, or missing.
+        let arr = null;
+        const i = cand?.items;
+        if (Array.isArray(i)) arr = i;
+        else if (i && typeof i === 'object') arr = Object.values(i);
+        else if (Array.isArray(cand?.queue_items)) arr = cand.queue_items;
+        else if (Array.isArray(cand?.tracks)) arr = cand.tracks;
+
+        const norm = (it) => ({
+          title: it.title || it.name || '',
+          artist: (it.artists?.[0]?.name) || it.artist || '',
+          album: (it.album?.name) || it.album || '',
+          thumbnail: it.image || it.thumbnail || it.media_image_url || it.image_url || null,
+        });
+
+        if (Array.isArray(arr) && arr.length) {
+          // If the queue includes the currently-playing track, slice
+          // past it via current_index so Up Next is what comes after.
+          const ci = typeof cand?.current_index === 'number' ? cand.current_index : -1;
+          const upcoming = ci >= 0 ? arr.slice(ci + 1) : arr;
+          pushDiag(`music: MA queue — ${arr.length} items, current_index=${ci}, ${upcoming.length} upcoming`);
+          setQueue(upcoming.map(norm));
           return;
         }
+
+        // Fall back to next_item alone — common when MA is streaming
+        // a single track or radio without a populated upcoming queue.
+        if (cand?.next_item) {
+          pushDiag(`music: MA queue — using next_item only`);
+          setQueue([norm(cand.next_item)]);
+          return;
+        }
+        pushDiag(`music: MA queue — empty (keys=${cand ? Object.keys(cand).join(',') : 'null'})`);
       } else if (alive && ma) {
         pushDiag(`music: MA get_queue failed — ${ma.error}`);
       }
-      const sonos = await tryService('sonos', 'get_queue');
-      if (alive && sonos.ok) {
-        const arr = sonos.response?.[speakerId];
-        if (Array.isArray(arr) && arr.length) { setQueue(arr); return; }
-        pushDiag(`music: sonos queue — empty or unexpected shape`);
-      } else if (alive && sonos) {
-        pushDiag(`music: sonos get_queue failed — ${sonos.error}`);
-      }
+      // Skip the Sonos fallback when the active speaker is MA-managed —
+      // sonos.get_queue would error out with "did not match any
+      // entities" because MA mirrors live in the music_assistant domain
+      // for service routing purposes.
       if (alive) setQueue([]);
     })();
     return () => { alive = false; };
@@ -581,22 +594,6 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                      hidden, setHidden, autoVisible, manageOpen, setManageOpen }) => {
   const { p, fonts } = ctx;
   const [chooserOpen, setChooserOpen] = React.useState(false);
-  const dropdownRef = React.useRef(null);
-  // Close the dropdown when the user taps outside it. Without this it
-  // sticks open until the chevron is tapped again.
-  React.useEffect(() => {
-    if (!chooserOpen) return;
-    const onDown = (e) => {
-      if (!dropdownRef.current) return;
-      if (!dropdownRef.current.contains(e.target)) setChooserOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('touchstart', onDown);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('touchstart', onDown);
-    };
-  }, [chooserOpen]);
 
   const groupable = speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
   const hiddenSpeakers = (autoVisible || []).filter(s => hidden?.has?.(s.id));
@@ -654,7 +651,7 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
     <window.Card p={p} style={{padding: 0, overflow: 'visible'}}>
       <div style={{padding: '12px 14px', display: 'grid', gap: 8}}>
         {/* Choose Room dropdown — also hosts grouping toggles + manage */}
-        <div ref={dropdownRef} style={{position: 'relative'}}>
+        <div style={{position: 'relative'}}>
           <button onClick={() => setChooserOpen(v => !v)} style={{
             width: '100%', padding: '12px 14px', borderRadius: 10,
             background: p.surface, border: `.5px solid ${p.border2}`, color: p.fg,
@@ -673,12 +670,20 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
             <span style={{fontSize: 11, color: p.fg3, transform: chooserOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 120ms ease'}}>▾</span>
           </button>
           {chooserOpen && (
-            <div style={{
-              position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
-              background: p.surface2, border: `.5px solid ${p.border2}`, borderRadius: 10,
-              boxShadow: '0 18px 40px rgba(0,0,0,0.4)', zIndex: 30,
-              maxHeight: 480, overflowY: 'auto',
-            }}>
+            <>
+              {/* Backdrop — absorbs taps outside the popup so we never
+                  accidentally close while the user is mid-interaction
+                  with a row. Lower z-index than the popup, so clicks
+                  on rows still hit the rows. */}
+              <div onClick={() => setChooserOpen(false)} style={{
+                position: 'fixed', inset: 0, zIndex: 25, background: 'transparent',
+              }}/>
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+                background: p.surface2, border: `.5px solid ${p.border2}`, borderRadius: 10,
+                boxShadow: '0 18px 40px rgba(0,0,0,0.4)', zIndex: 30,
+                maxHeight: 480, overflowY: 'auto',
+              }}>
               {/* Header with manage toggle */}
               <div style={{
                 padding: '10px 14px', borderBottom: `.5px solid ${p.border}`,
@@ -810,6 +815,7 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                 </div>
               )}
             </div>
+            </>
           )}
         </div>
 
