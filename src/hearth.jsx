@@ -3,7 +3,7 @@
 import HassContext from './lib/hass-context.js';
 import { askAgent } from './lib/ai.js';
 import { parseIntent } from './lib/intents.js';
-import { speak as speakText, cancelSpeak, listenOnce } from './lib/voice.js';
+import { speak as speakText, cancelSpeak, listenOnce, isHACompanionApp } from './lib/voice.js';
 import * as wakeWord from './lib/wake-word.js';
 
 const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibleDevices, settings, setSetting, user, patchUser, doLogout, narrow, openBrowser }) => {
@@ -121,8 +121,11 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
   // Attempt start() optimistically on mount so reloads pick up where we
   // left off; if iOS Safari refuses the silent reconnect we'll surface
   // the error and the user re-toggles in Settings (which carries a real
-  // user gesture).
+  // user gesture). In the HA Companion app the WKWebView blocks
+  // getUserMedia regardless, so we skip the attempt entirely and
+  // present the Safari workaround in Settings instead.
   React.useEffect(() => {
+    if (isHACompanionApp()) return;
     const apply = (cfg) => {
       if (cfg.enabled) wakeWord.start().catch(() => {});
       else wakeWord.stop();

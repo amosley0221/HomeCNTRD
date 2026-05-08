@@ -1,6 +1,7 @@
 // settings-view.jsx — Full settings page (mirrors Tweaks but as a real settings page)
 
 import * as wakeWord from './lib/wake-word.js';
+import { isHACompanionApp } from './lib/voice.js';
 
 const SettingsView = ({ ctx }) => {
   const { p, fonts, dens } = ctx;
@@ -424,7 +425,12 @@ const SettingRow = ({ p, fonts, label, desc, children, inline }) => (
 // Toggling on calls wakeWord.start() synchronously inside the click
 // handler so the getUserMedia() prompt rides on the user gesture
 // (otherwise iOS Safari refuses the mic). Toggling off tears down.
+//
+// In the HA Companion iOS app, getUserMedia is silently dropped by
+// the WKWebView for panel_custom content, so the toggle is replaced
+// with an explanation pointing the user at Safari + Add to Home Screen.
 const WakeWordSettings = ({ p, fonts }) => {
+  const inCompanion = React.useMemo(isHACompanionApp, []);
   const [voice, setVoice] = React.useState(() => wakeWord.loadVoiceSettings());
   const [status, setStatus] = React.useState(() => wakeWord.getState());
 
@@ -441,6 +447,21 @@ const WakeWordSettings = ({ p, fonts }) => {
       wakeWord.stop();
     }
   };
+
+  if (inCompanion) {
+    return (
+      <SettingRow p={p} fonts={fonts}
+        label="Voice activation"
+        desc={<>Hands-free wake word ("Hey Jarvis") isn't available in the Home Assistant Companion app — its WebView doesn't pass microphone permission through to embedded panels. Open <code style={{background:p.surface, padding:'1px 5px', borderRadius:4, fontSize:11}}>192.168.68.76:8123</code> in <b>Safari</b> instead, then <b>Share → Add to Home Screen</b> for a near-identical experience with full voice support.</>}>
+        <div style={{display:'flex', alignItems:'center', gap:14}}>
+          <window.Toggle p={p} on={false} onChange={() => {}}/>
+          <div style={{fontSize:12, color:p.fg3, fontStyle:'italic'}}>
+            Unavailable in Companion app
+          </div>
+        </div>
+      </SettingRow>
+    );
+  }
 
   const statusLabel = (() => {
     if (!voice.enabled) return { color: p.fg3, text: 'Off' };

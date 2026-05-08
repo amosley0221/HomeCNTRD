@@ -195,8 +195,24 @@ Two systems, easy to confuse:
   bubble. Tap-to-talk paths (the chat mic button + the wake-word
   detection handler) go through `listenOnce()`, which throws on iOS
   Companion — callers should handle that gracefully.
-- **`getUserMedia`** works in WKWebView (iOS 14.3+) but requires a
-  user gesture on the *first* call. Subsequent calls in the same
+- **`getUserMedia` is silently dropped by HA Companion's WKWebView**
+  for `panel_custom` content. The promise neither resolves nor
+  rejects — it just hangs. Granting Microphone permission to the HA
+  Companion app at the iOS level does not fix it; Companion's webview
+  delegate doesn't forward the permission request for embedded panels
+  (only for HA's first-party Assist UI). Confirmed with a fresh
+  reinstall of Companion in May 2026.
+  - Detection: `isHACompanionApp()` in `src/lib/voice.js` checks for
+    `window.webkit.messageHandlers.externalBus` and a `home assistant`
+    user-agent marker.
+  - We hide the wake-word toggle in Companion and show a "use Safari +
+    Add to Home Screen" notice instead. Don't try to make wake word
+    work in Companion — it can't.
+  - Safari + Add to Home Screen produces a standalone WebKit window
+    that does support `getUserMedia` for HomeCNTRD, with the same
+    full-screen feel as Companion.
+- **`getUserMedia` in regular Safari** works (iOS 14.3+) but requires
+  a user gesture on the *first* call. Subsequent calls in the same
   session are silent.
 - **AudioWorklet** works but needs the destination-sink trick above.
 - **`SharedArrayBuffer`** isn't available unless the page is served

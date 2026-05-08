@@ -15,6 +15,24 @@ export function isVoiceSupported() {
     && (window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
+// Detect HA Companion app's WKWebView. Companion doesn't support
+// SpeechRecognition or, more importantly, getUserMedia for arbitrary
+// panel_custom content — so wake word and Web-Speech tap-to-talk both
+// silently hang there. We use this to gate the voice features in the
+// UI so users see a clear "use Safari" message instead of a confusing
+// permission-pending state. Companion injects window.webkit.messageHandlers.
+// externalBus for its native bridge; user-agent fallback covers builds
+// that don't (or future Companion variants).
+export function isHACompanionApp() {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.webkit?.messageHandlers?.externalBus) return true;
+    if (window.externalApp) return true; // Android Companion's bridge
+  } catch {}
+  const ua = (navigator?.userAgent || '').toLowerCase();
+  return /home\s*assistant/.test(ua) || /homeassistant/.test(ua);
+}
+
 // Returns a promise that resolves with the final transcript or rejects
 // with an error. The caller can also pass an onPartial callback to get
 // interim results for live UI feedback.
