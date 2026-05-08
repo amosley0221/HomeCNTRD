@@ -165,6 +165,10 @@ function translate(states) {
       }
 
       case 'lock':
+        // Tesla / Tessie expose multiple locks (door, charge cable lock,
+        // speed-limit lock). They belong on the Car page, not in
+        // state.locks (which feeds the house Security & Access section).
+        if (teslaPrefix && id.startsWith(`lock.${teslaPrefix}`)) break;
         out.locks.push({ id, name, locked: e.state === 'locked' });
         break;
 
@@ -453,6 +457,19 @@ function buildTesla(states, prefix) {
   };
   const lockId = detectTeslaLockId(states, prefix);
   const lockEntity = lockId ? s(lockId) : null;
+  // Collect every Tesla-prefixed lock so the Car page can surface
+  // door / charge-cable / speed-limit locks individually.
+  const teslaLocks = [];
+  for (const id of Object.keys(states)) {
+    if (id.startsWith(`lock.${prefix}`)) {
+      const ent = states[id];
+      teslaLocks.push({
+        id,
+        name: ent?.attributes?.friendly_name || id,
+        locked: ent?.state === 'locked',
+      });
+    }
+  }
   const battEntity = s(`sensor.${prefix}_battery_level`);
   const rangeEntity = s(`sensor.${prefix}_battery_range`);
   const climateEntity = s(`climate.${prefix}_climate`);
@@ -466,6 +483,7 @@ function buildTesla(states, prefix) {
   return {
     id: prefix,
     lockEntityId: lockId,
+    locks: teslaLocks,
     name: carName,
     locked: lockEntity?.state === 'locked',
     chargePct: Math.round(numState(`sensor.${prefix}_battery_level`) ?? 0),

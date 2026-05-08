@@ -122,7 +122,7 @@ const NowPlayingBar = ({ ctx }) => {
             )}
             <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:10, marginTop:10}}>
               <button onClick={() => call(primary.id, 'media_previous_track')} style={ctlBtn(p, 36)}>‹‹</button>
-              <button onClick={() => call(primary.id, 'media_play_pause')} style={{...ctlBtn(p, 46), background:p.accent, color:'#fff', border:0}}>{primary.playing ? '❚❚' : '▶'}</button>
+              <button onClick={() => call(primary.id, primary.playing ? 'media_pause' : 'media_play')} style={{...ctlBtn(p, 46), background:p.accent, color:'#fff', border:0}}>{primary.playing ? '❚❚' : '▶'}</button>
               <button onClick={() => call(primary.id, 'media_next_track')} style={ctlBtn(p, 36)}>››</button>
               <div style={{flex:1}}/>
               <div style={{display:'flex', alignItems:'center', gap:8, color:p.fg3}}>
@@ -198,7 +198,7 @@ const NowPlayingBar = ({ ctx }) => {
       </div>
       <div style={{display:'flex', gap:2, flex:'none'}} onClick={(e) => e.stopPropagation()}>
         <button onClick={() => call(primary.id, 'media_previous_track')} style={ctlBtn(p, 28)} title="Previous">‹‹</button>
-        <button onClick={() => call(primary.id, 'media_play_pause')} style={{...ctlBtn(p, 32), background:p.accent, color:'#fff', border:0}} title={primary.playing ? 'Pause' : 'Play'}>
+        <button onClick={() => call(primary.id, primary.playing ? 'media_pause' : 'media_play')} style={{...ctlBtn(p, 32), background:p.accent, color:'#fff', border:0}} title={primary.playing ? 'Pause' : 'Play'}>
           {primary.playing ? '❚❚' : '▶'}
         </button>
         <button onClick={() => call(primary.id, 'media_next_track')} style={ctlBtn(p, 28)} title="Next">››</button>

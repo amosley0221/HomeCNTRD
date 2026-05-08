@@ -401,7 +401,11 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
         {/* Controls */}
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 14}}>
           <HeroBtn onClick={() => call('media_previous_track')} icon="‹‹" size={44}/>
-          <HeroBtn onClick={() => call('media_play_pause')} icon={isPlaying ? '❚❚' : '▶'} size={64} primary/>
+          {/* Explicit media_play / media_pause based on current state.
+              media_play_pause is a toggle service that some integrations
+              (notably MA) silently no-op on, leaving the UI stuck. */}
+          <HeroBtn onClick={() => call(isPlaying ? 'media_pause' : 'media_play')}
+            icon={isPlaying ? '❚❚' : '▶'} size={64} primary/>
           <HeroBtn onClick={() => call('media_next_track')} icon="››" size={44}/>
         </div>
       </div>
@@ -442,28 +446,43 @@ const QueueCard = ({ ctx, conn, speaker }) => {
           service_data: { entity_id: speakerId },
           return_response: true,
         });
-        return resp?.response?.[speakerId] ?? resp?.response ?? null;
-      } catch { return null; }
+        return { ok: true, response: resp?.response };
+      } catch (e) { return { ok: false, error: e?.message || String(e) }; }
     };
     (async () => {
       // MA's queue payload looks like { items: [{ name, artists, album,
       // image, ... }, ...] }; Sonos's is a bare array of { title,
       // artist, album, thumbnail }. Normalise to the latter shape.
       const ma = await tryService('music_assistant', 'get_queue');
-      if (alive && ma) {
-        const items = Array.isArray(ma) ? ma : (ma.items || ma.queue_items || []);
-        if (Array.isArray(items)) {
+      if (alive && ma.ok) {
+        // Try common response shapes:
+        //   resp.response.[entityId].items
+        //   resp.response.items
+        //   resp.response.[entityId] (array)
+        //   resp.response (array)
+        const cand = ma.response?.[speakerId] ?? ma.response;
+        const items = Array.isArray(cand) ? cand : (cand?.items || cand?.queue_items || cand?.tracks);
+        pushDiag(`music: MA queue — ${Array.isArray(items) ? items.length + ' items' : 'no items array (got: ' + (cand ? Object.keys(cand).join(',') : 'null') + ')'}`);
+        if (Array.isArray(items) && items.length) {
           setQueue(items.map(it => ({
             title: it.title || it.name || '',
             artist: (it.artists?.[0]?.name) || it.artist || '',
             album: (it.album?.name) || it.album || '',
-            thumbnail: it.image || it.thumbnail || null,
+            thumbnail: it.image || it.thumbnail || it.media_image_url || null,
           })));
           return;
         }
+      } else if (alive && ma) {
+        pushDiag(`music: MA get_queue failed — ${ma.error}`);
       }
       const sonos = await tryService('sonos', 'get_queue');
-      if (alive && Array.isArray(sonos)) { setQueue(sonos); return; }
+      if (alive && sonos.ok) {
+        const arr = sonos.response?.[speakerId];
+        if (Array.isArray(arr) && arr.length) { setQueue(arr); return; }
+        pushDiag(`music: sonos queue — empty or unexpected shape`);
+      } else if (alive && sonos) {
+        pushDiag(`music: sonos get_queue failed — ${sonos.error}`);
+      }
       if (alive) setQueue([]);
     })();
     return () => { alive = false; };
@@ -591,55 +610,68 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                   <div key={sp.id}
                     style={{
                       padding: '10px 14px',
-                      display: 'flex', alignItems: 'center', gap: 10,
                       background: isActive ? p.warm : 'transparent',
                       borderLeft: isActive ? `2px solid ${p.accent}` : '2px solid transparent',
                       borderBottom: `.5px solid ${p.border}`,
                     }}>
-                    <button onClick={() => { if (!manageOpen) { setActiveId(sp.id); setChooserOpen(false); } }}
-                      disabled={manageOpen}
-                      style={{
-                        flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
-                        padding: 0, border: 0, background: 'transparent',
-                        cursor: manageOpen ? 'default' : 'pointer', textAlign: 'left',
-                      }}>
-                      <div style={{width: 30, height: 30, borderRadius: 5, flex: 'none',
-                        background: sp.haEntityPicture
-                          ? `center / cover no-repeat url("${sp.haEntityPicture}"), oklch(20% 0.05 25)`
-                          : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
-                      <div style={{flex: 1, minWidth: 0}}>
-                        <div style={{fontSize: 13, color: p.fg, fontWeight: 500,
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                          {sp.name}
-                          {isActive && <span style={{fontSize: 9, padding: '2px 6px', borderRadius: 999, background: p.accent, color: '#fff', fontWeight: 600, letterSpacing: '.04em'}}>NOW</span>}
-                          {grouped && <span style={{fontSize: 9, padding: '2px 6px', borderRadius: 999, background: 'rgba(241,234,217,0.1)', color: p.fg2, fontWeight: 500, letterSpacing: '.04em'}}>GROUPED</span>}
+                    <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                      <button onClick={() => { if (!manageOpen) { setActiveId(sp.id); } }}
+                        disabled={manageOpen}
+                        style={{
+                          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
+                          padding: 0, border: 0, background: 'transparent',
+                          cursor: manageOpen ? 'default' : 'pointer', textAlign: 'left',
+                        }}>
+                        <div style={{width: 30, height: 30, borderRadius: 5, flex: 'none',
+                          background: sp.haEntityPicture
+                            ? `center / cover no-repeat url("${sp.haEntityPicture}"), oklch(20% 0.05 25)`
+                            : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
+                        <div style={{flex: 1, minWidth: 0}}>
+                          <div style={{fontSize: 13, color: p.fg, fontWeight: 500,
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                            {sp.name}
+                            {isActive && <span style={{fontSize: 9, padding: '2px 6px', borderRadius: 999, background: p.accent, color: '#fff', fontWeight: 600, letterSpacing: '.04em'}}>NOW</span>}
+                            {grouped && <span style={{fontSize: 9, padding: '2px 6px', borderRadius: 999, background: 'rgba(241,234,217,0.1)', color: p.fg2, fontWeight: 500, letterSpacing: '.04em'}}>GROUPED</span>}
+                          </div>
+                          <div style={{fontSize: 11, color: p.fg3, marginTop: 1,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                            {sp.playing && sp.haMediaTitle ? `${sp.haMediaTitle}${sp.haMediaArtist ? ' · ' + sp.haMediaArtist : ''}` : 'Idle'}
+                          </div>
                         </div>
-                        <div style={{fontSize: 11, color: p.fg3, marginTop: 1,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                          {sp.playing && sp.haMediaTitle ? sp.haMediaTitle : 'Idle'}
-                        </div>
+                      </button>
+                      {!manageOpen && canGroup && (
+                        <button onClick={(e) => { e.stopPropagation(); toggleGroup(sp); }}
+                          title={grouped ? 'Remove from group' : 'Add to group'}
+                          style={{
+                            padding: '5px 10px', borderRadius: 6,
+                            background: grouped ? p.accentSoft : 'transparent',
+                            border: `.5px solid ${grouped ? p.accent : p.border2}`,
+                            color: grouped ? p.accent : p.fg2,
+                            cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                          }}>{grouped ? '✓ Grouped' : '+ Group'}</button>
+                      )}
+                      {manageOpen && (
+                        <button onClick={(e) => { e.stopPropagation(); setHidden(prev => { const n = new Set(prev); n.add(sp.id); return n; }); }}
+                          title="Hide this speaker"
+                          style={{
+                            width: 24, height: 24, borderRadius: '50%',
+                            border: `.5px solid ${p.border2}`,
+                            background: 'transparent', color: p.fg3, cursor: 'pointer', fontSize: 12,
+                          }}>×</button>
+                      )}
+                    </div>
+                    {/* Per-speaker volume slider — visible always so the
+                        user can nudge volume without leaving the dropdown. */}
+                    {!manageOpen && (
+                      <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
+                        <window.Icon name="speaker" size={11} style={{color: p.fg3}}/>
+                        <input type="range" min="0" max="100" value={sp.vol}
+                          onChange={(e) => call(sp.id, 'volume_set', { volume_level: (+e.target.value) / 100 })}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{flex: 1, accentColor: p.accent, height: 3}}/>
+                        <span style={{fontSize: 10, color: p.fg3, fontVariantNumeric: 'tabular-nums', width: 22, textAlign: 'right'}}>{sp.vol}</span>
                       </div>
-                    </button>
-                    {!manageOpen && canGroup && (
-                      <button onClick={(e) => { e.stopPropagation(); toggleGroup(sp); }}
-                        title={grouped ? 'Remove from group' : 'Add to group'}
-                        style={{
-                          padding: '5px 10px', borderRadius: 6,
-                          background: grouped ? p.accentSoft : 'transparent',
-                          border: `.5px solid ${grouped ? p.accent : p.border2}`,
-                          color: grouped ? p.accent : p.fg2,
-                          cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-                        }}>{grouped ? '✓ Grouped' : '+ Group'}</button>
-                    )}
-                    {manageOpen && (
-                      <button onClick={(e) => { e.stopPropagation(); setHidden(prev => { const n = new Set(prev); n.add(sp.id); return n; }); }}
-                        title="Hide this speaker"
-                        style={{
-                          width: 24, height: 24, borderRadius: '50%',
-                          border: `.5px solid ${p.border2}`,
-                          background: 'transparent', color: p.fg3, cursor: 'pointer', fontSize: 12,
-                        }}>×</button>
                     )}
                   </div>
                 );

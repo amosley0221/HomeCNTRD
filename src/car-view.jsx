@@ -1,6 +1,8 @@
 // car-view.jsx — Tesla page (under Dashboard view)
 //
 // Reads from state.tesla, which ha-bridge populates from Tessie entities.
+
+import HassContext from './lib/hass-context.js';
 // All actions are wired through setState — diffAndDispatch in ha-bridge.js
 // translates the state changes into HA service calls.
 //
@@ -22,6 +24,7 @@ const TESLA_COMPOSITOR_URL =
 
 const CarView = ({ ctx }) => {
   const { p, fonts, dens, state, setState } = ctx;
+  const hass = React.useContext(HassContext);
   const t = state.tesla;
   const set = (k, v) => setState(s => ({...s, tesla: {...s.tesla, [k]: v}}));
 
@@ -242,6 +245,38 @@ const CarView = ({ ctx }) => {
             <Row p={p} label="Inside / outside" value={`${t.cabin}${tu} / ${t.outside}${tu}`}/>
             <Row p={p} label="Frunk / trunk" value={`${t.frunk ? 'Open' : 'Closed'} / ${t.trunk ? 'Open' : 'Closed'}`}/>
           </div>
+          {/* Tesla locks (door / charge cable / speed limit) live here
+              now instead of the house Security & Access section. */}
+          {Array.isArray(t.locks) && t.locks.length > 0 && (
+            <>
+              <div style={{fontSize:11, letterSpacing:'.1em', textTransform:'uppercase', color:p.fg3, marginTop:14, marginBottom:8}}>Locks</div>
+              <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                {t.locks.map(lk => (
+                  <div key={lk.id} style={{display:'flex', alignItems:'center', gap:10, padding:'6px 0', fontSize:12}}>
+                    <window.Icon name="lock" size={14} style={{color: lk.locked ? 'oklch(60% 0.13 145)' : p.accent}}/>
+                    <span style={{flex:1, color:p.fg}}>{lk.name}</span>
+                    <span style={{fontSize:11, color: lk.locked ? p.fg3 : p.accent}}>{lk.locked ? 'Locked' : 'Unlocked'}</span>
+                    <button
+                      onClick={() => {
+                        if (!hass?.callService) return;
+                        try {
+                          hass.callService('lock', lk.locked ? 'unlock' : 'lock', { entity_id: lk.id });
+                        } catch {}
+                      }}
+                      style={{
+                        padding:'5px 12px', borderRadius:999,
+                        border:`.5px solid ${lk.locked ? p.border2 : p.accent}`,
+                        background: lk.locked ? 'transparent' : p.accentSoft,
+                        color: lk.locked ? p.fg2 : p.accent,
+                        fontSize:11, cursor:'pointer', fontFamily:'inherit',
+                      }}>
+                      {lk.locked ? 'Unlock' : 'Lock'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </window.Card>
       </div>
       <div style={{height:60}}/>
