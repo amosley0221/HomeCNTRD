@@ -1034,6 +1034,24 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
   const isArtist = headClass === 'artist';
   const isAlbum = headClass === 'album';
   const showingSearch = mode === 'search' && path.length === 0;
+  const isBrowseRoot = mode === 'browse' && path.length === 0;
+
+  const [manageMode, setManageMode] = React.useState(false);
+  const [hiddenIds, setHiddenIds] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem(BROWSE_HIDDEN_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch { return new Set(); }
+  });
+  const toggleHide = (id) => {
+    setHiddenIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(BROWSE_HIDDEN_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+  React.useEffect(() => { if (!isBrowseRoot) setManageMode(false); }, [isBrowseRoot]);
 
   // Browse fetch — runs whenever the path tail changes.
   React.useEffect(() => {
@@ -1136,6 +1154,16 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
             </React.Fragment>
           ))}
           <div style={{flex: 1}}/>
+          {isBrowseRoot && (
+            <button onClick={() => setManageMode(m => !m)}
+              style={{padding: '6px 12px', borderRadius: 7,
+                background: manageMode ? p.surface2 : 'transparent',
+                border: `.5px solid ${p.border2}`,
+                color: manageMode ? p.accent : p.fg2,
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 12}}>
+              {manageMode ? 'Done' : 'Manage'}
+            </button>
+          )}
           <button onClick={onClose} style={overlayCloseBtn(p)}>×</button>
         </div>
       )}
@@ -1157,7 +1185,11 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
             onPlayFromIdx={(idx) => { playFromList(items.filter(i => i.can_play), idx); onClose(); }}/>
         )}
         {!showingSearch && !isArtist && !isAlbum && (
-          <BrowseBody ctx={ctx} items={items} error={error} onItemClick={onItemClick}/>
+          isBrowseRoot
+            ? <BrowseRootList ctx={ctx} items={items} error={error}
+                onItemClick={onItemClick}
+                manageMode={manageMode} hiddenIds={hiddenIds} onToggleHide={toggleHide}/>
+            : <BrowseBody ctx={ctx} items={items} error={error} onItemClick={onItemClick}/>
         )}
       </div>
     </Overlay>
@@ -1190,6 +1222,55 @@ const BrowseBody = ({ ctx, items, error, onItemClick }) => {
   if (items === null) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>;
   if (items.length === 0) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Nothing here.</div>;
   return <SortableGrid ctx={ctx} items={items} onItemClick={onItemClick}/>;
+};
+
+// ── Browse root — compact list of top-level categories ────────────────────
+// Hidden IDs persist in localStorage so the user's "don't show me Audiobooks"
+// preference survives reloads.
+const BROWSE_HIDDEN_KEY = 'homecntrd:music:hidden-root';
+const BrowseRootList = ({ ctx, items, error, onItemClick, manageMode, hiddenIds, onToggleHide }) => {
+  const { p } = ctx;
+  if (error) return <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>{error}</div>;
+  if (items === null) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>;
+  if (items.length === 0) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Nothing here.</div>;
+
+  const visible = manageMode ? items : items.filter(it => !hiddenIds.has(it.media_content_id));
+  if (visible.length === 0) return (
+    <div style={{padding: 24, fontSize: 13, color: p.fg3, textAlign: 'center'}}>
+      Everything's hidden. Tap Manage to bring items back.
+    </div>
+  );
+
+  return (
+    <div>
+      {visible.map((item, i) => {
+        const hidden = hiddenIds.has(item.media_content_id);
+        return (
+          <button key={item.media_content_id || item.title}
+            onClick={() => manageMode ? onToggleHide(item.media_content_id) : onItemClick(item)}
+            style={{
+              width: '100%', padding: '14px 18px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              border: 0, background: 'transparent', color: p.fg,
+              fontFamily: 'inherit', fontSize: 15, textAlign: 'left',
+              cursor: 'pointer',
+              borderBottom: i < visible.length - 1 ? `.5px solid ${p.border}` : 'none',
+              opacity: manageMode && hidden ? 0.5 : 1,
+            }}>
+            <span style={{flex: 1, fontWeight: 500}}>{item.title}</span>
+            {manageMode ? (
+              <span style={{fontSize: 11, color: hidden ? p.fg3 : p.accent,
+                letterSpacing: '.04em', textTransform: 'uppercase'}}>
+                {hidden ? 'Hidden' : 'Visible'}
+              </span>
+            ) : (
+              <span style={{color: p.fg3, fontSize: 16}}>›</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
 };
 
 // ── Artist detail — top tracks + albums newest-first ──────────────────────
