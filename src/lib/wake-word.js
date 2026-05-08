@@ -26,8 +26,11 @@ import * as ort from 'onnxruntime-web';
 
 // Load ORT's WASM binaries from a CDN so we don't have to ship them
 // alongside homecntrd.js. JSDelivr serves with permissive CORS and the
-// HA box already needs internet for the rest of HomeCNTRD anyway.
-ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
+// HA box already needs internet for the rest of HomeCNTRD anyway. The
+// version pin must match the installed onnxruntime-web exactly — ORT
+// generates per-version WASM filenames and fetches will 404 silently
+// if the JS↔WASM versions drift.
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.25.1/dist/';
 ort.env.wasm.numThreads = 1;
 
 const MODELS_BASE = '/local/';
@@ -60,13 +63,14 @@ const wakeListeners = new Set();
 const stateListeners = new Set();
 let currentState = 'idle';   // idle | starting | listening | error
 let lastError = null;
+let loadStep = '';                 // surfaced for diagnostics: which model / step is in flight
 
 function setState(next, err = null) {
   currentState = next;
   lastError = err;
   for (const cb of stateListeners) try { cb(next, err); } catch {}
 }
-export function getState() { return { state: currentState, error: lastError, probability: lastProbability }; }
+export function getState() { return { state: currentState, error: lastError, probability: lastProbability, step: loadStep }; }
 export function isRunning() { return !!workletNode; }
 export function onWake(cb) { wakeListeners.add(cb); return () => wakeListeners.delete(cb); }
 export function onStateChange(cb) {
@@ -106,14 +110,29 @@ function linearResample(input, fromRate, toRate) {
 }
 
 // ── inference helpers ───────────────────────────────────────────────────
+// Wraps a promise with a timeout so a stuck network fetch (e.g. ORT
+// failing to fetch its WASM, or HA serving an .onnx with the wrong MIME)
+// surfaces as an error instead of leaving the UI on "Loading models…"
+// forever.
+function withTimeout(p, ms, label) {
+  return Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ]);
+}
+
 async function loadModels() {
   if (melSession) return;
   const opts = { executionProviders: ['wasm'] };
-  [melSession, embSession, wakeSession] = await Promise.all([
-    ort.InferenceSession.create(MODELS_BASE + 'melspectrogram.onnx', opts),
-    ort.InferenceSession.create(MODELS_BASE + 'embedding_model.onnx', opts),
-    ort.InferenceSession.create(MODELS_BASE + 'hey_jarvis.onnx', opts),
-  ]);
+  // Sequential, not Promise.all, so the loadStep value tells us which
+  // file is in flight when something goes wrong.
+  loadStep = 'mel'; setState('starting');
+  melSession = await withTimeout(ort.InferenceSession.create(MODELS_BASE + 'melspectrogram.onnx', opts), 30000, 'mel-spec model');
+  loadStep = 'embed'; setState('starting');
+  embSession = await withTimeout(ort.InferenceSession.create(MODELS_BASE + 'embedding_model.onnx', opts), 30000, 'embedding model');
+  loadStep = 'wake'; setState('starting');
+  wakeSession = await withTimeout(ort.InferenceSession.create(MODELS_BASE + 'hey_jarvis.onnx', opts), 30000, 'wake model');
+  loadStep = '';
 }
 
 // Run a single chunk through the pipeline; returns a wake probability or null

@@ -444,7 +444,11 @@ const WakeWordSettings = ({ p, fonts }) => {
 
   const statusLabel = (() => {
     if (!voice.enabled) return { color: p.fg3, text: 'Off' };
-    if (status.state === 'starting')  return { color: p.fg2, text: 'Loading models…' };
+    if (status.state === 'starting')  {
+      const step = wakeWord.getState().step;
+      const label = { mel: 'mel-spec', embed: 'embedding', wake: 'wake-word' }[step] || 'runtime';
+      return { color: p.fg2, text: `Loading ${label} model…` };
+    }
     if (status.state === 'listening') {
       const pct = Math.round((wakeWord.getState().probability || 0) * 100);
       return { color: 'oklch(60% 0.13 145)', text: `● Listening · prob ${pct}%` };
