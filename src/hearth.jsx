@@ -108,8 +108,8 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
     }
     // Restart wake if it's still meant to be on.
     const cfg = wakeWord.loadVoiceSettings();
-    if (cfg.enabled && cfg.accessKey) {
-      try { await wakeWord.start(cfg.accessKey); } catch {}
+    if (cfg.enabled) {
+      try { await wakeWord.start(); } catch {}
     }
   };
 
@@ -118,13 +118,13 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
   }, []);
 
   // Boot wake-word from saved settings, then react to settings changes.
+  // We don't auto-start on mount because iOS Safari requires a user
+  // gesture for getUserMedia() — start() is fired from the toggle
+  // click in Settings instead. This effect only handles the OFF case
+  // (e.g. user disabled it elsewhere) and reacts to subsequent changes.
   React.useEffect(() => {
     const apply = (cfg) => {
-      if (cfg.enabled && cfg.accessKey) {
-        wakeWord.start(cfg.accessKey).catch(() => {});
-      } else {
-        wakeWord.stop();
-      }
+      if (!cfg.enabled) wakeWord.stop();
     };
     apply(wakeWord.loadVoiceSettings());
     return wakeWord.onVoiceSettingsChange(apply);

@@ -9,11 +9,19 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react({ jsxRuntime: 'automatic' })],
-  // Copy static/ verbatim into dist/ so files there land next to
-  // homecntrd.js. Currently used for the Porcupine wake-word model
-  // (porcupine_params.pv) — drop both files into HA's /config/www/
-  // and HA serves them at /local/homecntrd.js + /local/porcupine_params.pv.
+  // Copy static/ verbatim into dist/. Used to ship the OpenWakeWord
+  // ONNX models (melspectrogram, embedding_model, hey_jarvis) next to
+  // homecntrd.js — drop all four files into HA's /config/www/ and HA
+  // serves them at /local/<name>.
   publicDir: 'static',
+  // onnxruntime-web ships two import flavors via export conditions:
+  // (a) the default bundle inlines all WASM variants as base64 (~70 MB
+  // gzipped after Vite normalises it), and (b) "use-extern-wasm" loads
+  // the .wasm at runtime from a configurable path. We pick (b) so the
+  // bundle stays small and our wake-word code points ORT at a CDN.
+  resolve: {
+    conditions: ['onnxruntime-web-use-extern-wasm', 'browser', 'module', 'import', 'default'],
+  },
   // React's UMD/ESM build references process.env.NODE_ENV at runtime to pick
   // dev vs prod assertions. In Vite's lib mode those references are NOT
   // replaced by default (the assumption is downstream bundlers will do it).
