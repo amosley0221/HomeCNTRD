@@ -1,4 +1,13 @@
 // music-view.jsx — HA-driven music page (Music Assistant aware).
+//
+// Layout matches the reference design:
+//   - Center column: tall NowPlayingHero with art-tinted background +
+//     queue (Up next) below.
+//   - Right column: compact RoomChooser (one-tap speaker switcher
+//     with popup), Group-all / Pause-all controls, then a customizable
+//     Playlists grid pinned from MA's Playlists / Favorites trees.
+//   - Search and full-tree browse are accessible from the player
+//     header; results overlay the page.
 
 import HassContext from './lib/hass-context.js';
 
@@ -7,18 +16,34 @@ const SEARCH_FEATURE = 4194304;
 
 const MA_PLATFORMS = new Set(['music_assistant', 'mass']);
 const SONOS_PLATFORMS = new Set(['sonos']);
-const ALLOWED_PLATFORMS = new Set([...MA_PLATFORMS, ...SONOS_PLATFORMS]);
 const PLATFORM_PREF = ['music_assistant', 'mass', 'sonos'];
 
 const INFINITY_KEY = 'homecntrd_infinity_v1';
 const HIDDEN_KEY = 'homecntrd_music_hidden_v1';
+const PINNED_PLAYLISTS_KEY = 'homecntrd_pinned_playlists_v1';
+const HIDDEN_PLAYLISTS_KEY = 'homecntrd_hidden_playlists_v1';
 
-function loadHidden() {
-  try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]')); }
-  catch { return new Set(); }
+const FAVORITES_RE = /favorites?|pinned|starred/i;
+const PLAYLISTS_RE = /^playlists?$|my\s+playlists/i;
+
+const REJECT_CLASSES = new Set(['image', 'video', 'game', 'movie']);
+const ROOT_REJECT_RE = /^(image|camera|text-to-speech|tts|ai\s+generated|image\s+upload|nest)/i;
+function isMusicItem(item) {
+  if (!item) return false;
+  const cls = (item.media_class || '').toLowerCase();
+  if (REJECT_CLASSES.has(cls)) return false;
+  const title = (item.title || '').toLowerCase();
+  const cid = (item.media_content_id || '').toLowerCase();
+  if (ROOT_REJECT_RE.test(title)) return false;
+  if (/^media-source:\/\/(image|camera|tts|nest)/i.test(cid)) return false;
+  return true;
 }
-function saveHidden(set) {
-  try { localStorage.setItem(HIDDEN_KEY, JSON.stringify([...set])); } catch {}
+
+function loadStringSet(key) {
+  try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { return new Set(); }
+}
+function saveStringSet(key, set) {
+  try { localStorage.setItem(key, JSON.stringify([...set])); } catch {}
 }
 
 function pushDiag(msg) {
@@ -31,15 +56,11 @@ function pushDiag(msg) {
 const MusicView = ({ ctx }) => {
   const { p, fonts, dens, state, narrow } = ctx;
   const hass = React.useContext(HassContext);
-
-  // hassRef pattern — same fix we use for cameras. hass changes on every
-  // HA state push (multiple times/sec), but hass.connection is stable.
-  // Inner async work reads via the ref so effects don't churn.
   const hassRef = React.useRef(hass);
   React.useEffect(() => { hassRef.current = hass; }, [hass]);
   const conn = hass?.connection;
 
-  // Entity registry → platform map. Used to drop non-Sonos/MA speakers.
+  // ── Entity registry / platform map ──────────────────────────────────
   const [platforms, setPlatforms] = React.useState({});
   const [platformsLoaded, setPlatformsLoaded] = React.useState(false);
   React.useEffect(() => {
@@ -49,15 +70,13 @@ const MusicView = ({ ctx }) => {
       if (!alive) return;
       setPlatforms(m);
       setPlatformsLoaded(true);
-      const summary = (state.speakers || [])
-        .map(s => {
-          const tags = [];
-          if (s.isSonosAttr) tags.push('sonos_attr');
-          if (s.isMAAttr) tags.push('ma_attr');
-          if ((s.supportedFeatures & GROUPING_FEATURE) !== 0) tags.push('group');
-          if ((s.supportedFeatures & SEARCH_FEATURE) !== 0) tags.push('search');
-          return `${s.name}[${s.id}]=${m[s.id] || '?'}${tags.length ? '(' + tags.join('+') + ')' : ''}`;
-        }).join(' | ');
+      const summary = (state.speakers || []).map(s => {
+        const tags = [];
+        if (s.isSonosAttr) tags.push('sonos_attr');
+        if (s.isMAAttr) tags.push('ma_attr');
+        if ((s.supportedFeatures & GROUPING_FEATURE) !== 0) tags.push('group');
+        return `${s.name}[${s.id}]=${m[s.id] || '?'}${tags.length ? '(' + tags.join('+') + ')' : ''}`;
+      }).join(' | ');
       pushDiag(`music: speakers — ${summary || '(none)'}`);
     };
     if (hass.entities && Object.keys(hass.entities).length) {
@@ -75,52 +94,33 @@ const MusicView = ({ ctx }) => {
         apply(m);
       } catch (e) {
         pushDiag(`music: entity registry fetch failed — ${e?.message || e}`);
-        if (alive) setPlatformsLoaded(true); // proceed without filter rather than hanging forever
+        if (alive) setPlatformsLoaded(true);
       }
     })();
     return () => { alive = false; };
-  }, [conn]); // refetch only on reconnect, not on every state push
+  }, [conn]);
 
-  // User-managed hide list, persisted to localStorage. Lets the user
-  // banish speakers the auto-filter can't catch (some platforms aren't
-  // reported reliably by every HA setup).
-  const [hidden, setHiddenRaw] = React.useState(loadHidden);
+  // ── Speaker filter (auto + manual hide list) ────────────────────────
+  const [hidden, setHiddenRaw] = React.useState(() => loadStringSet(HIDDEN_KEY));
   const setHidden = React.useCallback((updater) => {
     setHiddenRaw(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      saveHidden(next);
+      saveStringSet(HIDDEN_KEY, next);
       return next;
     });
   }, []);
-  const [manageOpen, setManageOpen] = React.useState(false);
 
-  // Strict filter with two layers:
-  //   1. Auto: keep only entities that look like Sonos or MA-managed
-  //      (registry platform OR attribute markers). MA wins over Sonos
-  //      natives when both exist.
-  //   2. Manual: respect the user's hide list.
-  // Returns { visible, autoVisible } so the Manage panel can show the
-  // full auto-filtered set with hidden entries clearly separable.
-  const { visible, autoVisible } = React.useMemo(() => {
+  const { visible: speakers, autoVisible } = React.useMemo(() => {
     const empty = { visible: [], autoVisible: [] };
     if (!state.speakers?.length || !platformsLoaded) return empty;
-
     const looksSonos = (s) => SONOS_PLATFORMS.has(platforms[s.id]) || s.isSonosAttr;
     const looksMA = (s) => MA_PLATFORMS.has(platforms[s.id]) || s.isMAAttr;
-
     let pool = state.speakers.filter(s => looksSonos(s) || looksMA(s));
     if (pool.length === 0) {
-      // Last-ditch fallback if attribute markers + registry both miss
-      // (rare). Accept anything with the GROUPING feature bit. The
-      // Manage panel still lets the user trim.
       pool = state.speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
     }
     const hasMA = pool.some(looksMA);
     if (hasMA) pool = pool.filter(looksMA);
-
-    // Dedupe by friendly name — keep the entity from the most-preferred
-    // platform. Falls back to attribute-marker preference (MA over
-    // Sonos) when registry platforms are missing.
     const groups = new Map();
     for (const s of pool) {
       const key = (s.name || s.id).toLowerCase().trim();
@@ -129,37 +129,23 @@ const MusicView = ({ ctx }) => {
     }
     const pickBest = (group) => {
       for (const pref of PLATFORM_PREF) {
-        const match = group.find(s => platforms[s.id] === pref);
-        if (match) return match;
+        const m = group.find(s => platforms[s.id] === pref);
+        if (m) return m;
       }
-      const ma = group.find(s => s.isMAAttr);
-      if (ma) return ma;
-      const sonos = group.find(s => s.isSonosAttr);
-      if (sonos) return sonos;
+      const ma = group.find(s => s.isMAAttr); if (ma) return ma;
+      const sonos = group.find(s => s.isSonosAttr); if (sonos) return sonos;
       return group[0];
     };
     const auto = Array.from(groups.values()).map(pickBest);
-    return {
-      autoVisible: auto,
-      visible: auto.filter(s => !hidden.has(s.id)),
-    };
+    return { autoVisible: auto, visible: auto.filter(s => !hidden.has(s.id)) };
   }, [state.speakers, platforms, platformsLoaded, hidden]);
-  const speakers = visible;
 
-  // Active speaker selection. Hooks must be unconditional, so these
-  // sit above the loading / empty-state early returns even though they
-  // depend on `speakers`.
+  // ── Active speaker, infinity, manage panel ─────────────────────────
   const [activeId, setActiveId] = React.useState(null);
   React.useEffect(() => {
     if (!speakers.length) return;
-    if (!activeId || !speakers.find(s => s.id === activeId)) {
-      setActiveId(speakers[0].id);
-    }
+    if (!activeId || !speakers.find(s => s.id === activeId)) setActiveId(speakers[0].id);
   }, [speakers, activeId]);
-
-  // Infinity mode — when on, all play_media calls go through the
-  // music_assistant.play_media service with radio_mode: true so MA
-  // continues with similar tracks after the queue ends.
   const [infinity, setInfinityRaw] = React.useState(() => {
     try { return localStorage.getItem(INFINITY_KEY) === '1'; } catch { return false; }
   });
@@ -167,26 +153,47 @@ const MusicView = ({ ctx }) => {
     setInfinityRaw(v);
     try { localStorage.setItem(INFINITY_KEY, v ? '1' : '0'); } catch {}
   };
+  const [manageOpen, setManageOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [browseOpen, setBrowseOpen] = React.useState(false);
 
+  // ── Loading / empty states ─────────────────────────────────────────
   if (!platformsLoaded) {
-    return (
-      <>
-        <window.PageHead ctx={ctx} eyebrow="Music" title="Loading…" sub="Reading speaker registry"/>
-      </>
-    );
+    return <window.PageHead ctx={ctx} eyebrow="Music" title="Loading…" sub="Reading speaker registry"/>;
   }
   if (!speakers.length) {
-    return (
-      <>
-        <window.PageHead ctx={ctx} eyebrow="Music" title="No speakers yet"
-          sub="Add Sonos to HA — Music Assistant will mirror them automatically."/>
-      </>
-    );
+    return <window.PageHead ctx={ctx} eyebrow="Music" title="No speakers yet"
+      sub="Add Sonos to HA — Music Assistant will mirror them automatically."/>;
   }
 
   const active = speakers.find(s => s.id === activeId) || speakers[0];
   const playingCount = speakers.filter(s => s.playing).length;
-  const isMA = MA_PLATFORMS.has(platforms[active?.id]);
+  const isMA = MA_PLATFORMS.has(platforms[active?.id]) || active?.isMAAttr;
+
+  // Shared play helper — used by playlists, search, browse.
+  const playMedia = async (item, enqueue = 'play') => {
+    const hass = hassRef.current;
+    if (!hass?.callService || !active) return false;
+    if (isMA) {
+      try {
+        await hass.callService('music_assistant', 'play_media', {
+          entity_id: active.id,
+          media_id: item.media_content_id,
+          enqueue, radio_mode: !!infinity,
+        });
+        return true;
+      } catch {}
+    }
+    try {
+      await hass.callService('media_player', 'play_media', {
+        entity_id: active.id,
+        media_content_id: item.media_content_id,
+        media_content_type: item.media_content_type,
+        enqueue,
+      });
+      return true;
+    } catch { return false; }
+  };
 
   return (
     <>
@@ -194,65 +201,84 @@ const MusicView = ({ ctx }) => {
         eyebrow="Music"
         title={active?.name || 'Music'}
         sub={`${speakers.length} speaker${speakers.length === 1 ? '' : 's'} · ${playingCount} playing`}
-        right={isMA ? (
-          <button onClick={() => setInfinity(!infinity)} style={{
-            padding:'8px 14px', borderRadius:9,
-            border:`.5px solid ${infinity ? p.accent : p.border2}`,
-            background: infinity ? p.accentSoft : 'transparent',
-            color: infinity ? p.accent : p.fg, fontSize:12, cursor:'pointer',
-            fontFamily: fonts.body, display:'inline-flex', alignItems:'center', gap:6,
-          }}>
-            <span style={{fontSize:14}}>∞</span>
-            Infinity {infinity ? 'on' : 'off'}
-          </button>
-        ) : null}
+        right={
+          <div style={{display:'flex', gap:8}}>
+            <button onClick={() => setSearchOpen(true)} style={iconBtn(p)} title="Search">🔍</button>
+            <button onClick={() => setBrowseOpen(true)} style={iconBtn(p)} title="Browse">≣</button>
+            {isMA && (
+              <button onClick={() => setInfinity(!infinity)} style={{
+                padding:'8px 14px', borderRadius:9,
+                border:`.5px solid ${infinity ? p.accent : p.border2}`,
+                background: infinity ? p.accentSoft : 'transparent',
+                color: infinity ? p.accent : p.fg, fontSize:12, cursor:'pointer',
+                fontFamily: fonts.body,
+              }}>∞ Infinity {infinity ? 'on' : 'off'}</button>
+            )}
+          </div>
+        }
       />
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: narrow ? '1fr' : 'minmax(0,1fr) minmax(280px, 360px)',
+        gridTemplateColumns: narrow ? '1fr' : 'minmax(0,1fr) minmax(300px, 380px)',
         gap: dens.gap, alignItems: 'start', minWidth: 0,
       }}>
+        {/* Center column */}
         <div style={{display:'flex', flexDirection:'column', gap:dens.gap, minWidth: 0}}>
-          <NowPlayingCard ctx={ctx} hassRef={hassRef} speaker={active} />
-          <QueueCard ctx={ctx} hassRef={hassRef} conn={conn} speaker={active} />
-          <BrowserCard ctx={ctx} hassRef={hassRef} conn={conn}
-            speakerId={active?.id} isMA={isMA} infinity={infinity}/>
+          <NowPlayingHero ctx={ctx} hassRef={hassRef} speaker={active}/>
+          <QueueCard ctx={ctx} conn={conn} speaker={active}/>
         </div>
 
-        <SpeakersPanel ctx={ctx} hassRef={hassRef} speakers={speakers}
-          activeId={activeId} setActiveId={setActiveId}
-          hidden={hidden} setHidden={setHidden}
-          autoVisible={autoVisible}
-          manageOpen={manageOpen} setManageOpen={setManageOpen}/>
+        {/* Right column */}
+        <div style={{display:'flex', flexDirection:'column', gap:dens.gap, minWidth: 0}}>
+          <RoomPanel ctx={ctx} hassRef={hassRef} speakers={speakers} activeId={activeId}
+            setActiveId={setActiveId} hidden={hidden} setHidden={setHidden}
+            autoVisible={autoVisible}
+            manageOpen={manageOpen} setManageOpen={setManageOpen}/>
+          <PlaylistsCard ctx={ctx} hassRef={hassRef} conn={conn} speakerId={active?.id}
+            playMedia={playMedia} isMA={isMA}/>
+        </div>
       </div>
-      <div style={{height:60}}/>
+
+      {searchOpen && (
+        <SearchOverlay ctx={ctx} conn={conn} speakerId={active?.id}
+          playMedia={playMedia} onClose={() => setSearchOpen(false)}/>
+      )}
+      {browseOpen && (
+        <BrowseOverlay ctx={ctx} conn={conn} speakerId={active?.id}
+          playMedia={playMedia} onClose={() => setBrowseOpen(false)}/>
+      )}
+      <div style={{height: 60}}/>
     </>
   );
 };
 
-// ── Now-playing hero with seek slider ─────────────────────────────────────
-const NowPlayingCard = ({ ctx, hassRef, speaker }) => {
+const iconBtn = (p) => ({
+  width: 38, height: 38, borderRadius: 10,
+  background: p.surface, border: `.5px solid ${p.border2}`,
+  color: p.fg, cursor: 'pointer', fontSize: 14,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit',
+});
+
+// ── NowPlayingHero — large player with art-tinted background ──────────────
+const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
   const { p, fonts, narrow } = ctx;
 
-  // All hooks must run unconditionally on every render, so they sit
-  // above the `if (!speaker)` short-circuit even though some of them
-  // read off the speaker prop (we guard inside each effect).
   const [tickPos, setTickPos] = React.useState(0);
   const [seeking, setSeeking] = React.useState(false);
   const [seekValue, setSeekValue] = React.useState(0);
   const lastSeenRef = React.useRef({ pos: 0, at: Date.now(), key: '' });
 
   const title = speaker?.haMediaTitle;
+  const artist = speaker?.haMediaArtist;
+  const album = speaker?.haMediaAlbum;
+  const art = speaker?.haEntityPicture;
   const dur = speaker?.duration || 0;
   const isPlaying = !!speaker?.playing;
+  const isIdle = !title;
 
   React.useEffect(() => {
     if (!speaker) return;
-    // HA stamps media_position at the time it was reported. To get the
-    // current position we add the elapsed wall-clock time since that
-    // stamp (only while playing). Without this the slider snaps back to
-    // wherever HA last polled, which on Sonos can lag 30+ seconds.
     const stampedPos = speaker.progress || 0;
     const stampedAt = speaker.progressUpdatedAt;
     const now = Date.now();
@@ -264,7 +290,7 @@ const NowPlayingCard = ({ ctx, hassRef, speaker }) => {
       lastSeenRef.current = { pos: livePos, at: now, key };
       if (!seeking) setTickPos(Math.min(speaker.duration || livePos, livePos));
     }
-  }, [speaker?.id, title, speaker?.progress, speaker?.progressUpdatedAt, seeking, isPlaying, speaker]);
+  }, [speaker?.id, title, speaker?.progress, speaker?.progressUpdatedAt, isPlaying, seeking, speaker]);
 
   React.useEffect(() => {
     if (!isPlaying || seeking) return;
@@ -277,109 +303,128 @@ const NowPlayingCard = ({ ctx, hassRef, speaker }) => {
 
   if (!speaker) return null;
 
-  const artist = speaker.haMediaArtist;
-  const album = speaker.haMediaAlbum;
-  const art = speaker.haEntityPicture;
-  const isIdle = !title;
-
   const call = (service, data) => {
     const hass = hassRef.current;
     if (!hass?.callService) return;
     try { hass.callService('media_player', service, { entity_id: speaker.id, ...data }); } catch {}
   };
-
   const fmtTime = (s) => {
     if (!s || s < 0) return '0:00';
     const m = Math.floor(s / 60); const ss = Math.floor(s % 60);
     return `${m}:${ss.toString().padStart(2, '0')}`;
   };
-
   const displayPos = seeking ? seekValue : tickPos;
 
   return (
-    <window.Card p={p} style={{padding: 0, overflow: 'hidden', background: p.surface}}>
+    <div style={{
+      position: 'relative', overflow: 'hidden',
+      borderRadius: 16, minHeight: narrow ? 360 : 380,
+      background: p.surface,
+    }}>
+      {/* Album-art tinted background — blurred and darkened so the
+          foreground stays legible. */}
+      {art && (
+        <>
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `url("${art}")`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            filter: 'blur(60px) saturate(1.5) brightness(0.5)',
+            transform: 'scale(1.3)', // mask the blur edge feathering
+            zIndex: 0,
+          }}/>
+          <div aria-hidden style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(13,11,9,0.78) 100%)',
+            zIndex: 1,
+          }}/>
+        </>
+      )}
+
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: narrow ? '1fr' : '180px 1fr',
-        minHeight: narrow ? 'auto' : 200,
+        position: 'relative', zIndex: 2,
+        padding: narrow ? '20px 18px 18px' : '28px 32px 24px',
+        display: 'flex', flexDirection: 'column', gap: narrow ? 16 : 20,
+        height: '100%', minHeight: narrow ? 360 : 380,
+        color: '#fff',
       }}>
-        <div style={{
-          aspectRatio: narrow ? '16/9' : 'auto',
-          width: narrow ? '100%' : 180,
-          height: narrow ? 'auto' : '100%',
-          minHeight: narrow ? 220 : 200,
-          position: 'relative', overflow: 'hidden',
-          background: art ? '#0d0b09' : `linear-gradient(135deg, ${p.accent}, oklch(20% 0.05 25))`,
-        }}>
-          {art && (
-            <img src={art} alt=""
-              style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}}
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}/>
-          )}
-        </div>
-        <div style={{padding: '20px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0, gap: 14}}>
-          <div style={{minWidth: 0}}>
-            <div style={{fontSize: 11, color: p.fg3, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6}}>
+        {/* Top: track info on left, big art on right */}
+        <div style={{display: 'grid', gridTemplateColumns: narrow ? '1fr' : '1fr auto', gap: narrow ? 16 : 28, alignItems: 'flex-start'}}>
+          <div style={{minWidth: 0, order: narrow ? 2 : 1}}>
+            <div style={{fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 8}}>
               {isIdle ? 'Idle' : isPlaying ? 'Playing' : 'Paused'} · {speaker.name}
             </div>
-            <div style={{fontFamily: fonts.display, fontSize: narrow ? 22 : 26, color: p.fg, fontWeight: 500, lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+            <div style={{fontFamily: fonts.display, fontSize: narrow ? 26 : 34, fontWeight: 500, lineHeight: 1.1, marginBottom: 6,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
               {title || 'Nothing playing'}
             </div>
-            {(artist || album) && (
-              <div style={{fontSize: 13, color: p.fg2, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                {artist}{artist && album ? ' · ' : ''}{album}
+            {(album || artist) && (
+              <div style={{fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 2,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                {album || artist}
+              </div>
+            )}
+            {album && artist && (
+              <div style={{fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2, fontStyle:'italic',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                {artist}
               </div>
             )}
           </div>
+          {/* Album art tile */}
+          <div style={{
+            order: narrow ? 1 : 2,
+            width: narrow ? 160 : 200, height: narrow ? 160 : 200,
+            borderRadius: 12, flex: 'none', alignSelf: narrow ? 'center' : 'flex-start',
+            background: art ? `center / cover no-repeat url("${art}"), oklch(15% 0.05 25)` : `linear-gradient(135deg, ${p.accent}, oklch(20% 0.05 25))`,
+            boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
+          }}/>
+        </div>
 
-          {/* Seek slider — only when we know the duration. Drag commits
-              on release via media_seek. */}
-          {dur > 0 && (
-            <div>
-              <input type="range" min="0" max={dur} step={1}
-                value={Math.min(displayPos, dur)}
-                onMouseDown={() => { setSeeking(true); setSeekValue(tickPos); }}
-                onTouchStart={() => { setSeeking(true); setSeekValue(tickPos); }}
-                onChange={(e) => { setSeeking(true); setSeekValue(+e.target.value); }}
-                onMouseUp={(e) => { call('media_seek', { seek_position: +e.target.value }); setSeeking(false); }}
-                onTouchEnd={(e) => { call('media_seek', { seek_position: +e.target.value }); setSeeking(false); }}
-                style={{width: '100%', accentColor: p.accent, height: 3}}/>
-              <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 10, color: p.fg3, marginTop: 4, fontVariantNumeric: 'tabular-nums'}}>
-                <span>{fmtTime(displayPos)}</span>
-                <span>−{fmtTime(Math.max(0, dur - displayPos))}</span>
-              </div>
+        <div style={{flex: 1}}/>
+
+        {/* Seek slider */}
+        {dur > 0 && (
+          <div>
+            <input type="range" min="0" max={dur} step={1}
+              value={Math.min(displayPos, dur)}
+              onMouseDown={() => { setSeeking(true); setSeekValue(tickPos); }}
+              onTouchStart={() => { setSeeking(true); setSeekValue(tickPos); }}
+              onChange={(e) => { setSeeking(true); setSeekValue(+e.target.value); }}
+              onMouseUp={(e) => { call('media_seek', { seek_position: +e.target.value }); setSeeking(false); }}
+              onTouchEnd={(e) => { call('media_seek', { seek_position: +e.target.value }); setSeeking(false); }}
+              style={{width: '100%', accentColor: '#fff', height: 3}}/>
+            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 6, fontVariantNumeric: 'tabular-nums'}}>
+              <span>{fmtTime(displayPos)}</span>
+              <span>{fmtTime(dur)}</span>
             </div>
-          )}
-
-          <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
-            <CtrlBtn p={p} fonts={fonts} onClick={() => call('media_previous_track')} icon="‹‹"/>
-            <CtrlBtn p={p} fonts={fonts} primary onClick={() => call('media_play_pause')} icon={isPlaying ? '❚❚' : '▶'}/>
-            <CtrlBtn p={p} fonts={fonts} onClick={() => call('media_next_track')} icon="››"/>
-            {isPlaying && <CtrlBtn p={p} fonts={fonts} onClick={() => call('media_stop')} icon="◼"/>}
           </div>
+        )}
+
+        {/* Controls */}
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14}}>
+          <HeroBtn onClick={() => call('media_previous_track')} icon="‹‹" size={42}/>
+          <HeroBtn onClick={() => call('media_play_pause')} icon={isPlaying ? '❚❚' : '▶'} size={62} primary/>
+          <HeroBtn onClick={() => call('media_next_track')} icon="››" size={42}/>
         </div>
       </div>
-    </window.Card>
+    </div>
   );
 };
 
-const CtrlBtn = ({ p, fonts, primary, icon, onClick }) => (
+const HeroBtn = ({ onClick, icon, size, primary }) => (
   <button onClick={onClick} style={{
-    minWidth: primary ? 56 : 44, height: 44, padding: '0 14px',
-    borderRadius: 10,
-    background: primary ? p.accent : p.surface2,
-    color: primary ? '#fff' : p.fg,
-    border: `.5px solid ${primary ? p.accent : p.border2}`,
-    cursor: 'pointer', fontFamily: fonts.body,
-    fontSize: 16, fontWeight: 500,
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-  }}>
-    <span style={{fontSize: 14}}>{icon}</span>
-  </button>
+    width: size, height: size, borderRadius: '50%',
+    background: primary ? '#fff' : 'rgba(255,255,255,0.1)',
+    color: primary ? '#000' : '#fff',
+    border: primary ? '0' : '.5px solid rgba(255,255,255,0.18)',
+    cursor: 'pointer', fontSize: size > 50 ? 22 : 16, fontWeight: 600,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit',
+  }}>{icon}</button>
 );
 
-// ── Up-next queue ─────────────────────────────────────────────────────────
-const QueueCard = ({ ctx, hassRef, conn, speaker }) => {
+// ── Up next ───────────────────────────────────────────────────────────────
+const QueueCard = ({ ctx, conn, speaker }) => {
   const { p, fonts } = ctx;
   const [queue, setQueue] = React.useState(null);
   const [unsupported, setUnsupported] = React.useState(false);
@@ -389,7 +434,7 @@ const QueueCard = ({ ctx, hassRef, conn, speaker }) => {
   React.useEffect(() => {
     if (!conn || !speakerId) { setQueue(null); return; }
     let alive = true;
-    const fetchQueue = async () => {
+    (async () => {
       try {
         const resp = await conn.sendMessagePromise({
           type: 'call_service', domain: 'sonos', service: 'get_queue',
@@ -400,28 +445,27 @@ const QueueCard = ({ ctx, hassRef, conn, speaker }) => {
         setQueue(Array.isArray(arr) ? arr : []);
         setUnsupported(false);
       } catch { if (alive) { setQueue([]); setUnsupported(true); } }
-    };
-    fetchQueue();
+    })();
     return () => { alive = false; };
   }, [conn, speakerId, titleKey]);
 
   if (unsupported || !queue || queue.length === 0) return null;
   const currentTitle = (speaker.haMediaTitle || '').toLowerCase();
   const currentIdx = queue.findIndex(q => (q.title || '').toLowerCase() === currentTitle);
-  const upcoming = (currentIdx >= 0 ? queue.slice(currentIdx + 1) : queue).slice(0, 5);
+  const upcoming = (currentIdx >= 0 ? queue.slice(currentIdx + 1) : queue).slice(0, 6);
   if (!upcoming.length) return null;
 
   return (
     <window.Card p={p} style={{padding: 0}}>
-      <div style={{padding: '12px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>
-        <div style={{fontFamily: fonts.display, fontSize: 14, color: p.fg, fontWeight: 500}}>Up next</div>
+      <div style={{padding: '14px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>
+        <div style={{fontFamily: fonts.display, fontSize: 15, color: p.fg, fontWeight: 500}}>Up next</div>
         <div style={{fontSize: 11, color: p.fg3}}>{upcoming.length} track{upcoming.length === 1 ? '' : 's'}</div>
       </div>
       <div>
         {upcoming.map((tr, i) => (
           <div key={i} style={{display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px',
             borderBottom: i < upcoming.length - 1 ? `.5px solid ${p.border}` : 'none', minWidth: 0}}>
-            <div style={{width: 36, height: 36, borderRadius: 5, flex: 'none',
+            <div style={{width: 38, height: 38, borderRadius: 5, flex: 'none',
               background: tr.thumbnail ? `center / cover no-repeat url("${tr.thumbnail}"), oklch(20% 0.05 25)` : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
             <div style={{flex: 1, minWidth: 0}}>
               <div style={{fontSize: 13, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{tr.title || 'Untitled'}</div>
@@ -436,348 +480,14 @@ const QueueCard = ({ ctx, hassRef, conn, speaker }) => {
   );
 };
 
-// ── Browse + Search + Sections ────────────────────────────────────────────
-const REJECT_CLASSES = new Set(['image', 'video', 'game', 'movie']);
-const ROOT_REJECT_RE = /^(image|camera|text-to-speech|tts|ai\s+generated|image\s+upload|nest)/i;
-function isMusicItem(item) {
-  if (!item) return false;
-  const cls = (item.media_class || '').toLowerCase();
-  if (REJECT_CLASSES.has(cls)) return false;
-  const title = (item.title || '').toLowerCase();
-  const cid = (item.media_content_id || '').toLowerCase();
-  if (ROOT_REJECT_RE.test(title)) return false;
-  if (/^media-source:\/\/(image|camera|tts|nest)/i.test(cid)) return false;
-  return true;
-}
-const FAVORITES_RE = /favorites?|pinned|starred/i;
-const RECENT_RE = /recently\s*added|new\s+releases?/i;
-
-const BrowserCard = ({ ctx, hassRef, conn, speakerId, isMA, infinity }) => {
+// ── Right column: room chooser ────────────────────────────────────────────
+const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
+                     hidden, setHidden, autoVisible, manageOpen, setManageOpen }) => {
   const { p, fonts } = ctx;
-  const [path, setPath] = React.useState([]);
-  const [items, setItems] = React.useState(null);
-  const [error, setError] = React.useState(null);
-  const [sections, setSections] = React.useState(null);
-
-  const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState(null);
-  const [searchError, setSearchError] = React.useState(null);
-
-  const head = path[path.length - 1] || null;
-  const isAtRoot = path.length === 0;
-  const inAlbum = head?.contentType === 'album';
-
-  // Browse — depends on connection (stable) not hass (churns).
-  React.useEffect(() => {
-    if (!conn || !speakerId) { setItems(null); return; }
-    let alive = true;
-    setItems(null); setError(null); setSections(null);
-    (async () => {
-      try {
-        const msg = { type: 'media_player/browse_media', entity_id: speakerId };
-        if (head) {
-          msg.media_content_id = head.contentId;
-          msg.media_content_type = head.contentType;
-        }
-        const resp = await conn.sendMessagePromise(msg);
-        if (!alive) return;
-        setItems((resp?.children || []).filter(isMusicItem));
-      } catch (e) { if (alive) setError(e?.message || String(e)); }
-    })();
-    return () => { alive = false; };
-  }, [conn, speakerId, head?.contentId, head?.contentType]);
-
-  // Pre-expand Favorites + Recently Added at root.
-  React.useEffect(() => {
-    if (!isAtRoot || !items?.length || !conn || !speakerId) { setSections(null); return; }
-    let alive = true;
-    const fetchInto = async (node) => {
-      if (!node?.can_expand) return [];
-      try {
-        const resp = await conn.sendMessagePromise({
-          type: 'media_player/browse_media', entity_id: speakerId,
-          media_content_id: node.media_content_id,
-          media_content_type: node.media_content_type,
-        });
-        return (resp?.children || []).filter(isMusicItem).slice(0, 12);
-      } catch { return []; }
-    };
-    const findFirst = (re) => items.find(i => re.test(i.title || ''));
-    const favNode = findFirst(FAVORITES_RE);
-    const recentNode = findFirst(RECENT_RE);
-    Promise.all([fetchInto(favNode), fetchInto(recentNode)]).then(([favs, recent]) => {
-      if (!alive) return;
-      setSections({
-        favorites: { node: favNode, items: favs },
-        recent: { node: recentNode, items: recent },
-      });
-    });
-    return () => { alive = false; };
-  }, [isAtRoot, items, speakerId, conn]);
-
-  // Debounced search.
-  React.useEffect(() => {
-    if (!conn || !query.trim() || !speakerId) { setResults(null); setSearchError(null); return; }
-    let alive = true;
-    setSearchError(null);
-    const t = setTimeout(async () => {
-      try {
-        const resp = await conn.sendMessagePromise({
-          type: 'media_player/search_media',
-          entity_id: speakerId,
-          search_query: query.trim(),
-        });
-        if (!alive) return;
-        setResults((resp?.result || resp?.results || []).filter(isMusicItem));
-      } catch (e) {
-        if (alive) { setResults([]); setSearchError(e?.message || String(e)); }
-      }
-    }, 350);
-    return () => { alive = false; clearTimeout(t); };
-  }, [conn, speakerId, query]);
-
-  // Play helpers. When MA + Infinity is on, prefer music_assistant.play_media
-  // so MA can append a radio queue after the chosen item plays out.
-  const playMedia = async (item, enqueue) => {
-    const hass = hassRef.current;
-    if (!hass?.callService) return false;
-    if (isMA) {
-      try {
-        await hass.callService('music_assistant', 'play_media', {
-          entity_id: speakerId,
-          media_id: item.media_content_id,
-          enqueue: enqueue || 'play',
-          radio_mode: !!infinity,
-        });
-        return true;
-      } catch {
-        // Fall through to media_player.play_media
-      }
-    }
-    try {
-      await hass.callService('media_player', 'play_media', {
-        entity_id: speakerId,
-        media_content_id: item.media_content_id,
-        media_content_type: item.media_content_type,
-        enqueue: enqueue || 'play',
-      });
-      return true;
-    } catch (e) {
-      setError(e?.message || String(e));
-      return false;
-    }
-  };
-
-  const onItemClick = async (item) => {
-    if (item.can_expand) {
-      if (results !== null) { setQuery(''); setResults(null); }
-      setPath(p => [...p, { contentId: item.media_content_id, contentType: item.media_content_type, title: item.title }]);
-      return;
-    }
-    if (!item.can_play) return;
-    // In an album view, queue the rest of the album after the clicked
-    // track. enqueue: 'play' on the first replaces the queue; 'add' on
-    // the rest appends.
-    if (inAlbum && items?.length > 1) {
-      const idx = items.findIndex(i => i.media_content_id === item.media_content_id);
-      if (idx >= 0) {
-        const ok = await playMedia(items[idx], 'play');
-        if (ok) {
-          for (let i = idx + 1; i < items.length; i++) {
-            await playMedia(items[i], 'add');
-          }
-        }
-        return;
-      }
-    }
-    await playMedia(item, 'play');
-  };
-
-  const drillIntoSection = (node) => {
-    if (!node) return;
-    if (results !== null) { setQuery(''); setResults(null); }
-    setPath([{ contentId: node.media_content_id, contentType: node.media_content_type, title: node.title }]);
-  };
-
-  const showingSearch = results !== null;
-  const restItems = React.useMemo(() => {
-    if (!isAtRoot || !items) return items;
-    const skipIds = new Set();
-    if (sections?.favorites?.node) skipIds.add(sections.favorites.node.media_content_id);
-    if (sections?.recent?.node) skipIds.add(sections.recent.node.media_content_id);
-    return items.filter(i => !skipIds.has(i.media_content_id));
-  }, [isAtRoot, items, sections]);
-
-  return (
-    <window.Card p={p} style={{padding: 0}}>
-      <div style={{padding: '12px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8}}>
-        <span style={{fontSize: 14, color: p.fg3}}>🔍</span>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search songs, artists, albums…"
-          style={{flex: 1, minWidth: 0, border: 0, outline: 'none', background: 'transparent',
-            color: p.fg, fontSize: 13, fontFamily: fonts.body, padding: '4px 0'}}
-        />
-        {query && (
-          <button onClick={() => { setQuery(''); setResults(null); }}
-            style={{padding: '4px 8px', borderRadius: 6, background: 'transparent',
-              border: `.5px solid ${p.border2}`, color: p.fg3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11}}>
-            Clear
-          </button>
-        )}
-      </div>
-
-      {!showingSearch && (
-        <div style={{padding: '12px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
-          <button onClick={() => setPath([])} disabled={!path.length}
-            style={{padding: '6px 10px', borderRadius: 6, background: 'transparent',
-              border: `.5px solid ${p.border2}`, color: path.length ? p.fg : p.fg3,
-              cursor: path.length ? 'pointer' : 'default', fontFamily: 'inherit', fontSize: 11}}>
-            Browse
-          </button>
-          {path.map((node, i) => (
-            <React.Fragment key={node.contentId}>
-              <span style={{color: p.fg3, fontSize: 11}}>›</span>
-              <button onClick={() => setPath(prev => prev.slice(0, i + 1))}
-                style={{padding: '6px 10px', borderRadius: 6, background: 'transparent', border: 'none',
-                  color: i === path.length - 1 ? p.fg : p.fg2, cursor: 'pointer',
-                  fontFamily: 'inherit', fontSize: 11, fontWeight: i === path.length - 1 ? 500 : 400,
-                  overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180, whiteSpace: 'nowrap'}}>
-                {node.title}
-              </button>
-            </React.Fragment>
-          ))}
-        </div>
-      )}
-
-      {showingSearch && results === null && (
-        <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>Searching…</div>
-      )}
-      {showingSearch && searchError && results?.length === 0 && (
-        <div style={{padding: '14px 18px', fontSize: 12, color: '#e0a89a'}}>
-          Search failed: {searchError}.
-        </div>
-      )}
-      {showingSearch && results !== null && results.length === 0 && !searchError && (
-        <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>No results for "{query}"</div>
-      )}
-      {showingSearch && results?.length > 0 && (
-        <ItemsGrid items={results} onItemClick={onItemClick} ctx={ctx}/>
-      )}
-
-      {!showingSearch && (
-        <>
-          {error && <div style={{padding: '14px 18px', fontSize: 12, color: '#e0a89a'}}>{error}</div>}
-          {items === null && !error && (
-            <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>
-          )}
-          {isAtRoot && sections?.favorites?.items?.length > 0 && (
-            <SectionRow ctx={ctx} title="Pinned" subtitle={sections.favorites.node?.title}
-              onSeeAll={() => drillIntoSection(sections.favorites.node)}
-              items={sections.favorites.items} onItemClick={onItemClick}/>
-          )}
-          {isAtRoot && sections?.recent?.items?.length > 0 && (
-            <SectionRow ctx={ctx} title="Recently added" subtitle={sections.recent.node?.title}
-              onSeeAll={() => drillIntoSection(sections.recent.node)}
-              items={sections.recent.items} onItemClick={onItemClick}/>
-          )}
-          {restItems !== null && !restItems.length && !error && (
-            <div style={{padding: '24px 18px', fontSize: 12, color: p.fg3, lineHeight: 1.6}}>
-              {isAtRoot ? 'Nothing here at the top level. Use search above to find anything from your linked services.' : 'Nothing here.'}
-            </div>
-          )}
-          {restItems?.length > 0 && (
-            <div>
-              {isAtRoot && (sections?.favorites?.items?.length > 0 || sections?.recent?.items?.length > 0) && (
-                <div style={{padding: '12px 18px 0', fontSize: 11, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 500}}>
-                  Browse
-                </div>
-              )}
-              <ItemsGrid items={restItems} onItemClick={onItemClick} ctx={ctx}/>
-            </div>
-          )}
-        </>
-      )}
-    </window.Card>
-  );
-};
-
-const SectionRow = ({ ctx, title, subtitle, items, onItemClick, onSeeAll }) => {
-  const { p, fonts } = ctx;
-  return (
-    <div style={{borderBottom: `.5px solid ${p.border}`}}>
-      <div style={{padding: '14px 18px 8px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8}}>
-        <div>
-          <div style={{fontFamily: fonts.display, fontSize: 14, color: p.fg, fontWeight: 500}}>{title}</div>
-          {subtitle && subtitle.toLowerCase() !== title.toLowerCase() && (
-            <div style={{fontSize: 11, color: p.fg3, marginTop: 1}}>{subtitle}</div>
-          )}
-        </div>
-        {onSeeAll && (
-          <button onClick={onSeeAll} style={{
-            padding: '4px 10px', borderRadius: 6, background: 'transparent',
-            border: `.5px solid ${p.border2}`, color: p.fg2,
-            cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-          }}>See all</button>
-        )}
-      </div>
-      <div style={{
-        display: 'grid', gridAutoFlow: 'column',
-        gridAutoColumns: '140px', gap: 12, padding: '0 18px 14px',
-        overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'thin',
-      }}>
-        {items.map(item => <ItemTile key={item.media_content_id || item.title} item={item} onClick={() => onItemClick(item)} ctx={ctx}/>)}
-      </div>
-    </div>
-  );
-};
-
-const ItemsGrid = ({ items, onItemClick, ctx }) => (
-  <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, padding: '14px 18px'}}>
-    {items.map(item => <ItemTile key={item.media_content_id || item.title} item={item} onClick={() => onItemClick(item)} ctx={ctx}/>)}
-  </div>
-);
-
-const ItemTile = ({ item, onClick, ctx }) => {
-  const { p } = ctx;
-  return (
-    <button onClick={onClick} style={{
-      padding: 0, border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left',
-      display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0,
-    }}>
-      <div style={{aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
-        background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`, position: 'relative'}}>
-        {item.thumbnail && (
-          <img src={item.thumbnail} alt=""
-            style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}}
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}/>
-        )}
-        {!item.can_expand && item.can_play && (
-          <div style={{position: 'absolute', bottom: 6, right: 6, width: 24, height: 24, borderRadius: '50%',
-            background: 'rgba(0,0,0,0.65)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11}}>▶</div>
-        )}
-      </div>
-      <div style={{fontSize: 12, color: p.fg, fontWeight: 500, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-        {item.title}
-      </div>
-      {item.media_class && (
-        <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.04em', textTransform: 'capitalize'}}>
-          {item.media_class}
-        </div>
-      )}
-    </button>
-  );
-};
-
-// ── Speakers panel ────────────────────────────────────────────────────────
-const SpeakersPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
-                         hidden, setHidden, autoVisible, manageOpen, setManageOpen }) => {
-  const { p, fonts } = ctx;
+  const [chooserOpen, setChooserOpen] = React.useState(false);
   const groupable = speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
-  // Speakers the auto-filter wanted to show but the user has hidden.
-  // Surfaces them in the Manage panel so they're easy to restore.
   const hiddenSpeakers = (autoVisible || []).filter(s => hidden?.has?.(s.id));
+  const active = speakers.find(s => s.id === activeId) || speakers[0];
 
   const call = (entityId, service, data) => {
     const hass = hassRef.current;
@@ -805,108 +515,525 @@ const SpeakersPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
   };
 
   return (
-    <window.Card p={p} style={{padding: 0, overflow: 'hidden'}}>
-      <div style={{padding: '14px 16px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8}}>
-        <div style={{flex: 1, fontFamily: fonts.display, fontSize: 15, color: p.fg, fontWeight: 500}}>Playing on</div>
-        <div style={{fontSize: 11, color: p.fg3}}>{speakers.filter(s => s.playing).length} of {speakers.length}</div>
-        <button onClick={() => setManageOpen(v => !v)} style={{
-          padding: '4px 10px', borderRadius: 6,
-          background: manageOpen ? p.accentSoft : 'transparent',
-          border: `.5px solid ${manageOpen ? p.accent : p.border2}`,
-          color: manageOpen ? p.accent : p.fg2,
-          cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-        }}>{manageOpen ? 'Done' : 'Manage'}</button>
-      </div>
-
-      {manageOpen && hiddenSpeakers.length > 0 && (
-        <div style={{padding: '10px 14px', borderBottom: `.5px solid ${p.border}`, background: 'rgba(241,234,217,0.02)'}}>
-          <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8}}>
-            Hidden ({hiddenSpeakers.length})
-          </div>
-          <div style={{display: 'flex', flexWrap: 'wrap', gap: 6}}>
-            {hiddenSpeakers.map(sp => (
-              <button key={sp.id}
-                onClick={() => setHidden(prev => { const next = new Set(prev); next.delete(sp.id); return next; })}
-                style={{
-                  padding: '5px 10px', borderRadius: 6,
-                  background: 'transparent', border: `.5px solid ${p.border2}`,
-                  color: p.fg2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-                }}>
-                + {sp.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      <div style={{maxHeight: 540, overflowY: 'auto'}}>
-        {speakers.map(sp => {
-          const isActive = sp.id === activeId;
-          const title = sp.haMediaTitle;
-          const artist = sp.haMediaArtist;
-          return (
-            <div key={sp.id} onClick={() => setActiveId(sp.id)}
-              style={{padding: '12px 14px', borderBottom: `.5px solid ${p.border}`, cursor: 'pointer',
-                background: isActive ? p.warm : 'transparent',
-                borderLeft: isActive ? `2px solid ${p.accent}` : '2px solid transparent'}}>
-              <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
-                <div style={{width: 36, height: 36, borderRadius: 6, flex: 'none',
-                  background: sp.haEntityPicture ? `center / cover no-repeat url("${sp.haEntityPicture}"), oklch(20% 0.05 25)` : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
-                <div style={{flex: 1, minWidth: 0}}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: p.fg, fontWeight: 500}}>
-                    {sp.name}
-                    {sp.playing && <span style={{width: 6, height: 6, borderRadius: '50%', background: 'oklch(60% 0.14 145)'}}/>}
-                  </div>
-                  <div style={{fontSize: 11, color: p.fg3, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
-                    {sp.playing && title ? `${title}${artist ? ' · ' + artist : ''}` : 'Idle'}
-                  </div>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); call(sp.id, 'media_play_pause'); }}
-                  style={{width: 28, height: 28, borderRadius: '50%', border: 0,
-                    background: sp.playing ? p.accent : p.surface, color: sp.playing ? '#fff' : p.fg2,
-                    cursor: 'pointer', display: 'grid', placeItems: 'center', flex: 'none', fontSize: 11}}>
-                  {sp.playing ? '❚❚' : '▶'}
-                </button>
-                {manageOpen && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setHidden(prev => { const next = new Set(prev); next.add(sp.id); return next; }); }}
-                    title="Hide this speaker"
-                    style={{width: 24, height: 24, borderRadius: '50%', border: `.5px solid ${p.border2}`,
-                      background: 'transparent', color: p.fg3, cursor: 'pointer',
-                      display: 'grid', placeItems: 'center', flex: 'none', fontSize: 12}}>
-                    ×
-                  </button>
-                )}
+    <window.Card p={p} style={{padding: 0, overflow: 'visible'}}>
+      <div style={{padding: '12px 14px', display: 'grid', gap: 8}}>
+        {/* Choose Room dropdown */}
+        <div style={{position: 'relative'}}>
+          <button onClick={() => setChooserOpen(v => !v)} style={{
+            width: '100%', padding: '12px 14px', borderRadius: 10,
+            background: p.surface, border: `.5px solid ${p.border2}`, color: p.fg,
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{flex: 1, minWidth: 0}}>
+              <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2}}>Choose</div>
+              <div style={{fontSize: 14, fontWeight: 500, color: p.fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                {active?.name || 'Room'}
               </div>
-              <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
-                <window.Icon name="speaker" size={11} style={{color: p.fg3}}/>
-                <input type="range" min="0" max="100" value={sp.vol}
-                  onChange={(e) => call(sp.id, 'volume_set', { volume_level: (+e.target.value) / 100 })}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{flex: 1, accentColor: p.accent, height: 3}}/>
-                <span style={{fontSize: 10, color: p.fg3, fontVariantNumeric: 'tabular-nums', width: 22, textAlign: 'right'}}>{sp.vol}</span>
-              </div>
+            </span>
+            <span style={{fontSize: 11, color: p.fg3, transform: chooserOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 120ms ease'}}>▾</span>
+          </button>
+          {chooserOpen && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+              background: p.surface2, border: `.5px solid ${p.border2}`, borderRadius: 10,
+              boxShadow: '0 18px 40px rgba(0,0,0,0.4)', zIndex: 30,
+              maxHeight: 320, overflowY: 'auto',
+            }}>
+              {speakers.map(sp => {
+                const isActive = sp.id === activeId;
+                return (
+                  <div key={sp.id}
+                    onClick={() => { setActiveId(sp.id); setChooserOpen(false); }}
+                    style={{
+                      padding: '10px 14px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      background: isActive ? p.warm : 'transparent',
+                      borderLeft: isActive ? `2px solid ${p.accent}` : '2px solid transparent',
+                    }}>
+                    <div style={{width: 28, height: 28, borderRadius: 5, flex: 'none',
+                      background: sp.haEntityPicture ? `center / cover no-repeat url("${sp.haEntityPicture}"), oklch(20% 0.05 25)` : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
+                    <div style={{flex: 1, minWidth: 0}}>
+                      <div style={{fontSize: 13, color: p.fg, fontWeight: 500}}>{sp.name}</div>
+                      <div style={{fontSize: 11, color: p.fg3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        {sp.playing && sp.haMediaTitle ? sp.haMediaTitle : 'Idle'}
+                      </div>
+                    </div>
+                    {sp.playing && <span style={{width: 6, height: 6, borderRadius: '50%', background: 'oklch(60% 0.14 145)', flex: 'none'}}/>}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-      <div style={{padding: '12px 14px', borderTop: `.5px solid ${p.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8}}>
-        <button onClick={pauseAll} style={smallActionBtn(p, fonts)}>Pause all</button>
-        <button onClick={groupAll} disabled={groupable.length < 2}
-          style={smallActionBtn(p, fonts, true, groupable.length < 2)}>Group all</button>
-        <button onClick={ungroupAll} disabled={!groupable.length}
-          style={{...smallActionBtn(p, fonts, false, !groupable.length), gridColumn: '1 / -1'}}>Ungroup</button>
+          )}
+        </div>
+
+        <button onClick={groupAll} disabled={groupable.length < 2} style={{
+          width: '100%', padding: '12px 14px', borderRadius: 10,
+          background: p.surface, border: `.5px solid ${p.border2}`, color: p.fg,
+          cursor: groupable.length < 2 ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+          opacity: groupable.length < 2 ? 0.4 : 1,
+          display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+        }}>
+          <span style={{flex: 1}}>
+            <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2}}>Play</div>
+            <div style={{fontSize: 14, fontWeight: 500}}>in all Rooms</div>
+          </span>
+          <span style={{fontSize: 13}}>⌂</span>
+        </button>
+
+        {/* Quick speaker chips */}
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(86px, 1fr))', gap: 6, marginTop: 4}}>
+          {speakers.slice(0, 8).map((sp, i) => (
+            <button key={sp.id} onClick={() => setActiveId(sp.id)}
+              title={sp.name}
+              style={{
+                aspectRatio: '1', borderRadius: 12, padding: 8,
+                border: sp.id === activeId ? `1.5px solid ${p.accent}` : `.5px solid ${p.border2}`,
+                background: SPEAKER_TINTS[i % SPEAKER_TINTS.length],
+                color: '#fff', cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-end',
+                gap: 4, position: 'relative', overflow: 'hidden',
+                fontSize: 11, fontWeight: 500, textAlign: 'left', lineHeight: 1.1,
+              }}>
+              <span style={{fontSize: 18, opacity: 0.85}}>{ROOM_ICON_FOR(sp.name)}</span>
+              <span style={{
+                fontSize: 11, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%',
+              }}>{sp.name}</span>
+              {sp.playing && <span style={{position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: '50%', background: '#fff'}}/>}
+            </button>
+          ))}
+        </div>
+
+        {/* Manage / actions */}
+        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 4}}>
+          <button onClick={pauseAll} style={smallBtn(p)}>Pause all</button>
+          <button onClick={ungroupAll} disabled={!groupable.length} style={smallBtn(p, !groupable.length)}>Ungroup</button>
+          <button onClick={() => setManageOpen(v => !v)} style={{
+            ...smallBtn(p, false, manageOpen),
+            background: manageOpen ? p.accentSoft : 'transparent',
+            color: manageOpen ? p.accent : p.fg,
+          }}>{manageOpen ? 'Done' : 'Manage'}</button>
+        </div>
+
+        {/* Manage panel — hide/show speakers */}
+        {manageOpen && (
+          <div style={{padding: 8, borderRadius: 8, background: 'rgba(241,234,217,0.02)', border: `.5px dashed ${p.border}`}}>
+            <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6}}>
+              Tap × to hide a speaker
+            </div>
+            <div style={{display: 'flex', flexDirection: 'column', gap: 4}}>
+              {speakers.map(sp => (
+                <div key={sp.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 8px', borderRadius: 6, background: p.surface,
+                }}>
+                  <span style={{flex: 1, fontSize: 12, color: p.fg}}>{sp.name}</span>
+                  <button onClick={() => setHidden(prev => { const n = new Set(prev); n.add(sp.id); return n; })}
+                    style={{width: 22, height: 22, borderRadius: '50%', border: `.5px solid ${p.border2}`,
+                      background: 'transparent', color: p.fg3, cursor: 'pointer', fontSize: 11}}>×</button>
+                </div>
+              ))}
+            </div>
+            {hiddenSpeakers.length > 0 && (
+              <>
+                <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', margin: '10px 0 6px'}}>
+                  Hidden — tap to restore
+                </div>
+                <div style={{display: 'flex', flexWrap: 'wrap', gap: 4}}>
+                  {hiddenSpeakers.map(sp => (
+                    <button key={sp.id}
+                      onClick={() => setHidden(prev => { const n = new Set(prev); n.delete(sp.id); return n; })}
+                      style={{
+                        padding: '4px 10px', borderRadius: 6,
+                        background: p.surface, border: `.5px solid ${p.border2}`,
+                        color: p.fg2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                      }}>+ {sp.name}</button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </window.Card>
   );
 };
 
-const smallActionBtn = (p, fonts, primary, disabled) => ({
-  padding: '7px 10px', borderRadius: 7,
-  border: `.5px solid ${primary ? p.accent : p.border2}`,
-  background: primary ? p.accentSoft : 'transparent',
-  color: primary ? p.accent : p.fg, fontSize: 11,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.4 : 1, fontFamily: fonts.body,
+const smallBtn = (p, disabled, active) => ({
+  padding: '8px 4px', borderRadius: 7,
+  border: `.5px solid ${active ? p.accent : p.border2}`,
+  background: 'transparent',
+  color: p.fg, fontSize: 11, cursor: disabled ? 'not-allowed' : 'pointer',
+  opacity: disabled ? 0.4 : 1, fontFamily: 'inherit',
 });
+
+const SPEAKER_TINTS = [
+  'linear-gradient(135deg, #4a8c5a, #2f5c3c)',
+  'linear-gradient(135deg, #6a8cc4, #3c5982)',
+  'linear-gradient(135deg, #c97478, #8c4548)',
+  'linear-gradient(135deg, #d4a35a, #8c6730)',
+  'linear-gradient(135deg, #b56fc4, #6e3f82)',
+  'linear-gradient(135deg, #d88c5a, #8c5430)',
+  'linear-gradient(135deg, #5fb0a8, #2f7872)',
+  'linear-gradient(135deg, #c4a05f, #826636)',
+];
+function ROOM_ICON_FOR(name) {
+  const n = (name || '').toLowerCase();
+  if (/bed|sleep/.test(n)) return '🛏️';
+  if (/bath|shower/.test(n)) return '🛁';
+  if (/kitch|dining|food/.test(n)) return '🍽️';
+  if (/office|study|desk/.test(n)) return '💻';
+  if (/garage|car/.test(n)) return '🚗';
+  if (/turntable|vinyl/.test(n)) return '💿';
+  if (/move|portable/.test(n)) return '🎒';
+  if (/living|family|den/.test(n)) return '🛋️';
+  if (/outdoor|patio|yard/.test(n)) return '🌳';
+  return '🔊';
+}
+
+// ── Playlists card — pinned/customizable ──────────────────────────────────
+const PlaylistsCard = ({ ctx, hassRef, conn, speakerId, playMedia, isMA }) => {
+  const { p, fonts } = ctx;
+  const [items, setItems] = React.useState(null);
+  const [error, setError] = React.useState(null);
+  const [editing, setEditing] = React.useState(false);
+  const [hidden, setHiddenRaw] = React.useState(() => loadStringSet(HIDDEN_PLAYLISTS_KEY));
+  const setHidden = (updater) => {
+    setHiddenRaw(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      saveStringSet(HIDDEN_PLAYLISTS_KEY, next);
+      return next;
+    });
+  };
+
+  // Fetch the user's playlists. We try MA's Playlists folder first
+  // (richer, includes all linked services), then fall back to whatever
+  // the speaker's root browse exposes — any node titled "Playlists" /
+  // "Favorites" / "Pinned".
+  React.useEffect(() => {
+    if (!conn || !speakerId) { setItems(null); return; }
+    let alive = true;
+    setItems(null); setError(null);
+    (async () => {
+      try {
+        // Browse root, find a Playlists or Favorites node, expand it.
+        const rootResp = await conn.sendMessagePromise({
+          type: 'media_player/browse_media', entity_id: speakerId,
+        });
+        const rootChildren = (rootResp?.children || []).filter(isMusicItem);
+        const pickInto = async (re) => {
+          const node = rootChildren.find(c => re.test(c.title || ''));
+          if (!node?.can_expand) return [];
+          try {
+            const r = await conn.sendMessagePromise({
+              type: 'media_player/browse_media', entity_id: speakerId,
+              media_content_id: node.media_content_id,
+              media_content_type: node.media_content_type,
+            });
+            return (r?.children || []).filter(isMusicItem);
+          } catch { return []; }
+        };
+        let pls = await pickInto(PLAYLISTS_RE);
+        // If the playlists folder is MA-style and contains nested
+        // "Library", drill one level deeper.
+        if (pls.length === 1 && pls[0].can_expand && /library/i.test(pls[0].title || '')) {
+          try {
+            const r = await conn.sendMessagePromise({
+              type: 'media_player/browse_media', entity_id: speakerId,
+              media_content_id: pls[0].media_content_id,
+              media_content_type: pls[0].media_content_type,
+            });
+            pls = (r?.children || []).filter(isMusicItem);
+          } catch {}
+        }
+        let favs = [];
+        if (pls.length === 0) favs = await pickInto(FAVORITES_RE);
+        const merged = pls.length ? pls : favs;
+        if (alive) setItems(merged);
+      } catch (e) {
+        if (alive) setError(e?.message || String(e));
+      }
+    })();
+    return () => { alive = false; };
+  }, [conn, speakerId]);
+
+  const visible = (items || []).filter(it => !hidden.has(it.media_content_id));
+
+  return (
+    <window.Card p={p} style={{padding: 0}}>
+      <div style={{padding: '12px 16px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8}}>
+        <div style={{flex: 1, fontFamily: fonts.display, fontSize: 14, color: p.fg, fontWeight: 500}}>Playlists</div>
+        {items?.length > 0 && (
+          <button onClick={() => setEditing(v => !v)} style={{
+            padding: '4px 10px', borderRadius: 6,
+            background: editing ? p.accentSoft : 'transparent',
+            border: `.5px solid ${editing ? p.accent : p.border2}`,
+            color: editing ? p.accent : p.fg2,
+            cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+          }}>{editing ? 'Done' : 'Edit'}</button>
+        )}
+      </div>
+      {error && <div style={{padding: '14px 16px', fontSize: 12, color: '#e0a89a'}}>{error}</div>}
+      {items === null && !error && (
+        <div style={{padding: '20px 16px', fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>
+      )}
+      {items?.length === 0 && (
+        <div style={{padding: '20px 16px', fontSize: 12, color: p.fg3, lineHeight: 1.5}}>
+          {isMA ? 'No playlists found yet. Add some in Music Assistant or favorite tracks/albums in your linked services.'
+                : 'Install Music Assistant for your full Apple Music library, or favorite tracks in the Sonos app.'}
+        </div>
+      )}
+      {visible.length > 0 && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
+          gap: 8, padding: '12px 16px',
+        }}>
+          {visible.map(it => (
+            <PlaylistTile key={it.media_content_id} item={it} ctx={ctx}
+              onPlay={() => playMedia(it, 'play')}
+              editing={editing}
+              onHide={() => setHidden(prev => { const n = new Set(prev); n.add(it.media_content_id); return n; })}/>
+          ))}
+        </div>
+      )}
+      {editing && hidden.size > 0 && items?.length > 0 && (
+        <div style={{padding: '8px 16px 14px', borderTop: `.5px dashed ${p.border}`}}>
+          <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', margin: '6px 0'}}>
+            Hidden — tap to restore
+          </div>
+          <div style={{display: 'flex', flexWrap: 'wrap', gap: 4}}>
+            {(items || []).filter(i => hidden.has(i.media_content_id)).map(it => (
+              <button key={it.media_content_id}
+                onClick={() => setHidden(prev => { const n = new Set(prev); n.delete(it.media_content_id); return n; })}
+                style={{
+                  padding: '4px 10px', borderRadius: 6,
+                  background: p.surface, border: `.5px solid ${p.border2}`,
+                  color: p.fg2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                  overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160, whiteSpace: 'nowrap',
+                }}>+ {it.title}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </window.Card>
+  );
+};
+
+const PlaylistTile = ({ item, ctx, onPlay, editing, onHide }) => {
+  const { p } = ctx;
+  return (
+    <div style={{position: 'relative'}}>
+      <button onClick={editing ? undefined : onPlay} disabled={editing}
+        style={{
+          padding: 0, border: 0, background: 'transparent',
+          cursor: editing ? 'default' : 'pointer', textAlign: 'left',
+          display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, width: '100%',
+        }}>
+        <div style={{
+          aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
+          background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`,
+          position: 'relative',
+        }}>
+          {item.thumbnail && (
+            <img src={item.thumbnail} alt=""
+              style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}/>
+          )}
+        </div>
+        <div style={{fontSize: 11, color: p.fg, fontWeight: 500, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+          {item.title}
+        </div>
+      </button>
+      {editing && (
+        <button onClick={onHide} title="Hide"
+          style={{
+            position: 'absolute', top: 4, right: 4,
+            width: 22, height: 22, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.7)', color: '#fff',
+            border: 0, cursor: 'pointer', fontSize: 12,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          }}>×</button>
+      )}
+    </div>
+  );
+};
+
+// ── Search overlay ────────────────────────────────────────────────────────
+const SearchOverlay = ({ ctx, conn, speakerId, playMedia, onClose }) => {
+  const { p, fonts } = ctx;
+  const [query, setQuery] = React.useState('');
+  const [results, setResults] = React.useState(null);
+  const [error, setError] = React.useState(null);
+  const inputRef = React.useRef(null);
+  React.useEffect(() => { inputRef.current?.focus(); }, []);
+
+  React.useEffect(() => {
+    if (!conn || !query.trim() || !speakerId) { setResults(null); setError(null); return; }
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        const resp = await conn.sendMessagePromise({
+          type: 'media_player/search_media', entity_id: speakerId, search_query: query.trim(),
+        });
+        if (!alive) return;
+        setResults((resp?.result || resp?.results || []).filter(isMusicItem));
+        setError(null);
+      } catch (e) {
+        if (alive) { setResults([]); setError(e?.message || String(e)); }
+      }
+    }, 300);
+    return () => { alive = false; clearTimeout(t); };
+  }, [conn, query, speakerId]);
+
+  return (
+    <Overlay onClose={onClose} ctx={ctx}>
+      <div style={{padding: 18, borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 10}}>
+        <span style={{fontSize: 18, color: p.fg3}}>🔍</span>
+        <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search songs, artists, albums…"
+          style={{flex: 1, border: 0, outline: 'none', background: 'transparent',
+            color: p.fg, fontSize: 16, fontFamily: fonts.body}}/>
+        <button onClick={onClose} style={{
+          width: 32, height: 32, borderRadius: '50%', border: `.5px solid ${p.border2}`,
+          background: 'transparent', color: p.fg2, cursor: 'pointer', fontSize: 14,
+        }}>×</button>
+      </div>
+      <div style={{flex: 1, overflowY: 'auto'}}>
+        {results === null && query && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Searching…</div>}
+        {error && results?.length === 0 && <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>Search failed: {error}</div>}
+        {results?.length === 0 && !error && query && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>No results for "{query}"</div>}
+        {results?.length > 0 && (
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, padding: 18}}>
+            {results.map(item => (
+              <button key={item.media_content_id} onClick={() => { playMedia(item, 'play'); onClose(); }}
+                style={{padding: 0, border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                  display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0}}>
+                <div style={{aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
+                  background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`, position: 'relative'}}>
+                  {item.thumbnail && <img src={item.thumbnail} alt="" style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} onError={(e) => {e.currentTarget.style.display = 'none';}}/>}
+                </div>
+                <div style={{fontSize: 12, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{item.title}</div>
+                {item.media_class && <div style={{fontSize: 10, color: p.fg3, textTransform: 'capitalize'}}>{item.media_class}</div>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Overlay>
+  );
+};
+
+// ── Browse overlay ────────────────────────────────────────────────────────
+const BrowseOverlay = ({ ctx, conn, speakerId, playMedia, onClose }) => {
+  const { p, fonts } = ctx;
+  const [path, setPath] = React.useState([]);
+  const [items, setItems] = React.useState(null);
+  const [error, setError] = React.useState(null);
+  const head = path[path.length - 1] || null;
+
+  React.useEffect(() => {
+    if (!conn || !speakerId) { setItems(null); return; }
+    let alive = true;
+    setItems(null); setError(null);
+    (async () => {
+      try {
+        const msg = { type: 'media_player/browse_media', entity_id: speakerId };
+        if (head) {
+          msg.media_content_id = head.contentId;
+          msg.media_content_type = head.contentType;
+        }
+        const resp = await conn.sendMessagePromise(msg);
+        if (!alive) return;
+        setItems((resp?.children || []).filter(isMusicItem));
+      } catch (e) { if (alive) setError(e?.message || String(e)); }
+    })();
+    return () => { alive = false; };
+  }, [conn, speakerId, head?.contentId, head?.contentType]);
+
+  const onClick = async (item) => {
+    if (item.can_expand) {
+      setPath(p => [...p, { contentId: item.media_content_id, contentType: item.media_content_type, title: item.title }]);
+      return;
+    }
+    if (item.can_play) { playMedia(item, 'play'); onClose(); }
+  };
+
+  return (
+    <Overlay onClose={onClose} ctx={ctx}>
+      <div style={{padding: 14, borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
+        <button onClick={() => setPath([])} disabled={!path.length}
+          style={{padding: '6px 12px', borderRadius: 7, background: 'transparent',
+            border: `.5px solid ${p.border2}`, color: path.length ? p.fg : p.fg3,
+            cursor: path.length ? 'pointer' : 'default', fontFamily: 'inherit', fontSize: 12}}>
+          Browse
+        </button>
+        {path.map((node, i) => (
+          <React.Fragment key={node.contentId}>
+            <span style={{color: p.fg3, fontSize: 12}}>›</span>
+            <button onClick={() => setPath(prev => prev.slice(0, i + 1))}
+              style={{padding: '6px 12px', borderRadius: 7, background: 'transparent', border: 'none',
+                color: i === path.length - 1 ? p.fg : p.fg2, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 12, fontWeight: i === path.length - 1 ? 500 : 400,
+                overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200, whiteSpace: 'nowrap'}}>
+              {node.title}
+            </button>
+          </React.Fragment>
+        ))}
+        <div style={{flex: 1}}/>
+        <button onClick={onClose} style={{
+          width: 32, height: 32, borderRadius: '50%', border: `.5px solid ${p.border2}`,
+          background: 'transparent', color: p.fg2, cursor: 'pointer', fontSize: 14,
+        }}>×</button>
+      </div>
+      <div style={{flex: 1, overflowY: 'auto'}}>
+        {error && <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>{error}</div>}
+        {items === null && !error && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>}
+        {items?.length === 0 && !error && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Nothing here.</div>}
+        {items?.length > 0 && (
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, padding: 18}}>
+            {items.map(item => (
+              <button key={item.media_content_id || item.title} onClick={() => onClick(item)}
+                style={{padding: 0, border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                  display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0}}>
+                <div style={{aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
+                  background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`, position: 'relative'}}>
+                  {item.thumbnail && <img src={item.thumbnail} alt="" style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} onError={(e) => {e.currentTarget.style.display = 'none';}}/>}
+                  {!item.can_expand && item.can_play && (
+                    <div style={{position: 'absolute', bottom: 6, right: 6, width: 24, height: 24, borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.65)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11}}>▶</div>
+                  )}
+                </div>
+                <div style={{fontSize: 12, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{item.title}</div>
+                {item.media_class && <div style={{fontSize: 10, color: p.fg3, textTransform: 'capitalize'}}>{item.media_class}</div>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Overlay>
+  );
+};
+
+const Overlay = ({ onClose, children, ctx }) => {
+  const { p } = ctx;
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
+      display: 'grid', placeItems: 'center', padding: 16,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: 'min(720px, 100%)', maxHeight: '85vh',
+        background: p.surface, border: `.5px solid ${p.border2}`,
+        borderRadius: 14, display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.55)',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+};
 
 window.MusicView = MusicView;
