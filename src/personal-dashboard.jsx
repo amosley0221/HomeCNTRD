@@ -162,53 +162,39 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       paddingLeft: narrow ? 16 : 36,
       paddingRight: narrow ? 16 : 36,
     }}>
-      {/* Header */}
-      <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap: 14, marginBottom: narrow ? 24 : 36}}>
-        <div>
+      {/* Header
+          Wide:   [Avatar pill] [Greeting] — Edit + Hamburger live INSIDE the pill.
+          Narrow: [Greeting]    [Avatar circle] — Edit lives inside the avatar's
+                  dropdown card; hamburger isn't shown (bottom nav covers it). */}
+      <div style={{display:'flex', alignItems:'flex-start', gap: 14, marginBottom: narrow ? 24 : 36}}>
+        {!narrow && (
+          <PresenceAvatar
+            hass={hass} user={user}
+            accent={accent} fg={fg} fg2={fg2} fg3={fg3} border={border}
+            surface={surface} surface2={surface2} fonts={fonts}
+            narrow={false}
+            editMode={editMode}
+            onToggleEdit={() => setEditMode(v => !v)}
+            onOpenMenu={onOpenMenu}
+          />
+        )}
+        <div style={{flex: 1, minWidth: 0}}>
           <div style={{fontSize: 11, color: fg3, letterSpacing:'.12em', textTransform:'uppercase', marginBottom: 6}}>{dayName} · {dateStr}</div>
           <div style={{fontFamily: display, fontSize: narrow ? 30 : 40, lineHeight: 1.05, color: fg, fontWeight: 500}}>
             {greet()}, <em style={{fontStyle:'italic', color: accent, fontWeight: 400}}>{user?.firstName || 'there'}.</em>
           </div>
         </div>
-
-        <div style={{display:'flex', gap: 8, flex: 'none'}}>
-          {/* Edit-layout toggle. Visible everywhere (it's the only way to
-              rearrange tiles on a touch device, where there's no sidebar
-              menu to dig into). */}
-          <button
-            onClick={() => setEditMode(v => !v)}
-            aria-label={editMode ? 'Done editing' : 'Edit layout'}
-            style={{
-              height: 42, borderRadius: 10, flex: 'none',
-              padding: '0 14px',
-              background: editMode ? accent : surface,
-              border: `.5px solid ${editMode ? accent : border}`,
-              color: editMode ? '#fff' : fg,
-              cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
-              fontWeight: 500, letterSpacing: '.04em', textTransform: 'uppercase',
-              display:'inline-flex', alignItems:'center', gap: 6,
-            }}
-          >
-            {editMode ? 'Done' : 'Edit'}
-          </button>
-
-          {/* Hamburger — only shown on wide viewports where we've hidden the
-              inline sidebar. Tap to slide it in as a drawer. On narrow
-              viewports the bottom nav already covers this so we hide the
-              button. */}
-          {!narrow && onOpenMenu && (
-            <button onClick={onOpenMenu} aria-label="Open menu" style={{
-              width: 42, height: 42, borderRadius: 10, flex: 'none',
-              background: surface, border: `.5px solid ${border}`,
-              color: fg, cursor: 'pointer',
-              display:'grid', placeItems:'center',
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                <path d="M3 6h18M3 12h18M3 18h18"/>
-              </svg>
-            </button>
-          )}
-        </div>
+        {narrow && (
+          <PresenceAvatar
+            hass={hass} user={user}
+            accent={accent} fg={fg} fg2={fg2} fg3={fg3} border={border}
+            surface={surface} surface2={surface2} fonts={fonts}
+            narrow={true}
+            editMode={editMode}
+            onToggleEdit={() => setEditMode(v => !v)}
+            onOpenMenu={onOpenMenu}
+          />
+        )}
       </div>
 
       <div style={{
@@ -496,6 +482,316 @@ const EditFooter = ({ onReset, onDone, accent, fonts, surface, border, fg, fg3 }
     </div>
   </div>
 );
+
+// ── Presence avatar ───────────────────────────────────────────────────────
+//
+// Header chip that surfaces "where I am / what my phone is doing" without
+// any setup beyond the Mobile App / Person integration that HA already
+// wires up. Entities are discovered by suffix so the same code works for
+// any user — no hard-coded entity IDs.
+//
+// Narrow: 42px circle on the right of the header; tap opens a 244px
+// dropdown card with full status rows + Edit-layout button.
+// Wide:   42px circle on the LEFT of the header that expands horizontally
+// into a 340px pill on hover/click. Pill shows compact pips plus inline
+// Edit and Hamburger buttons.
+
+const ACTIVITY_ICON = {
+  stationary: '🧍',
+  walking: '🚶',
+  running: '🏃',
+  automotive: '🚗',
+  cycling: '🚴',
+};
+const ACTIVITY_LABEL = {
+  stationary: 'Stationary',
+  walking: 'Walking',
+  running: 'Running',
+  automotive: 'Driving',
+  cycling: 'Cycling',
+};
+
+const findEntity = (hass, domains, suffixes) => {
+  if (!hass || !hass.states) return null;
+  for (const sfx of suffixes) {
+    for (const id in hass.states) {
+      if (!id.endsWith(sfx)) continue;
+      if (domains && !domains.some(d => id.startsWith(d + '.'))) continue;
+      return hass.states[id];
+    }
+  }
+  return null;
+};
+
+const findPerson = (hass, firstName) => {
+  if (!hass || !hass.states) return null;
+  const lower = (firstName || '').toLowerCase();
+  if (lower) {
+    const exact = hass.states[`person.${lower}`];
+    if (exact) return exact;
+    const mosley = hass.states[`person.${lower}_mosley`];
+    if (mosley) return mosley;
+  }
+  for (const id in hass.states) {
+    if (id.startsWith('person.')) return hass.states[id];
+  }
+  return null;
+};
+
+const focusGlyph = (state) => {
+  const s = String(state || '').toLowerCase().trim();
+  if (!s || s === 'no focus' || s === 'unknown' || s === 'unavailable' || s === 'none') return null;
+  if (/sleep/.test(s)) return '🌙';
+  if (/work/.test(s)) return '💼';
+  if (/personal/.test(s)) return '🧘';
+  if (/driv/.test(s)) return '🚗';
+  if (/dnd|do not disturb|disturb/.test(s)) return '🔕';
+  if (/fitness|exerc/.test(s)) return '🏋️';
+  if (/mind/.test(s)) return '🧠';
+  return '🎯';
+};
+
+const StatusRow = ({ icon, label, value, fg, fg2, fg3, border }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '8px 0',
+    borderBottom: `.5px solid ${border}`,
+  }}>
+    <div style={{width: 22, fontSize: 16, textAlign: 'center'}}>{icon || '·'}</div>
+    <div style={{flex: 1, minWidth: 0}}>
+      <div style={{fontSize: 10, color: fg3, letterSpacing: '.08em', textTransform: 'uppercase'}}>{label}</div>
+      <div style={{fontSize: 13, color: fg, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+        {value || <span style={{color: fg2}}>—</span>}
+      </div>
+    </div>
+  </div>
+);
+
+const PresencePip = ({ icon, title, fg2 }) => (
+  <span
+    title={title || ''}
+    style={{
+      fontSize: 14, lineHeight: 1, color: fg2,
+      display: 'inline-flex', alignItems: 'center',
+      flex: 'none',
+    }}
+  >{icon}</span>
+);
+
+const PresenceAvatar = ({
+  hass, user,
+  accent, fg, fg2, fg3, border, surface, surface2, fonts,
+  narrow, editMode, onToggleEdit, onOpenMenu,
+}) => {
+  const [open, setOpen] = React.useState(false);     // dropdown (narrow) / sticky-expanded (wide)
+  const [hovering, setHovering] = React.useState(false);
+  const wrapRef = React.useRef(null);
+
+  // Tap-outside closes the narrow dropdown / wide sticky pill.
+  React.useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDoc);
+    return () => document.removeEventListener('pointerdown', onDoc);
+  }, [open]);
+
+  const firstName = user?.firstName || '';
+  const initial = (firstName[0] || 'U').toUpperCase();
+  const person = findPerson(hass, firstName);
+  const personPic = person?.attributes?.entity_picture || null;
+  const personState = (person?.state || '').toLowerCase();
+
+  const presenceColor =
+    personState === 'home' ? '#34c759'
+    : (personState && personState !== 'unknown' && personState !== 'unavailable') ? '#ff9f0a'
+    : 'rgba(241,234,217,0.32)';
+  const presenceLabel =
+    personState === 'home' ? '🏠 Home'
+    : !personState || personState === 'unknown' || personState === 'unavailable' ? 'Unknown'
+    : (personState === 'not_home' || personState === 'away') ? '✈️ Away'
+    : `📍 ${person.state}`;
+  const presencePipIcon =
+    personState === 'home' ? '🏠'
+    : (personState === 'not_home' || personState === 'away') ? '✈️'
+    : (personState && personState !== 'unknown' && personState !== 'unavailable') ? '📍'
+    : '·';
+
+  const batt = findEntity(hass, ['sensor'], ['_battery_level']);
+  const battNum = batt && !isNaN(parseFloat(batt.state)) ? Math.round(parseFloat(batt.state)) : null;
+  const chargeBin = findEntity(hass, ['binary_sensor'], ['_battery_state', '_is_charging']);
+  const chargeSensor = chargeBin || findEntity(hass, ['sensor'], ['_battery_state']);
+  const chargeRaw = (chargeSensor?.state || '').toLowerCase();
+  const charging = chargeRaw === 'on' || chargeRaw === 'charging' || chargeRaw === 'full';
+  const battIcon = battNum != null
+    ? (charging ? '🔌' : (battNum < 20 ? '🪫' : '🔋'))
+    : null;
+  const battValue = battNum != null
+    ? `${battNum}%${charging ? ' · charging' : ''}`
+    : null;
+
+  const act = findEntity(hass, ['sensor'], ['_activity_2']) || findEntity(hass, ['sensor'], ['_activity']);
+  const actRaw = (act?.state || '').toLowerCase();
+  const actIcon = ACTIVITY_ICON[actRaw] || null;
+  const actLabel = ACTIVITY_LABEL[actRaw] || (actRaw && actRaw !== 'unknown' && actRaw !== 'unavailable' ? act.state : null);
+
+  const focus = findEntity(hass, ['sensor'], ['_focus']);
+  const focusIcon = focusGlyph(focus?.state);
+  const focusLabel = focusIcon ? focus.state : null;
+
+  // The avatar circle. Used as the left endcap of both the narrow chip
+  // and the wide pill. Presence dot stays inside the 42×42 box so it
+  // doesn't get clipped by the pill's `overflow: hidden` during the
+  // width transition.
+  const avatarCircle = (
+    <div style={{
+      position: 'relative',
+      width: 42, height: 42, borderRadius: '50%',
+      flex: 'none',
+      background: personPic
+        ? `center/cover no-repeat url(${personPic})`
+        : `linear-gradient(135deg, #ff8a3d 0%, ${accent} 100%)`,
+      color: '#fff',
+      fontFamily: fonts.display, fontWeight: 600, fontSize: 18,
+      letterSpacing: '.02em',
+      display: 'grid', placeItems: 'center',
+      boxShadow: 'inset 0 0 0 .5px rgba(255,255,255,0.12)',
+    }}>
+      {!personPic && initial}
+      <span aria-hidden style={{
+        position: 'absolute', bottom: 0, right: 0,
+        width: 12, height: 12, borderRadius: '50%',
+        background: presenceColor,
+        border: '2px solid #0d0b09',
+        boxSizing: 'border-box',
+      }}/>
+    </div>
+  );
+
+  if (narrow) {
+    return (
+      <div ref={wrapRef} style={{position: 'relative', flex: 'none'}}>
+        <button
+          onClick={() => setOpen(v => !v)}
+          aria-label="Profile and presence"
+          aria-expanded={open}
+          style={{
+            padding: 0, background: 'transparent', border: 'none',
+            cursor: 'pointer', display: 'block',
+          }}
+        >
+          {avatarCircle}
+        </button>
+        {open && (
+          <div style={{
+            position: 'absolute', top: 50, right: 0, width: 244,
+            background: surface2, border: `.5px solid ${border}`,
+            borderRadius: 14, padding: '6px 14px 14px',
+            boxShadow: '0 14px 32px rgba(0,0,0,0.45)',
+            zIndex: 50,
+          }}>
+            <StatusRow icon="🏠" label="Presence" value={presenceLabel}
+              fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            <StatusRow icon={battIcon} label="Battery" value={battValue}
+              fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            <StatusRow icon={actIcon} label="Activity" value={actLabel}
+              fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            {focusIcon && (
+              <StatusRow icon={focusIcon} label="Focus" value={focusLabel}
+                fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            )}
+            <button
+              onClick={() => { onToggleEdit && onToggleEdit(); setOpen(false); }}
+              style={{
+                marginTop: 12, width: '100%', height: 36,
+                borderRadius: 8,
+                background: editMode ? accent : 'transparent',
+                border: `.5px solid ${editMode ? accent : border}`,
+                color: editMode ? '#fff' : fg,
+                cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 12, fontWeight: 500,
+                letterSpacing: '.04em', textTransform: 'uppercase',
+              }}
+            >
+              {editMode ? '✓ Done editing' : '✎ Edit layout'}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Wide: avatar expands horizontally into a 340px pill.
+  const expanded = open || hovering;
+  const iconBtn = (label, content, onClick) => (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      style={{
+        width: 28, height: 28, borderRadius: 8, flex: 'none',
+        background: 'transparent', border: `.5px solid ${border}`,
+        color: fg, cursor: 'pointer',
+        display: 'grid', placeItems: 'center',
+        fontSize: 13, lineHeight: 1, fontFamily: 'inherit',
+      }}
+    >{content}</button>
+  );
+
+  return (
+    <div
+      ref={wrapRef}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      onClick={(e) => {
+        // Only sticky-toggle when the click lands on the avatar / pill bg
+        // itself; inner buttons stop propagation via their own handlers.
+        if (e.target === e.currentTarget) setOpen(v => !v);
+      }}
+      style={{
+        height: 42,
+        width: expanded ? 340 : 42,
+        borderRadius: 21,
+        background: surface,
+        border: `.5px solid ${border}`,
+        display: 'flex', alignItems: 'center',
+        overflow: 'hidden',
+        transition: 'width 220ms cubic-bezier(.2,.7,.2,1)',
+        flex: 'none',
+        cursor: 'pointer',
+      }}
+    >
+      {avatarCircle}
+      <div style={{
+        flex: 1, minWidth: 0,
+        display: 'flex', alignItems: 'center', gap: 8,
+        paddingLeft: 10, paddingRight: 7,
+        opacity: expanded ? 1 : 0,
+        transition: 'opacity 160ms ease 60ms',
+      }}>
+        <PresencePip icon={presencePipIcon} title={presenceLabel} fg2={fg2}/>
+        {battIcon && <PresencePip icon={battIcon} title={battValue || ''} fg2={fg2}/>}
+        {actIcon && <PresencePip icon={actIcon} title={actLabel || ''} fg2={fg2}/>}
+        {focusIcon && <PresencePip icon={focusIcon} title={focusLabel || ''} fg2={fg2}/>}
+        <div style={{flex: 1}}/>
+        <div onClick={(e) => e.stopPropagation()} style={{display: 'flex', gap: 6, flex: 'none'}}>
+          {iconBtn(
+            editMode ? 'Done editing' : 'Edit layout',
+            <span style={{color: editMode ? accent : fg}}>{editMode ? '✓' : '✎'}</span>,
+            onToggleEdit,
+          )}
+          {onOpenMenu && iconBtn(
+            'Open menu',
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M3 6h18M3 12h18M3 18h18"/>
+            </svg>,
+            onOpenMenu,
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ── Section: Weather ──────────────────────────────────────────────────────
 const CONDITION_ICON = {
