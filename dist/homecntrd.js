@@ -31971,19 +31971,20 @@ const Al = [
 }, iI = ({ ctx: n }) => {
   const { p: e, fonts: t, dens: i, state: r } = n, s = React.useContext(It), o = React.useMemo(() => {
     if (!r.speakers?.length) return [];
-    const g = /* @__PURE__ */ new Set();
-    for (const y of r.speakers)
-      y.isSonosAttr && g.add((y.name || y.id).toLowerCase().trim());
-    if (!g.size) return [];
-    const p = r.speakers.filter(
-      (y) => g.has((y.name || y.id).toLowerCase().trim())
-    ), m = /* @__PURE__ */ new Map();
-    for (const y of p) {
-      const x = (y.name || y.id).toLowerCase().trim(), v = m.get(x);
-      (!v || y.isMAAttr && !v.isMAAttr) && m.set(x, y);
+    const g = s?.entities, p = (v) => g?.[v]?.platform || null, m = /* @__PURE__ */ new Set();
+    for (const v of r.speakers)
+      (p(v.id) === "sonos" || v.isSonosAttr) && m.add((v.name || v.id).toLowerCase().trim());
+    let y;
+    m.size ? y = r.speakers.filter(
+      (v) => m.has((v.name || v.id).toLowerCase().trim())
+    ) : y = r.speakers.filter((v) => (v.supportedFeatures & 524288) !== 0);
+    const x = /* @__PURE__ */ new Map();
+    for (const v of y) {
+      const S = (v.name || v.id).toLowerCase().trim(), b = x.get(S);
+      (!b || v.isMAAttr && !b.isMAAttr) && x.set(S, v);
     }
-    return Array.from(m.values());
-  }, [r.speakers]), [a, d] = React.useState({}), c = React.useRef({}), u = (g, p, m) => {
+    return Array.from(x.values());
+  }, [r.speakers, s?.entities]), [a, d] = React.useState({}), c = React.useRef({}), u = (g, p, m) => {
     if (s?.callService)
       try {
         s.callService("media_player", p, { entity_id: g, ...m });

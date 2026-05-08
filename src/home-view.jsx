@@ -635,19 +635,31 @@ const SpeakersSection = ({ ctx }) => {
 
   // Dashboard speaker tiles should only show real Sonos rooms, not the
   // MacBook / Cast / display media_players that Music Assistant also
-  // surfaces. Build the list by name from entities flagged as Sonos
-  // (isSonosAttr === sonos_group attribute is present), then prefer the
-  // MA mirror per name so service calls go through MA when available.
+  // exposes. Determine "is Sonos" by entity platform first (most
+  // reliable), then by the sonos_group attribute, then by the GROUPING
+  // feature flag as a last resort if the registry isn't loaded yet.
   const speakers = React.useMemo(() => {
     if (!state.speakers?.length) return [];
+    const ent = hass?.entities;
+    const platformOf = (id) => ent?.[id]?.platform || null;
     const sonosNames = new Set();
     for (const s of state.speakers) {
-      if (s.isSonosAttr) sonosNames.add((s.name || s.id).toLowerCase().trim());
+      if (platformOf(s.id) === 'sonos' || s.isSonosAttr) {
+        sonosNames.add((s.name || s.id).toLowerCase().trim());
+      }
     }
-    if (!sonosNames.size) return [];
-    const pool = state.speakers.filter(s =>
-      sonosNames.has((s.name || s.id).toLowerCase().trim())
-    );
+    let pool;
+    if (sonosNames.size) {
+      pool = state.speakers.filter(s =>
+        sonosNames.has((s.name || s.id).toLowerCase().trim())
+      );
+    } else {
+      // Registry not loaded — fall back to GROUPING-capable speakers
+      // (524288 = MediaPlayerEntityFeature.GROUPING; Sonos has it,
+      // typical MacBook AirPlay / Cast displays don't).
+      pool = state.speakers.filter(s => (s.supportedFeatures & 524288) !== 0);
+    }
+    // Dedupe by name, preferring MA mirror so service calls go through MA.
     const seen = new Map();
     for (const s of pool) {
       const key = (s.name || s.id).toLowerCase().trim();
@@ -655,7 +667,7 @@ const SpeakersSection = ({ ctx }) => {
       if (!existing || (s.isMAAttr && !existing.isMAAttr)) seen.set(key, s);
     }
     return Array.from(seen.values());
-  }, [state.speakers]);
+  }, [state.speakers, hass?.entities]);
 
   // Optimistic local volume override during slider drag — Sonos rate-
   // limits volume_set, so we debounce the HA call and let the slider
