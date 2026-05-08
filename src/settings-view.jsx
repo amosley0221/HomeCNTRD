@@ -445,9 +445,12 @@ const WakeWordSettings = ({ p, fonts }) => {
   const statusLabel = (() => {
     if (!voice.enabled) return { color: p.fg3, text: 'Off' };
     if (status.state === 'starting')  return { color: p.fg2, text: 'Loading models…' };
-    if (status.state === 'listening') return { color: 'oklch(60% 0.13 145)', text: '● Listening for "Hey Jarvis"' };
+    if (status.state === 'listening') {
+      const pct = Math.round((wakeWord.getState().probability || 0) * 100);
+      return { color: 'oklch(60% 0.13 145)', text: `● Listening · prob ${pct}%` };
+    }
     if (status.state === 'error')     return { color: '#e0a89a', text: `Error: ${status.error?.message || 'unknown'}` };
-    return { color: p.fg3, text: 'Idle' };
+    return { color: p.fg3, text: 'Idle (toggle off & on to re-arm)' };
   })();
 
   return (

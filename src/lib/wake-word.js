@@ -47,12 +47,14 @@ let audioCtx = null;
 let workletNode = null;
 let micStream = null;
 let micSource = null;
+let silentSink = null;             // 0-gain bridge that keeps the worklet pumping
 
 let pcmBuffer = [];                // accumulates raw mic samples, drained in 1280-sized chunks
 let melBuffer = [];                // rolling [N × 32] mel frames
 let embBuffer = [];                // rolling [N × 96] embeddings
 let armed = true;                  // false during cooldown after a detection
 let inferencing = false;           // backpressure: skip a chunk if the previous one is still running
+let lastProbability = 0;           // surfaced in getState() so the UI can show a live meter
 
 const wakeListeners = new Set();
 const stateListeners = new Set();
@@ -64,7 +66,7 @@ function setState(next, err = null) {
   lastError = err;
   for (const cb of stateListeners) try { cb(next, err); } catch {}
 }
-export function getState() { return { state: currentState, error: lastError }; }
+export function getState() { return { state: currentState, error: lastError, probability: lastProbability }; }
 export function isRunning() { return !!workletNode; }
 export function onWake(cb) { wakeListeners.add(cb); return () => wakeListeners.delete(cb); }
 export function onStateChange(cb) {
@@ -179,6 +181,12 @@ async function pumpInference() {
       pcmBuffer.splice(0, CHUNK_SAMPLES);
       const prob = await inferChunk(chunk);
       if (prob == null) continue;
+      lastProbability = prob;
+      // Re-emit listening state so subscribers (the settings status row)
+      // see updated probability values without manually polling.
+      if (currentState === 'listening') {
+        for (const cb of stateListeners) try { cb('listening', null); } catch {}
+      }
       if (armed && prob >= WAKE_THRESHOLD) {
         armed = false;
         for (const cb of wakeListeners) try { cb({ probability: prob }); } catch {}
@@ -219,7 +227,15 @@ export async function start() {
         pumpInference();
       };
       micSource.connect(workletNode);
-      // Don't connect to destination — we don't want to play mic back.
+      // Force the audio graph to keep pumping. AudioWorkletNode.process()
+      // only runs while a downstream node consumes its output, so without
+      // a sink the worklet stays idle — no PCM ever reaches the inference
+      // chain. We bridge through a 0-gain GainNode so destination plays
+      // silence and we don't get mic feedback.
+      silentSink = audioCtx.createGain();
+      silentSink.gain.value = 0;
+      workletNode.connect(silentSink);
+      silentSink.connect(audioCtx.destination);
       setState('listening');
     } catch (e) {
       await stop().catch(() => {});
@@ -236,10 +252,12 @@ export async function stop() {
   if (starting) { try { await starting; } catch {} }
   try { workletNode?.port.close(); } catch {}
   try { workletNode?.disconnect(); } catch {}
+  try { silentSink?.disconnect(); } catch {}
   try { micSource?.disconnect(); } catch {}
   try { micStream?.getTracks().forEach(t => t.stop()); } catch {}
   try { await audioCtx?.close(); } catch {}
   workletNode = null;
+  silentSink = null;
   micSource = null;
   micStream = null;
   audioCtx = null;

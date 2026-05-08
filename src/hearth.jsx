@@ -118,13 +118,14 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
   }, []);
 
   // Boot wake-word from saved settings, then react to settings changes.
-  // We don't auto-start on mount because iOS Safari requires a user
-  // gesture for getUserMedia() — start() is fired from the toggle
-  // click in Settings instead. This effect only handles the OFF case
-  // (e.g. user disabled it elsewhere) and reacts to subsequent changes.
+  // Attempt start() optimistically on mount so reloads pick up where we
+  // left off; if iOS Safari refuses the silent reconnect we'll surface
+  // the error and the user re-toggles in Settings (which carries a real
+  // user gesture).
   React.useEffect(() => {
     const apply = (cfg) => {
-      if (!cfg.enabled) wakeWord.stop();
+      if (cfg.enabled) wakeWord.start().catch(() => {});
+      else wakeWord.stop();
     };
     apply(wakeWord.loadVoiceSettings());
     return wakeWord.onVoiceSettingsChange(apply);
@@ -443,8 +444,29 @@ const AgentBubble = ({ ctx, open, setOpen, unread, messages, thinking, draft, se
   const inputRef = React.useRef(null);
   const scrollRef = React.useRef(null);
   const [browser, setBrowser] = React.useState(null); // { url, title }
+  const [micActive, setMicActive] = React.useState(false);
   React.useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
   React.useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, thinking]);
+
+  // Mic button → tap-to-talk: pause the wake-word loop so it doesn't
+  // race the SpeechRecognition session, listen for one utterance, feed
+  // the transcript through send(), then re-arm the wake word.
+  const onMicTap = async () => {
+    if (micActive) return;
+    setMicActive(true);
+    const wasRunning = wakeWord.isRunning();
+    if (wasRunning) await wakeWord.stop();
+    try {
+      const transcript = await listenOnce({});
+      if (transcript) await send(transcript);
+    } catch {} finally {
+      setMicActive(false);
+      const cfg = wakeWord.loadVoiceSettings();
+      if (cfg.enabled && wasRunning) {
+        try { await wakeWord.start(); } catch {}
+      }
+    }
+  };
 
   // On narrow viewports the BottomNav owns ~64px at the bottom. Lift the
   // floating button (and the expanded chat panel) above it so the dot
@@ -506,7 +528,14 @@ const AgentBubble = ({ ctx, open, setOpen, unread, messages, thinking, draft, se
               flex:1, padding:'10px 12px', borderRadius:10, border:`.5px solid ${p.border2}`,
               background:p.surface, color:p.fg, fontSize:13, fontFamily:fonts.body, outline:'none'
             }}/>
-            <button type="button" style={{width:36, height:36, borderRadius:9, background:'transparent', border:`.5px solid ${p.border2}`, color:p.fg2, cursor:'pointer', display:'grid', placeItems:'center'}}><window.Icon name="mic" size={16}/></button>
+            <button type="button" onClick={onMicTap} disabled={micActive} title={micActive ? 'Listening…' : 'Tap to talk'} style={{
+              width:36, height:36, borderRadius:9,
+              background: micActive ? p.accent : 'transparent',
+              border:`.5px solid ${micActive ? p.accent : p.border2}`,
+              color: micActive ? '#fff' : p.fg2,
+              cursor: micActive ? 'default' : 'pointer',
+              display:'grid', placeItems:'center',
+            }}><window.Icon name="mic" size={16}/></button>
             <button type="submit" style={{width:36, height:36, borderRadius:9, background:p.accent, border:0, color:'#fff', cursor:'pointer', display:'grid', placeItems:'center'}}><window.Icon name="send" size={15}/></button>
           </form>
         </div>
