@@ -1,16 +1,29 @@
 // tvs-section.jsx — Home page TV section + per-brand integrated remotes.
 // Brands: appletv (Siri Remote), googletv (Google TV remote), lgthinq (LG Magic Remote).
 
+import HassContext from './lib/hass-context.js';
+
 const TvsSection = ({ ctx }) => {
-  const { p, fonts, dens, state, setState, room } = ctx;
+  const { p, fonts, dens, state, room } = ctx;
+  const hass = React.useContext(HassContext);
   // Show TVs in the current room first; fall back to all if none here.
   const inRoom = state.tvs.filter(tv => tv.room === room);
   const tvs = inRoom.length ? inRoom : state.tvs;
   const [remoteFor, setRemoteFor] = React.useState(null); // tv id when remote is open
   if (!tvs.length) return null;
 
-  const togglePlay = (id) => setState(s => ({...s, tvs: s.tvs.map(tv => tv.id===id ? {...tv, playing: !tv.playing, on:true} : tv)}));
-  const togglePower = (id) => setState(s => ({...s, tvs: s.tvs.map(tv => tv.id===id ? {...tv, on: !tv.on, playing: !tv.on ? tv.playing : false} : tv)}));
+  // Real HA service calls — local state mutations are pointless because
+  // the bridge will overwrite them on the next state push anyway.
+  const callMP = (id, service) => {
+    if (!hass?.callService) return;
+    try { hass.callService('media_player', service, { entity_id: id }); } catch {}
+  };
+  const togglePlay = (id) => callMP(id, 'media_play_pause');
+  const togglePower = (id) => {
+    const tv = state.tvs.find(t => t.id === id);
+    if (!tv) return;
+    callMP(id, tv.on ? 'turn_off' : 'turn_on');
+  };
 
   return (
     <window.Section title="TVs" subtitle={`${tvs.filter(t => t.on).length} of ${tvs.length} on${inRoom.length ? '' : ' · whole house'}`} p={p} fonts={fonts}>
@@ -86,7 +99,7 @@ const TvCard = ({ ctx, tv, togglePlay, togglePower, openRemote }) => {
             {tv.name}
           </div>
           <div style={{fontSize:11, color:p.fg3, marginTop:1}}>
-            {tv.model} · {roomName}
+            {[tv.model, roomName].filter(Boolean).join(' · ') || '—'}
             {tv.on && tv.dur > 0 && <span> · {window.fmtTime(tv.progress)} / {window.fmtTime(tv.dur)}</span>}
           </div>
         </div>

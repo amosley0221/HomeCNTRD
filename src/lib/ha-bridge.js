@@ -110,8 +110,22 @@ function translate(states) {
         const vol = typeof e.attributes?.volume_level === 'number'
           ? Math.round(e.attributes.volume_level * 100) : 30;
         if (isTv) {
+          // Brand drives the remote layout (Apple Siri / Google / LG Magic).
+          // Fall back to the closest match by name/entity_id since HA's
+          // device_class doesn't distinguish between the platforms.
+          const brandText = `${name} ${shortId}`.toLowerCase();
+          let brand;
+          if (/webos|\blg\b|thinq/.test(brandText)) brand = 'lgthinq';
+          else if (/google\s*tv|chromecast|android\s*tv/.test(brandText)) brand = 'googletv';
+          else brand = 'appletv';
+          // Skip model when it would just duplicate the friendly name —
+          // the dashboard tile renders "name · model · room" and we don't
+          // want "[LG] webOS U889SA · [LG] webOS U889SA · Living Room".
+          const model = e.attributes?.model || '';
           out.tvs.push({
-            id, name, brand: dc === 'tv' ? 'tv' : 'appletv', model: name, room,
+            id, name, brand,
+            model: model && model !== name ? model : '',
+            room,
             on: e.state !== 'off' && e.state !== 'unavailable',
             app: e.attributes?.app_name || '—',
             show: e.attributes?.media_title || '—',

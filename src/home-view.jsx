@@ -292,6 +292,7 @@ const SECTIONS = [
   { id:'climate',  label:'Climate' },
   { id:'lights',   label:'Lighting' },
   { id:'music',    label:'Music' },
+  { id:'speakers', label:'Speaker volume' },
   { id:'tvs',      label:'TVs' },
   { id:'scenes',   label:'Scenes' },
   { id:'cameras',  label:'Cameras' },
@@ -351,6 +352,7 @@ const HomeView = ({ ctx }) => {
       {visible.climate  !== false && <window.ClimateSection ctx={ctx}/>}
       {visible.lights   !== false && <window.LightsSection ctx={ctx}/>}
       {visible.music    !== false && <window.MusicSection ctx={ctx}/>}
+      {visible.speakers !== false && <window.SpeakersSection ctx={ctx}/>}
       {visible.tvs      !== false && <window.TvsSection ctx={ctx}/>}
       {visible.scenes   !== false && <window.ScenesSection ctx={ctx}/>}
       {visible.cameras  !== false && <window.CamerasSection ctx={ctx}/>}
@@ -534,33 +536,185 @@ const LightsSection = ({ ctx }) => {
 
 // ── MUSIC ───────────────────────────────────────────────────────────────
 const MusicSection = ({ ctx }) => {
-  const { p, fonts, state, setState, room, setPage } = ctx;
-  const speaker = state.speakers.find(s => s.room === room) || state.speakers[0];
-  if (!speaker) return null; // no media players known to HA yet → hide the section
-  const track = window.trackById(speaker.trackId);
-  const togglePlay = () => setState(s => ({...s, speakers: s.speakers.map(sp => sp.id === speaker.id ? {...sp, playing: !speaker.playing} : sp)}));
+  const { p, fonts, state, room, setPage } = ctx;
+  const hass = React.useContext(HassContext);
+  if (!state.speakers?.length) return null;
+
+  // Pick the speaker to feature: prefer any speaker actually playing,
+  // then anything in the current room, otherwise the first one.
+  const playing = state.speakers.find(s => s.playing);
+  const inRoom = state.speakers.find(s => s.room === room);
+  const speaker = playing || inRoom || state.speakers[0];
+
+  const title = speaker.haMediaTitle;
+  const artist = speaker.haMediaArtist;
+  const album = speaker.haMediaAlbum;
+  const art = speaker.haEntityPicture;
+  const dur = speaker.duration || 0;
+  const hasMedia = !!(title || artist || album);
+
+  // Live progress — HA sends a snapshot + updated_at, we extrapolate
+  // forward in real time so the bar moves between pushes.
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    if (!speaker.playing) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [speaker.playing, speaker.id]);
+  const livePos = speaker.playing && speaker.progressUpdatedAt
+    ? speaker.progress + (now - speaker.progressUpdatedAt) / 1000
+    : speaker.progress;
+  const pct = dur > 0 ? Math.min(100, (livePos / dur) * 100) : 0;
+  const remaining = Math.max(0, dur - livePos);
+
+  const callMP = (service) => {
+    if (!hass?.callService) return;
+    try { hass.callService('media_player', service, { entity_id: speaker.id }); } catch {}
+  };
+  const togglePlay = () => callMP(speaker.playing ? 'media_pause' : 'media_play');
+
+  const playingCount = state.speakers.filter(s => s.playing).length;
   return (
-    <window.Section title="Music" subtitle={`${state.speakers.filter(s => s.playing).length} speakers playing`} p={p} fonts={fonts}
+    <window.Section title="Music" subtitle={`${playingCount} speaker${playingCount === 1 ? '' : 's'} playing`} p={p} fonts={fonts}
       action={<button onClick={() => setPage('music')} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>Library →</button>}>
       <window.Card p={p} style={{padding:18, display:'flex', gap:16, alignItems:'center'}}>
-        <div style={{width:90, height:90, borderRadius:10, flex:'none', background:`radial-gradient(120% 120% at 30% 25%, ${track.hue}, oklch(20% 0.05 25))`}}/>
+        <div style={{width:90, height:90, borderRadius:10, flex:'none', overflow:'hidden',
+          background: art
+            ? `center/cover no-repeat url("${art}"), oklch(20% 0.05 25)`
+            : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`,
+        }}/>
         <div style={{flex:1, minWidth:0}}>
-          <div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase'}}>Now playing · {window.ROOMS.find(r=>r.id===speaker.room)?.name}</div>
-          <div style={{fontFamily:fonts.display, fontSize:20, color:p.fg, fontWeight:500, marginTop:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{track.title}</div>
-          <div style={{fontSize:12, color:p.fg2, fontStyle:'italic', marginTop:1}}>{track.artist} · {track.album}</div>
-          <div style={{height:3, background:p.border, borderRadius:2, marginTop:12, position:'relative'}}>
-            <div style={{position:'absolute', inset:0, width:`${(speaker.progress/track.dur)*100}%`, background:p.accent, borderRadius:2}}/>
+          <div style={{fontSize:10, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase'}}>
+            {hasMedia ? `Now playing · ${speaker.name}` : speaker.name}
           </div>
-          <div style={{display:'flex', justifyContent:'space-between', fontSize:10, color:p.fg3, marginTop:4}}>
-            <span>{window.fmtTime(speaker.progress)}</span><span>−{window.fmtTime(track.dur - speaker.progress)}</span>
+          <div style={{fontFamily:fonts.display, fontSize:20, color:p.fg, fontWeight:500, marginTop:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
+            {title || 'Nothing playing'}
           </div>
+          {(artist || album) && (
+            <div style={{fontSize:12, color:p.fg2, fontStyle:'italic', marginTop:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
+              {[artist, album].filter(Boolean).join(' · ')}
+            </div>
+          )}
+          {dur > 0 && (
+            <>
+              <div style={{height:3, background:p.border, borderRadius:2, marginTop:12, position:'relative'}}>
+                <div style={{position:'absolute', inset:0, width:`${pct}%`, background:p.accent, borderRadius:2}}/>
+              </div>
+              <div style={{display:'flex', justifyContent:'space-between', fontSize:10, color:p.fg3, marginTop:4}}>
+                <span>{window.fmtTime(livePos)}</span><span>−{window.fmtTime(remaining)}</span>
+              </div>
+            </>
+          )}
         </div>
         <div style={{display:'flex', gap:6, flex:'none'}}>
-          <button style={{width:34, height:34, borderRadius:8, background:'transparent', border:`.5px solid ${p.border2}`, color:p.fg2, cursor:'pointer'}}><window.Icon name="prev" size={14}/></button>
-          <button onClick={togglePlay} style={{width:42, height:42, borderRadius:'50%', background:p.accent, color:'#fff', border:0, cursor:'pointer', display:'grid', placeItems:'center'}}><window.Icon name={speaker.playing ? 'pause' : 'play'} size={16}/></button>
-          <button style={{width:34, height:34, borderRadius:8, background:'transparent', border:`.5px solid ${p.border2}`, color:p.fg2, cursor:'pointer'}}><window.Icon name="next" size={14}/></button>
+          <button onClick={() => callMP('media_previous_track')} disabled={!hasMedia}
+            style={{width:34, height:34, borderRadius:8, background:'transparent', border:`.5px solid ${p.border2}`,
+              color:p.fg2, cursor: hasMedia ? 'pointer' : 'not-allowed', opacity: hasMedia ? 1 : .4}}>
+            <window.Icon name="prev" size={14}/>
+          </button>
+          <button onClick={togglePlay} disabled={!hasMedia && !speaker.playing}
+            style={{width:42, height:42, borderRadius:'50%', background:p.accent, color:'#fff', border:0,
+              cursor: 'pointer', display:'grid', placeItems:'center', opacity: hasMedia || speaker.playing ? 1 : .4}}>
+            <window.Icon name={speaker.playing ? 'pause' : 'play'} size={16}/>
+          </button>
+          <button onClick={() => callMP('media_next_track')} disabled={!hasMedia}
+            style={{width:34, height:34, borderRadius:8, background:'transparent', border:`.5px solid ${p.border2}`,
+              color:p.fg2, cursor: hasMedia ? 'pointer' : 'not-allowed', opacity: hasMedia ? 1 : .4}}>
+            <window.Icon name="next" size={14}/>
+          </button>
         </div>
       </window.Card>
+    </window.Section>
+  );
+};
+
+// ── SPEAKERS — per-Sonos volume tiles ──────────────────────────────────
+const SpeakersSection = ({ ctx }) => {
+  const { p, fonts, dens, state } = ctx;
+  const hass = React.useContext(HassContext);
+
+  // Dedupe Sonos + Music Assistant entries by name. When an MA mirror
+  // exists for a room, prefer it (matches the Music page logic).
+  const speakers = React.useMemo(() => {
+    if (!state.speakers?.length) return [];
+    let pool = state.speakers.filter(s => s.isMAAttr || s.isSonosAttr);
+    if (!pool.length) pool = state.speakers;
+    if (pool.some(s => s.isMAAttr)) pool = pool.filter(s => s.isMAAttr);
+    const seen = new Map();
+    for (const s of pool) {
+      const key = (s.name || s.id).toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing || (s.isMAAttr && !existing.isMAAttr)) seen.set(key, s);
+    }
+    return Array.from(seen.values());
+  }, [state.speakers]);
+
+  // Optimistic local volume override during slider drag — Sonos rate-
+  // limits volume_set, so we debounce the HA call and let the slider
+  // track the thumb instead of waiting on the round-trip.
+  const [volOverrides, setVolOverrides] = React.useState({});
+  const volTimers = React.useRef({});
+  const callMP = (id, service, data) => {
+    if (!hass?.callService) return;
+    try { hass.callService('media_player', service, { entity_id: id, ...data }); } catch {}
+  };
+  const setVolume = (sp, pct) => {
+    setVolOverrides(prev => ({ ...prev, [sp.id]: pct }));
+    clearTimeout(volTimers.current[sp.id]);
+    volTimers.current[sp.id] = setTimeout(() => {
+      callMP(sp.id, 'volume_set', { volume_level: pct / 100 });
+      // Drop the override shortly after so HA's reported value resumes.
+      setTimeout(() => setVolOverrides(prev => {
+        const n = { ...prev }; delete n[sp.id]; return n;
+      }), 1200);
+    }, 180);
+  };
+
+  if (!speakers.length) return null;
+  const playingCount = speakers.filter(s => s.playing).length;
+
+  return (
+    <window.Section title="Speakers" subtitle={`${playingCount} of ${speakers.length} playing`} p={p} fonts={fonts}>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:dens.tileGap}}>
+        {speakers.map(sp => {
+          const v = volOverrides[sp.id] ?? sp.vol ?? 0;
+          const subtitle = sp.playing && sp.haMediaTitle
+            ? [sp.haMediaTitle, sp.haMediaArtist].filter(Boolean).join(' · ')
+            : 'Idle';
+          return (
+            <window.Card key={sp.id} p={p} style={{padding:14, display:'flex', flexDirection:'column', gap:12}}>
+              <div style={{display:'flex', alignItems:'center', gap:10}}>
+                <div style={{width:42, height:42, borderRadius:7, flex:'none', overflow:'hidden',
+                  background: sp.haEntityPicture
+                    ? `center/cover no-repeat url("${sp.haEntityPicture}"), oklch(20% 0.05 25)`
+                    : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontSize:13, fontWeight:500, color:p.fg,
+                    whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{sp.name}</div>
+                  <div style={{fontSize:11, color:p.fg3, marginTop:1,
+                    whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{subtitle}</div>
+                </div>
+                <button onClick={() => callMP(sp.id, sp.playing ? 'media_pause' : 'media_play')}
+                  style={{width:32, height:32, borderRadius:'50%',
+                    background: sp.playing ? p.accentSoft : p.accent,
+                    color: sp.playing ? p.accent : '#fff',
+                    border:0, cursor:'pointer', display:'grid', placeItems:'center', flex:'none'}}>
+                  <window.Icon name={sp.playing ? 'pause' : 'play'} size={12}/>
+                </button>
+              </div>
+              <div style={{display:'flex', alignItems:'center', gap:8}}>
+                <window.Icon name="speaker" size={11} style={{color:p.fg3}}/>
+                <input type="range" min={0} max={100} value={v}
+                  onChange={(e) => setVolume(sp, parseInt(e.target.value, 10))}
+                  style={{flex:1, accentColor: p.accent}}/>
+                <span style={{fontSize:11, color:p.fg3, fontVariantNumeric:'tabular-nums', width:30, textAlign:'right'}}>
+                  {Math.round(v)}
+                </span>
+              </div>
+            </window.Card>
+          );
+        })}
+      </div>
     </window.Section>
   );
 };
@@ -928,4 +1082,4 @@ const CamThumb = ({ c, ctx, live }) => {
   );
 };
 
-Object.assign(window, { HomeView, ClimateSection, LightsSection, MusicSection, ScenesSection, CamerasSection, SecuritySection, CarSection, TodaySection, CamThumb, RingModeSwitcher });
+Object.assign(window, { HomeView, ClimateSection, LightsSection, MusicSection, SpeakersSection, ScenesSection, CamerasSection, SecuritySection, CarSection, TodaySection, CamThumb, RingModeSwitcher });
