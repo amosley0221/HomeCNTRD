@@ -598,6 +598,14 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
   const groupable = speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
   const hiddenSpeakers = (autoVisible || []).filter(s => hidden?.has?.(s.id));
   const active = speakers.find(s => s.id === activeId) || speakers[0];
+  // Float currently-playing speakers to the top of the dropdown so the
+  // user doesn't have to scan past idle rooms to find what's actually
+  // making sound. Original order is preserved within each tier.
+  const sortedSpeakers = React.useMemo(() => {
+    const playing = speakers.filter(s => s.playing);
+    const idle = speakers.filter(s => !s.playing);
+    return [...playing, ...idle];
+  }, [speakers]);
   const activeGroup = active?.groupMembers || [];
 
   const call = (entityId, service, data) => {
@@ -701,7 +709,7 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                 }}>{manageOpen ? 'Done' : 'Manage'}</button>
               </div>
 
-              {speakers.map(sp => {
+              {sortedSpeakers.map(sp => {
                 const isActive = sp.id === active?.id;
                 const grouped = inActiveGroup(sp);
                 const canGroup = !isActive && (sp.supportedFeatures & GROUPING_FEATURE) !== 0;
@@ -1588,7 +1596,7 @@ const Overlay = ({ onClose, children, ctx }) => {
       display: 'grid', placeItems: 'center', padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} style={{
-        width: 'min(820px, 100%)', maxHeight: '88vh', height: '88vh',
+        width: 'min(820px, 100%)', maxHeight: '88vh',
         background: p.surface, border: `.5px solid ${p.border2}`,
         borderRadius: 14, display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
