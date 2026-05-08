@@ -8,6 +8,30 @@ if (typeof globalThis !== 'undefined' && typeof globalThis.process === 'undefine
   globalThis.process = { env: { NODE_ENV: 'production' } };
 }
 
+// Bootstrap-time error capture. If any of the side-effect imports below
+// throws while parsing or evaluating, the custom element never gets
+// registered and the user sees an empty black panel with no clue why.
+// Catch those at the window level and paint the message so we have
+// something actionable on screen.
+if (typeof window !== 'undefined') {
+  const showBootError = (msg) => {
+    try {
+      const host = document.querySelector('homecntrd-panel') || document.body;
+      const div = document.createElement('div');
+      div.style.cssText = 'position:fixed;inset:0;background:#161310;color:#e0a89a;font-family:system-ui,sans-serif;font-size:13px;padding:24px;line-height:1.5;white-space:pre-wrap;overflow:auto;z-index:99999';
+      div.textContent = 'HomeCNTRD failed to load:\n\n' + msg;
+      host.appendChild(div);
+    } catch {}
+  };
+  window.addEventListener('error', (e) => {
+    if (e?.message && /(__hcBootError|customElements|HomeCNTRD)/i.test(e.message)) return;
+    showBootError(`${e?.message || e}\n\n${e?.error?.stack || ''}`);
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    showBootError(`Unhandled promise rejection: ${e?.reason?.message || e?.reason || e}`);
+  });
+}
+
 //
 // Home Assistant loads this file as an ES module and instantiates the
 // <homecntrd-panel> custom element wherever the user navigates to the panel.

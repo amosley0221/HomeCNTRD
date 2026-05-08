@@ -35309,6 +35309,24 @@ function eA(n) {
 }
 window.App = ZI;
 typeof globalThis < "u" && typeof globalThis.process > "u" && (globalThis.process = { env: { NODE_ENV: "production" } });
+if (typeof window < "u") {
+  const n = (e) => {
+    try {
+      const t = document.querySelector("homecntrd-panel") || document.body, i = document.createElement("div");
+      i.style.cssText = "position:fixed;inset:0;background:#161310;color:#e0a89a;font-family:system-ui,sans-serif;font-size:13px;padding:24px;line-height:1.5;white-space:pre-wrap;overflow:auto;z-index:99999", i.textContent = `HomeCNTRD failed to load:
+
+` + e, t.appendChild(i);
+    } catch {
+    }
+  };
+  window.addEventListener("error", (e) => {
+    e?.message && /(__hcBootError|customElements|HomeCNTRD)/i.test(e.message) || n(`${e?.message || e}
+
+${e?.error?.stack || ""}`);
+  }), window.addEventListener("unhandledrejection", (e) => {
+    n(`Unhandled promise rejection: ${e?.reason?.message || e?.reason || e}`);
+  });
+}
 window.React = Oe;
 window.HassContext = En;
 class tA extends HTMLElement {
