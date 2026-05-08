@@ -446,8 +446,12 @@ const WakeWordSettings = ({ p, fonts }) => {
     if (!voice.enabled) return { color: p.fg3, text: 'Off' };
     if (status.state === 'starting')  {
       const step = wakeWord.getState().step;
-      const label = { mel: 'mel-spec', embed: 'embedding', wake: 'wake-word' }[step] || 'runtime';
-      return { color: p.fg2, text: `Loading ${label} model…` };
+      if (step === 'mel')   return { color: p.fg2, text: 'Loading mel-spec model…' };
+      if (step === 'embed') return { color: p.fg2, text: 'Loading embedding model…' };
+      if (step === 'wake')  return { color: p.fg2, text: 'Loading wake-word model…' };
+      if (step === 'mic')   return { color: p.fg2, text: 'Awaiting microphone permission…' };
+      if (step === 'audio') return { color: p.fg2, text: 'Starting audio capture…' };
+      return { color: p.fg2, text: 'Loading runtime model…' };
     }
     if (status.state === 'listening') {
       const pct = Math.round((wakeWord.getState().probability || 0) * 100);

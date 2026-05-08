@@ -134,7 +134,6 @@ async function loadModels() {
   embSession = await withTimeout(ort.InferenceSession.create(MODELS_BASE + 'embedding_model.onnx', opts), 30000, 'embedding model');
   loadStep = 'wake'; setState('starting');
   wakeSession = await withTimeout(ort.InferenceSession.create(MODELS_BASE + 'hey_jarvis.onnx', opts), 30000, 'wake model');
-  loadStep = '';
 }
 
 // Run a single chunk through the pipeline; returns a wake probability or null
@@ -231,10 +230,12 @@ export async function start() {
   starting = (async () => {
     try {
       await loadModels();
-      micStream = await navigator.mediaDevices.getUserMedia({
+      loadStep = 'mic'; setState('starting');
+      micStream = await withTimeout(navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
-      });
+      }), 30000, 'microphone permission');
+      loadStep = 'audio'; setState('starting');
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const blobUrl = URL.createObjectURL(new Blob([WORKLET_SOURCE], { type: 'application/javascript' }));
       await audioCtx.audioWorklet.addModule(blobUrl);
@@ -257,6 +258,7 @@ export async function start() {
       silentSink.gain.value = 0;
       workletNode.connect(silentSink);
       silentSink.connect(audioCtx.destination);
+      loadStep = '';
       setState('listening');
     } catch (e) {
       await stop().catch(() => {});
