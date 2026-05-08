@@ -195,6 +195,18 @@ const MusicView = ({ ctx }) => {
     } catch { return false; }
   };
 
+  // Play a chosen track from a list (album / playlist) and queue the
+  // remainder in order. Used by AlbumDetailView so that picking track
+  // 4 plays it immediately and enqueues 5..N as Up Next, instead of
+  // playing only the one track.
+  const playFromList = async (items, idx) => {
+    if (!items?.length || idx < 0 || idx >= items.length) return;
+    await playMedia(items[idx], 'play');
+    for (let i = idx + 1; i < items.length; i++) {
+      await playMedia(items[i], 'add');
+    }
+  };
+
   return (
     <>
       <window.PageHead ctx={ctx}
@@ -240,13 +252,11 @@ const MusicView = ({ ctx }) => {
         </div>
       </div>
 
-      {searchOpen && (
-        <SearchOverlay ctx={ctx} conn={conn} speakerId={active?.id}
-          playMedia={playMedia} onClose={() => setSearchOpen(false)}/>
-      )}
-      {browseOpen && (
-        <BrowseOverlay ctx={ctx} conn={conn} speakerId={active?.id}
-          playMedia={playMedia} onClose={() => setBrowseOpen(false)}/>
+      {(searchOpen || browseOpen) && (
+        <MediaOverlay ctx={ctx} conn={conn} speakerId={active?.id}
+          playMedia={playMedia} playFromList={playFromList}
+          mode={searchOpen ? 'search' : 'browse'}
+          onClose={() => { setSearchOpen(false); setBrowseOpen(false); }}/>
       )}
       <div style={{height: 60}}/>
     </>
@@ -520,13 +530,6 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
     }
   };
 
-  const groupAll = () => {
-    if (!groupable.length || !active) return;
-    const followers = groupable.filter(s => s.id !== active.id).map(s => s.id);
-    if (!followers.length) return;
-    call(active.id, 'join', { group_members: followers });
-  };
-
   const groupedNames = groupable
     .filter(s => s.id !== active?.id && inActiveGroup(s))
     .map(s => s.name);
@@ -666,21 +669,6 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
           )}
         </div>
 
-        {/* "Play in all Rooms" quick action — joins every groupable
-            speaker to the active speaker's stream. */}
-        <button onClick={groupAll} disabled={groupable.length < 2} style={{
-          width: '100%', padding: '12px 14px', borderRadius: 10,
-          background: p.surface, border: `.5px solid ${p.border2}`, color: p.fg,
-          cursor: groupable.length < 2 ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-          opacity: groupable.length < 2 ? 0.4 : 1,
-          display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
-        }}>
-          <span style={{flex: 1}}>
-            <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2}}>Play</div>
-            <div style={{fontSize: 14, fontWeight: 500}}>in all Rooms</div>
-          </span>
-          <span style={{fontSize: 13}}>⌂</span>
-        </button>
       </div>
     </window.Card>
   );
@@ -853,81 +841,40 @@ const PlaylistTile = ({ item, ctx, onPlay, editing, onHide }) => {
   );
 };
 
-// ── Search overlay ────────────────────────────────────────────────────────
-const SearchOverlay = ({ ctx, conn, speakerId, playMedia, onClose }) => {
-  const { p, fonts } = ctx;
-  const [query, setQuery] = React.useState('');
-  const [results, setResults] = React.useState(null);
-  const [error, setError] = React.useState(null);
-  const inputRef = React.useRef(null);
-  React.useEffect(() => { inputRef.current?.focus(); }, []);
 
-  React.useEffect(() => {
-    if (!conn || !query.trim() || !speakerId) { setResults(null); setError(null); return; }
-    let alive = true;
-    const t = setTimeout(async () => {
-      try {
-        const resp = await conn.sendMessagePromise({
-          type: 'media_player/search_media', entity_id: speakerId, search_query: query.trim(),
-        });
-        if (!alive) return;
-        setResults((resp?.result || resp?.results || []).filter(isMusicItem));
-        setError(null);
-      } catch (e) {
-        if (alive) { setResults([]); setError(e?.message || String(e)); }
-      }
-    }, 300);
-    return () => { alive = false; clearTimeout(t); };
-  }, [conn, query, speakerId]);
-
-  return (
-    <Overlay onClose={onClose} ctx={ctx}>
-      <div style={{padding: 18, borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 10}}>
-        <span style={{fontSize: 18, color: p.fg3}}>🔍</span>
-        <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search songs, artists, albums…"
-          style={{flex: 1, border: 0, outline: 'none', background: 'transparent',
-            color: p.fg, fontSize: 16, fontFamily: fonts.body}}/>
-        <button onClick={onClose} style={{
-          width: 32, height: 32, borderRadius: '50%', border: `.5px solid ${p.border2}`,
-          background: 'transparent', color: p.fg2, cursor: 'pointer', fontSize: 14,
-        }}>×</button>
-      </div>
-      <div style={{flex: 1, overflowY: 'auto'}}>
-        {results === null && query && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Searching…</div>}
-        {error && results?.length === 0 && <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>Search failed: {error}</div>}
-        {results?.length === 0 && !error && query && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>No results for "{query}"</div>}
-        {results?.length > 0 && (
-          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, padding: 18}}>
-            {results.map(item => (
-              <button key={item.media_content_id} onClick={() => { playMedia(item, 'play'); onClose(); }}
-                style={{padding: 0, border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                  display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0}}>
-                <div style={{aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
-                  background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`, position: 'relative'}}>
-                  {item.thumbnail && <img src={item.thumbnail} alt="" style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} onError={(e) => {e.currentTarget.style.display = 'none';}}/>}
-                </div>
-                <div style={{fontSize: 12, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{item.title}</div>
-                {item.media_class && <div style={{fontSize: 10, color: p.fg3, textTransform: 'capitalize'}}>{item.media_class}</div>}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </Overlay>
-  );
-};
-
-// ── Browse overlay ────────────────────────────────────────────────────────
-const BrowseOverlay = ({ ctx, conn, speakerId, playMedia, onClose }) => {
+// ── Unified MediaOverlay — search + browse + artist + album views ─────────
+//
+// Single overlay component that handles the four contexts the user can
+// be in while exploring music:
+//
+//   1. Search:  text input → results grid.
+//   2. Browse:  drill the speaker's media tree → tile grid w/ A-Z scroller.
+//   3. Artist:  drilled into an artist node → top tracks + albums (newest
+//                first) on a dedicated detail page.
+//   4. Album:   drilled into an album node → numbered track list with
+//                a "Play album" button at the top. Tapping a track plays
+//                it and queues the rest of the album as Up Next.
+//
+// The mode is determined by the path stack and the head's media_class.
+const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onClose }) => {
   const { p, fonts } = ctx;
   const [path, setPath] = React.useState([]);
   const [items, setItems] = React.useState(null);
   const [error, setError] = React.useState(null);
-  const head = path[path.length - 1] || null;
+  const [query, setQuery] = React.useState('');
+  const [results, setResults] = React.useState(null);
+  const [searchError, setSearchError] = React.useState(null);
+  const inputRef = React.useRef(null);
 
+  const head = path[path.length - 1] || null;
+  const headClass = (head?.contentClass || '').toLowerCase();
+  const isArtist = headClass === 'artist';
+  const isAlbum = headClass === 'album';
+  const showingSearch = mode === 'search' && path.length === 0;
+
+  // Browse fetch — runs whenever the path tail changes.
   React.useEffect(() => {
-    if (!conn || !speakerId) { setItems(null); return; }
+    if (!conn || !speakerId || showingSearch) { setItems(null); return; }
     let alive = true;
     setItems(null); setError(null);
     (async () => {
@@ -943,69 +890,440 @@ const BrowseOverlay = ({ ctx, conn, speakerId, playMedia, onClose }) => {
       } catch (e) { if (alive) setError(e?.message || String(e)); }
     })();
     return () => { alive = false; };
-  }, [conn, speakerId, head?.contentId, head?.contentType]);
+  }, [conn, speakerId, head?.contentId, head?.contentType, showingSearch]);
 
-  const onClick = async (item) => {
-    if (item.can_expand) {
-      setPath(p => [...p, { contentId: item.media_content_id, contentType: item.media_content_type, title: item.title }]);
-      return;
-    }
+  // Search fetch.
+  React.useEffect(() => {
+    if (mode !== 'search') return;
+    if (!conn || !query.trim() || !speakerId) { setResults(null); setSearchError(null); return; }
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        const resp = await conn.sendMessagePromise({
+          type: 'media_player/search_media', entity_id: speakerId, search_query: query.trim(),
+        });
+        if (!alive) return;
+        setResults((resp?.result || resp?.results || []).filter(isMusicItem));
+        setSearchError(null);
+      } catch (e) {
+        if (alive) { setResults([]); setSearchError(e?.message || String(e)); }
+      }
+    }, 300);
+    return () => { alive = false; clearTimeout(t); };
+  }, [conn, query, speakerId, mode]);
+
+  React.useEffect(() => { if (mode === 'search') inputRef.current?.focus(); }, [mode]);
+
+  const drillInto = (item) => {
+    setPath(p => [...p, {
+      contentId: item.media_content_id,
+      contentType: item.media_content_type,
+      contentClass: item.media_class,
+      title: item.title,
+      thumbnail: item.thumbnail,
+    }]);
+    if (results !== null) setResults(null);
+    setQuery('');
+  };
+
+  const onItemClick = async (item) => {
+    if (item.can_expand) { drillInto(item); return; }
     if (item.can_play) { playMedia(item, 'play'); onClose(); }
   };
 
   return (
     <Overlay onClose={onClose} ctx={ctx}>
-      <div style={{padding: 14, borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
-        <button onClick={() => setPath([])} disabled={!path.length}
-          style={{padding: '6px 12px', borderRadius: 7, background: 'transparent',
-            border: `.5px solid ${p.border2}`, color: path.length ? p.fg : p.fg3,
-            cursor: path.length ? 'pointer' : 'default', fontFamily: 'inherit', fontSize: 12}}>
-          Browse
-        </button>
-        {path.map((node, i) => (
-          <React.Fragment key={node.contentId}>
-            <span style={{color: p.fg3, fontSize: 12}}>›</span>
-            <button onClick={() => setPath(prev => prev.slice(0, i + 1))}
-              style={{padding: '6px 12px', borderRadius: 7, background: 'transparent', border: 'none',
-                color: i === path.length - 1 ? p.fg : p.fg2, cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 12, fontWeight: i === path.length - 1 ? 500 : 400,
-                overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200, whiteSpace: 'nowrap'}}>
-              {node.title}
-            </button>
-          </React.Fragment>
-        ))}
-        <div style={{flex: 1}}/>
-        <button onClick={onClose} style={{
-          width: 32, height: 32, borderRadius: '50%', border: `.5px solid ${p.border2}`,
-          background: 'transparent', color: p.fg2, cursor: 'pointer', fontSize: 14,
-        }}>×</button>
-      </div>
-      <div style={{flex: 1, overflowY: 'auto'}}>
-        {error && <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>{error}</div>}
-        {items === null && !error && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>}
-        {items?.length === 0 && !error && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Nothing here.</div>}
-        {items?.length > 0 && (
-          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, padding: 18}}>
-            {items.map(item => (
-              <button key={item.media_content_id || item.title} onClick={() => onClick(item)}
-                style={{padding: 0, border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                  display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0}}>
-                <div style={{aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
-                  background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`, position: 'relative'}}>
-                  {item.thumbnail && <img src={item.thumbnail} alt="" style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} onError={(e) => {e.currentTarget.style.display = 'none';}}/>}
-                  {!item.can_expand && item.can_play && (
-                    <div style={{position: 'absolute', bottom: 6, right: 6, width: 24, height: 24, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.65)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11}}>▶</div>
-                  )}
-                </div>
-                <div style={{fontSize: 12, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{item.title}</div>
-                {item.media_class && <div style={{fontSize: 10, color: p.fg3, textTransform: 'capitalize'}}>{item.media_class}</div>}
+      {/* Header — search bar (search mode @ root) or breadcrumb (browse) */}
+      {showingSearch ? (
+        <div style={{padding: 18, borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'center', gap: 10}}>
+          <span style={{fontSize: 18, color: p.fg3}}>🔍</span>
+          <input ref={inputRef} value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search songs, artists, albums…"
+            style={{flex: 1, border: 0, outline: 'none', background: 'transparent',
+              color: p.fg, fontSize: 16, fontFamily: fonts.body}}/>
+          <button onClick={onClose} style={overlayCloseBtn(p)}>×</button>
+        </div>
+      ) : (
+        <div style={{padding: 14, borderBottom: `.5px solid ${p.border}`,
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
+          <button onClick={() => setPath([])} disabled={!path.length}
+            style={{padding: '6px 12px', borderRadius: 7, background: 'transparent',
+              border: `.5px solid ${p.border2}`, color: path.length ? p.fg : p.fg3,
+              cursor: path.length ? 'pointer' : 'default', fontFamily: 'inherit', fontSize: 12}}>
+            {mode === 'search' ? '← Search' : 'Browse'}
+          </button>
+          {path.map((node, i) => (
+            <React.Fragment key={node.contentId}>
+              <span style={{color: p.fg3, fontSize: 12}}>›</span>
+              <button onClick={() => setPath(prev => prev.slice(0, i + 1))}
+                style={{padding: '6px 12px', borderRadius: 7, background: 'transparent', border: 'none',
+                  color: i === path.length - 1 ? p.fg : p.fg2, cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 12, fontWeight: i === path.length - 1 ? 500 : 400,
+                  overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200, whiteSpace: 'nowrap'}}>
+                {node.title}
               </button>
-            ))}
-          </div>
+            </React.Fragment>
+          ))}
+          <div style={{flex: 1}}/>
+          <button onClick={onClose} style={overlayCloseBtn(p)}>×</button>
+        </div>
+      )}
+
+      {/* Body */}
+      <div style={{flex: 1, overflowY: 'auto', minHeight: 0}}>
+        {showingSearch && (
+          <SearchBody ctx={ctx} query={query} results={results}
+            error={searchError} onItemClick={onItemClick}/>
+        )}
+        {!showingSearch && isArtist && (
+          <ArtistDetail ctx={ctx} conn={conn} speakerId={speakerId}
+            artist={head} items={items} error={error}
+            onAlbumClick={(item) => drillInto(item)}
+            onTrackPlay={(item) => { playMedia(item, 'play'); onClose(); }}/>
+        )}
+        {!showingSearch && isAlbum && (
+          <AlbumDetail ctx={ctx} album={head} items={items} error={error}
+            onPlayFromIdx={(idx) => { playFromList(items.filter(i => i.can_play), idx); onClose(); }}/>
+        )}
+        {!showingSearch && !isArtist && !isAlbum && (
+          <BrowseBody ctx={ctx} items={items} error={error} onItemClick={onItemClick}/>
         )}
       </div>
     </Overlay>
+  );
+};
+
+const overlayCloseBtn = (p) => ({
+  width: 32, height: 32, borderRadius: '50%', border: `.5px solid ${p.border2}`,
+  background: 'transparent', color: p.fg2, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit',
+});
+
+// ── Search results body ────────────────────────────────────────────────────
+const SearchBody = ({ ctx, query, results, error, onItemClick }) => {
+  const { p } = ctx;
+  if (!query) {
+    return <div style={{padding: 24, fontSize: 13, color: p.fg3, textAlign: 'center'}}>
+      Type a song, artist, or album name to search across your linked services.
+    </div>;
+  }
+  if (results === null) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Searching…</div>;
+  if (error && results?.length === 0) return <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>Search failed: {error}</div>;
+  if (results.length === 0) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>No results for "{query}"</div>;
+  return <SortableGrid ctx={ctx} items={results} onItemClick={onItemClick}/>;
+};
+
+// ── Browse list body — sorted alphabetically with A-Z scroller ─────────────
+const BrowseBody = ({ ctx, items, error, onItemClick }) => {
+  const { p } = ctx;
+  if (error) return <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>{error}</div>;
+  if (items === null) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>;
+  if (items.length === 0) return <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Nothing here.</div>;
+  return <SortableGrid ctx={ctx} items={items} onItemClick={onItemClick}/>;
+};
+
+// ── Artist detail — top tracks + albums newest-first ──────────────────────
+const ArtistDetail = ({ ctx, conn, speakerId, artist, items, error, onAlbumClick, onTrackPlay }) => {
+  const { p, fonts } = ctx;
+  // MA's artist node typically has Top Tracks + Albums folders. We
+  // expand both in parallel; if children are already a flat list of
+  // tracks/albums (some integrations) we partition by media_class.
+  const [topTracks, setTopTracks] = React.useState([]);
+  const [albums, setAlbums] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!conn || !speakerId || !items) return;
+    let alive = true;
+    setLoading(true);
+    const fetchInto = async (node) => {
+      if (!node?.can_expand) return [];
+      try {
+        const r = await conn.sendMessagePromise({
+          type: 'media_player/browse_media', entity_id: speakerId,
+          media_content_id: node.media_content_id,
+          media_content_type: node.media_content_type,
+        });
+        return (r?.children || []).filter(isMusicItem);
+      } catch { return []; }
+    };
+    (async () => {
+      const ttFolder = items.find(i => /top\s+tracks?|popular/i.test(i.title || ''));
+      const albFolder = items.find(i => /^albums?$/i.test(i.title || ''));
+      let tt = items.filter(i => (i.media_class || '').toLowerCase() === 'track');
+      let alb = items.filter(i => (i.media_class || '').toLowerCase() === 'album');
+      if (ttFolder) tt = await fetchInto(ttFolder);
+      if (albFolder) alb = await fetchInto(albFolder);
+      if (!alive) return;
+      // Sort albums newest-first when MA exposes year/release_date.
+      const yearOf = (it) => {
+        if (typeof it.year === 'number') return it.year;
+        if (it.release_date) return new Date(it.release_date).getFullYear() || 0;
+        const m = (it.title || '').match(/\((\d{4})\)/);
+        return m ? +m[1] : 0;
+      };
+      alb = [...alb].sort((a, b) => yearOf(b) - yearOf(a));
+      setTopTracks(tt.slice(0, 12));
+      setAlbums(alb);
+      setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [conn, speakerId, items]);
+
+  if (error) return <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>{error}</div>;
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{padding: 24, display: 'flex', alignItems: 'center', gap: 18,
+        borderBottom: `.5px solid ${p.border}`,
+        background: artist.thumbnail ? '#0d0b09' : 'transparent', position: 'relative', overflow: 'hidden',
+      }}>
+        {artist.thumbnail && (
+          <>
+            <div aria-hidden style={{position: 'absolute', inset: 0,
+              backgroundImage: `url("${artist.thumbnail}")`,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              filter: 'blur(40px) brightness(0.5)', transform: 'scale(1.3)'}}/>
+            <div aria-hidden style={{position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.85))'}}/>
+          </>
+        )}
+        <div style={{position: 'relative', display: 'flex', alignItems: 'center', gap: 18, color: '#fff'}}>
+          <div style={{width: 96, height: 96, borderRadius: '50%', flex: 'none',
+            background: artist.thumbnail ? `center / cover no-repeat url("${artist.thumbnail}")` : `linear-gradient(135deg, ${p.accent}, oklch(20% 0.05 25))`,
+            boxShadow: '0 12px 28px rgba(0,0,0,0.45)'}}/>
+          <div>
+            <div style={{fontSize: 11, color: 'rgba(255,255,255,0.75)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 4}}>Artist</div>
+            <div style={{fontFamily: fonts.display, fontSize: 28, fontWeight: 500, lineHeight: 1.1}}>{artist.title}</div>
+            <div style={{fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4}}>
+              {topTracks.length} top track{topTracks.length === 1 ? '' : 's'} · {albums.length} album{albums.length === 1 ? '' : 's'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {loading && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>}
+
+      {/* Top tracks */}
+      {!loading && topTracks.length > 0 && (
+        <div>
+          <div style={{padding: '14px 18px 8px', fontFamily: fonts.display, fontSize: 14, color: p.fg, fontWeight: 500}}>
+            Popular
+          </div>
+          {topTracks.map((tr, i) => (
+            <button key={tr.media_content_id || i}
+              onClick={() => onTrackPlay(tr)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '8px 18px', border: 0, background: 'transparent',
+                cursor: 'pointer', textAlign: 'left',
+                borderBottom: i < topTracks.length - 1 ? `.5px solid ${p.border}` : 'none',
+              }}>
+              <div style={{width: 22, fontSize: 11, color: p.fg3, textAlign: 'right', fontVariantNumeric: 'tabular-nums'}}>{i + 1}</div>
+              <div style={{width: 38, height: 38, borderRadius: 5, flex: 'none',
+                background: tr.thumbnail ? `center / cover no-repeat url("${tr.thumbnail}"), oklch(20% 0.05 25)` : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
+              <div style={{flex: 1, minWidth: 0}}>
+                <div style={{fontSize: 13, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{tr.title}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Albums */}
+      {!loading && albums.length > 0 && (
+        <div>
+          <div style={{padding: '18px 18px 8px', fontFamily: fonts.display, fontSize: 14, color: p.fg, fontWeight: 500}}>
+            Albums
+          </div>
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, padding: '0 18px 18px'}}>
+            {albums.map(alb => <ItemTileSmall key={alb.media_content_id} item={alb} ctx={ctx} onClick={() => onAlbumClick(alb)}/>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Album detail — track list, click to play + queue rest ─────────────────
+const AlbumDetail = ({ ctx, album, items, error, onPlayFromIdx }) => {
+  const { p, fonts } = ctx;
+  const tracks = (items || []).filter(i => i.can_play);
+  if (error) return <div style={{padding: 18, fontSize: 12, color: '#e0a89a'}}>{error}</div>;
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{padding: 24, display: 'flex', alignItems: 'flex-end', gap: 18,
+        borderBottom: `.5px solid ${p.border}`,
+        background: album.thumbnail ? '#0d0b09' : 'transparent', position: 'relative', overflow: 'hidden',
+        minHeight: 180,
+      }}>
+        {album.thumbnail && (
+          <>
+            <div aria-hidden style={{position: 'absolute', inset: 0,
+              backgroundImage: `url("${album.thumbnail}")`,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              filter: 'blur(40px) brightness(0.5)', transform: 'scale(1.3)'}}/>
+            <div aria-hidden style={{position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.85))'}}/>
+          </>
+        )}
+        <div style={{position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 18, color: '#fff', flex: 1}}>
+          <div style={{width: 130, height: 130, borderRadius: 8, flex: 'none',
+            background: album.thumbnail ? `center / cover no-repeat url("${album.thumbnail}")` : `linear-gradient(135deg, ${p.accent}, oklch(20% 0.05 25))`,
+            boxShadow: '0 12px 28px rgba(0,0,0,0.5)'}}/>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: 11, color: 'rgba(255,255,255,0.75)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 4}}>Album</div>
+            <div style={{fontFamily: fonts.display, fontSize: 26, fontWeight: 500, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{album.title}</div>
+            <div style={{fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4}}>
+              {tracks.length} track{tracks.length === 1 ? '' : 's'}
+            </div>
+            {tracks.length > 0 && (
+              <button onClick={() => onPlayFromIdx(0)} style={{
+                marginTop: 12, padding: '8px 16px', borderRadius: 8,
+                background: '#fff', color: '#000', border: 0,
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}>▶ Play album</button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {items === null && <div style={{padding: 24, fontSize: 12, color: p.fg3, textAlign: 'center'}}>Loading…</div>}
+
+      {/* Track list */}
+      {tracks.map((tr, i) => (
+        <button key={tr.media_content_id || i}
+          onClick={() => onPlayFromIdx(i)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 18px', border: 0, background: 'transparent',
+            cursor: 'pointer', textAlign: 'left',
+            borderBottom: i < tracks.length - 1 ? `.5px solid ${p.border}` : 'none',
+          }}>
+          <div style={{width: 22, fontSize: 11, color: p.fg3, textAlign: 'right', fontVariantNumeric: 'tabular-nums'}}>{i + 1}</div>
+          <div style={{flex: 1, minWidth: 0}}>
+            <div style={{fontSize: 13, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{tr.title}</div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// ── Tile grid with optional A-Z scroller ──────────────────────────────────
+const SortableGrid = ({ ctx, items, onItemClick }) => {
+  const { p } = ctx;
+  // Always sort alphabetically when there are enough items to need a
+  // scroller. Below the threshold we leave the order alone so MA's
+  // curated rows ("Recently Added", etc.) stay intact.
+  const SORT_THRESHOLD = 25;
+  const sorted = React.useMemo(() => {
+    if (items.length < SORT_THRESHOLD) return items;
+    return [...items].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+  }, [items]);
+
+  const containerRef = React.useRef(null);
+  const itemRefs = React.useRef(new Map());
+
+  const letters = React.useMemo(() => {
+    if (sorted.length < SORT_THRESHOLD) return [];
+    const set = new Set();
+    for (const it of sorted) {
+      const c = ((it.title || '').trim()[0] || '').toUpperCase();
+      set.add(/[A-Z]/.test(c) ? c : '#');
+    }
+    const arr = [...set];
+    arr.sort((a, b) => a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b));
+    return arr;
+  }, [sorted]);
+
+  const jumpTo = (letter) => {
+    const target = sorted.find(it => {
+      const c = ((it.title || '').trim()[0] || '').toUpperCase();
+      const bucket = /[A-Z]/.test(c) ? c : '#';
+      return bucket === letter;
+    });
+    if (!target) return;
+    const node = itemRefs.current.get(target.media_content_id);
+    if (node) {
+      // scrollIntoView with `nearest` so we don't yank past the header.
+      node.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    }
+  };
+
+  return (
+    <div style={{display: 'flex', minHeight: '100%'}}>
+      <div ref={containerRef} style={{flex: 1, minWidth: 0,
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: 12, padding: 18,
+      }}>
+        {sorted.map(item => (
+          <div key={item.media_content_id || item.title}
+            ref={(node) => { if (node) itemRefs.current.set(item.media_content_id, node); }}>
+            <ItemTileSmall item={item} ctx={ctx} onClick={() => onItemClick(item)}/>
+          </div>
+        ))}
+      </div>
+      {letters.length > 0 && (
+        <div style={{
+          position: 'sticky', top: 0, alignSelf: 'flex-start',
+          display: 'flex', flexDirection: 'column', gap: 1,
+          padding: '14px 8px', flex: 'none',
+        }}>
+          {letters.map(l => (
+            <button key={l} onClick={() => jumpTo(l)} style={{
+              width: 22, height: 18, padding: 0,
+              border: 0, background: 'transparent',
+              color: p.fg2, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 10, fontWeight: 500,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 4,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = p.surface2; e.currentTarget.style.color = p.accent; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = p.fg2; }}
+            >{l}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Small reusable tile for grid views inside the overlay.
+const ItemTileSmall = ({ item, onClick, ctx }) => {
+  const { p } = ctx;
+  return (
+    <button onClick={onClick} style={{
+      padding: 0, border: 0, background: 'transparent',
+      cursor: 'pointer', textAlign: 'left',
+      display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, width: '100%',
+    }}>
+      <div style={{aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
+        background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`, position: 'relative',
+        ...((item.media_class || '').toLowerCase() === 'artist' ? { borderRadius: '50%' } : {}),
+      }}>
+        {item.thumbnail && (
+          <img src={item.thumbnail} alt=""
+            style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}/>
+        )}
+        {!item.can_expand && item.can_play && (
+          <div style={{position: 'absolute', bottom: 6, right: 6, width: 24, height: 24, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.65)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11}}>▶</div>
+        )}
+      </div>
+      <div style={{fontSize: 12, color: p.fg, fontWeight: 500, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+        {item.title}
+      </div>
+      {item.media_class && (
+        <div style={{fontSize: 10, color: p.fg3, letterSpacing: '.04em', textTransform: 'capitalize'}}>
+          {item.media_class}
+        </div>
+      )}
+    </button>
   );
 };
 
@@ -1018,7 +1336,7 @@ const Overlay = ({ onClose, children, ctx }) => {
       display: 'grid', placeItems: 'center', padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} style={{
-        width: 'min(720px, 100%)', maxHeight: '85vh',
+        width: 'min(820px, 100%)', maxHeight: '88vh', height: '88vh',
         background: p.surface, border: `.5px solid ${p.border2}`,
         borderRadius: 14, display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
