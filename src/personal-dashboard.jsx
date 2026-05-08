@@ -551,6 +551,60 @@ const focusGlyph = (state) => {
   return '🎯';
 };
 
+// Pull the phone's entity prefix from the person entity that HA Companion
+// is tracking. `person.<x>.attributes.source` is set to the device tracker
+// the integration created (e.g. `device_tracker.andrews_iphone_15_pro`).
+// Strip the domain → that's the slug every Companion sensor on that phone
+// shares (`sensor.andrews_iphone_15_pro_battery_level`, etc.). Anchoring
+// every lookup to this prefix is what keeps the avatar from picking up
+// AirTag / watch / remote battery sensors that happen to be alphabetically
+// first in `hass.states`.
+const phonePrefix = (person) => {
+  const src = person?.attributes?.source;
+  if (typeof src !== 'string') return null;
+  const m = src.match(/^device_tracker\.(.+)$/);
+  return m ? m[1] : null;
+};
+
+// Fallback used when we can't derive a prefix from `person.source` (e.g.
+// the user hasn't opened the iOS Companion app yet, so the device tracker
+// hasn't been registered, or they've named it something unusual). Prefer
+// IDs that look like a phone; skip ones that obviously aren't.
+const PHONE_HINT = /(iphone|ipad|phone|tablet|companion)/i;
+const NOT_PHONE = /(airtag|airpods|apple_?tv|_watch|homepod|remote|doorbell|lock|camera|tile_)/i;
+const findPhoneEntity = (hass, domain, suffix) => {
+  if (!hass || !hass.states) return null;
+  let weak = null;
+  for (const id in hass.states) {
+    if (!id.startsWith(domain + '.')) continue;
+    if (!id.endsWith(suffix)) continue;
+    if (NOT_PHONE.test(id)) continue;
+    if (PHONE_HINT.test(id)) return hass.states[id];
+    if (!weak) weak = hass.states[id];
+  }
+  return weak;
+};
+
+// Try the prefix-anchored entity ID first for each (domain, suffix)
+// candidate; on miss, fall back to phone-keyword matching. Used for every
+// Companion sensor (battery, charge state, activity, focus) so they all
+// resolve to the same phone instead of independently picking the first
+// thing that ends with the right suffix.
+const phoneSensor = (hass, prefix, candidates) => {
+  if (!hass || !hass.states) return null;
+  if (prefix) {
+    for (const [domain, suffix] of candidates) {
+      const id = `${domain}.${prefix}${suffix}`;
+      if (hass.states[id]) return hass.states[id];
+    }
+  }
+  for (const [domain, suffix] of candidates) {
+    const e = findPhoneEntity(hass, domain, suffix);
+    if (e) return e;
+  }
+  return null;
+};
+
 const StatusRow = ({ icon, label, value, fg, fg2, fg3, border }) => (
   <div style={{
     display: 'flex', alignItems: 'center', gap: 10,
@@ -587,14 +641,18 @@ const PresenceAvatar = ({
   const [hovering, setHovering] = React.useState(false);
   const wrapRef = React.useRef(null);
 
-  // Tap-outside closes the narrow dropdown / wide sticky pill.
+  // Tap-outside closes the narrow dropdown / wide sticky pill. We listen
+  // on `click` (not `pointerdown`) so the document handler runs AFTER any
+  // inner button's onClick has already fired — otherwise toggling edit
+  // mode from inside the dropdown races the close and only one of the two
+  // state updates lands.
   React.useEffect(() => {
     if (!open) return;
     const onDoc = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
     };
-    document.addEventListener('pointerdown', onDoc);
-    return () => document.removeEventListener('pointerdown', onDoc);
+    document.addEventListener('click', onDoc);
+    return () => document.removeEventListener('click', onDoc);
   }, [open]);
 
   const firstName = user?.firstName || '';
@@ -618,10 +676,19 @@ const PresenceAvatar = ({
     : (personState && personState !== 'unknown' && personState !== 'unavailable') ? '📍'
     : '·';
 
-  const batt = findEntity(hass, ['sensor'], ['_battery_level']);
+  // Anchor every Companion sensor lookup to the phone HA Companion is
+  // tracking — derived from `person.<x>.attributes.source`. Without this,
+  // each suffix match independently picks the first matching entity in
+  // `hass.states`, which routinely lands on AirTag / watch / remote
+  // batteries and other non-phone sources.
+  const phoneId = phonePrefix(person);
+  const batt = phoneSensor(hass, phoneId, [['sensor', '_battery_level']]);
   const battNum = batt && !isNaN(parseFloat(batt.state)) ? Math.round(parseFloat(batt.state)) : null;
-  const chargeBin = findEntity(hass, ['binary_sensor'], ['_battery_state', '_is_charging']);
-  const chargeSensor = chargeBin || findEntity(hass, ['sensor'], ['_battery_state']);
+  const chargeSensor = phoneSensor(hass, phoneId, [
+    ['binary_sensor', '_battery_state'],
+    ['binary_sensor', '_is_charging'],
+    ['sensor', '_battery_state'],
+  ]);
   const chargeRaw = (chargeSensor?.state || '').toLowerCase();
   const charging = chargeRaw === 'on' || chargeRaw === 'charging' || chargeRaw === 'full';
   const battIcon = battNum != null
@@ -631,12 +698,15 @@ const PresenceAvatar = ({
     ? `${battNum}%${charging ? ' · charging' : ''}`
     : null;
 
-  const act = findEntity(hass, ['sensor'], ['_activity_2']) || findEntity(hass, ['sensor'], ['_activity']);
+  const act = phoneSensor(hass, phoneId, [
+    ['sensor', '_activity_2'],
+    ['sensor', '_activity'],
+  ]);
   const actRaw = (act?.state || '').toLowerCase();
   const actIcon = ACTIVITY_ICON[actRaw] || null;
   const actLabel = ACTIVITY_LABEL[actRaw] || (actRaw && actRaw !== 'unknown' && actRaw !== 'unavailable' ? act.state : null);
 
-  const focus = findEntity(hass, ['sensor'], ['_focus']);
+  const focus = phoneSensor(hass, phoneId, [['sensor', '_focus']]);
   const focusIcon = focusGlyph(focus?.state);
   const focusLabel = focusIcon ? focus.state : null;
 
@@ -702,7 +772,11 @@ const PresenceAvatar = ({
                 fg={fg} fg2={fg2} fg3={fg3} border={border}/>
             )}
             <button
-              onClick={() => { onToggleEdit && onToggleEdit(); setOpen(false); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onToggleEdit) onToggleEdit();
+                setOpen(false);
+              }}
               style={{
                 marginTop: 12, width: '100%', height: 36,
                 borderRadius: 8,
