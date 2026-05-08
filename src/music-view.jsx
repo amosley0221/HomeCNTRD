@@ -156,6 +156,27 @@ const MusicView = ({ ctx }) => {
   const [manageOpen, setManageOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [browseOpen, setBrowseOpen] = React.useState(false);
+  // When a tile elsewhere on the page (e.g. a playlist in PlaylistsCard)
+  // wants the user to land inside the browse tree at a specific node,
+  // it stashes that node here and opens the overlay. Cleared on close.
+  const [overlayInitialPath, setOverlayInitialPath] = React.useState([]);
+
+  // If any hidden speaker is currently a member of someone else's
+  // group, unjoin it. This catches the case where the user previously
+  // grouped the speaker (before hiding it), then hid it — Sonos keeps
+  // the speaker in the group, and music keeps spilling out of it
+  // until somebody manually unjoins. Runs whenever hidden or speaker
+  // list changes so it self-heals.
+  React.useEffect(() => {
+    if (!hass?.callService || !state.speakers) return;
+    for (const id of hidden) {
+      const sp = state.speakers.find(s => s.id === id);
+      if (!sp) continue;
+      const inGroup = (sp.groupMembers || []).length > 1;
+      if (!inGroup) continue;
+      try { hass.callService('media_player', 'unjoin', { entity_id: sp.id }); } catch {}
+    }
+  }, [hidden, state.speakers, hass]);
 
   // ── Loading / empty states ─────────────────────────────────────────
   if (!platformsLoaded) {
@@ -248,7 +269,17 @@ const MusicView = ({ ctx }) => {
             autoVisible={autoVisible}
             manageOpen={manageOpen} setManageOpen={setManageOpen}/>
           <PlaylistsCard ctx={ctx} hassRef={hassRef} conn={conn} speakerId={active?.id}
-            playMedia={playMedia} isMA={isMA}/>
+            playMedia={playMedia} isMA={isMA}
+            onDrillInto={(item) => {
+              setOverlayInitialPath([{
+                contentId: item.media_content_id,
+                contentType: item.media_content_type,
+                contentClass: item.media_class,
+                title: item.title,
+                thumbnail: item.thumbnail,
+              }]);
+              setBrowseOpen(true);
+            }}/>
         </div>
       </div>
 
@@ -256,7 +287,8 @@ const MusicView = ({ ctx }) => {
         <MediaOverlay ctx={ctx} conn={conn} speakerId={active?.id}
           playMedia={playMedia} playFromList={playFromList}
           mode={searchOpen ? 'search' : 'browse'}
-          onClose={() => { setSearchOpen(false); setBrowseOpen(false); }}/>
+          initialPath={browseOpen ? overlayInitialPath : []}
+          onClose={() => { setSearchOpen(false); setBrowseOpen(false); setOverlayInitialPath([]); }}/>
       )}
       <div style={{height: 60}}/>
     </>
@@ -278,14 +310,30 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
   const [seeking, setSeeking] = React.useState(false);
   const [seekValue, setSeekValue] = React.useState(0);
   const lastSeenRef = React.useRef({ pos: 0, at: Date.now(), key: '' });
+  // Optimistic play/pause overlay. HA's state pushes can lag the user's
+  // tap by several seconds (especially MA, which routes through Sonos
+  // before reporting back). pendingPlay flips the UI immediately on
+  // click; HA's actual state takes over once it matches.
+  const [pendingPlay, setPendingPlay] = React.useState(null); // bool | null
+  const pendingTimerRef = React.useRef(null);
 
   const title = speaker?.haMediaTitle;
   const artist = speaker?.haMediaArtist;
   const album = speaker?.haMediaAlbum;
   const art = speaker?.haEntityPicture;
   const dur = speaker?.duration || 0;
-  const isPlaying = !!speaker?.playing;
+  const realPlaying = !!speaker?.playing;
+  // Effective playing state — UI uses this for icon + progress ticker.
+  const isPlaying = pendingPlay !== null ? pendingPlay : realPlaying;
   const isIdle = !title;
+
+  // Once HA's reported state matches the pending intent, drop the
+  // overlay so the UI tracks reality again.
+  React.useEffect(() => {
+    if (pendingPlay !== null && pendingPlay === realPlaying) {
+      setPendingPlay(null);
+    }
+  }, [realPlaying, pendingPlay]);
 
   React.useEffect(() => {
     if (!speaker) return;
@@ -404,7 +452,16 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
           {/* Explicit media_play / media_pause based on current state.
               media_play_pause is a toggle service that some integrations
               (notably MA) silently no-op on, leaving the UI stuck. */}
-          <HeroBtn onClick={() => call(isPlaying ? 'media_pause' : 'media_play')}
+          <HeroBtn onClick={() => {
+            const next = !isPlaying;
+            setPendingPlay(next);
+            // Auto-clear after 6 s in case HA never confirms (e.g.,
+            // service call quietly failed) — better than a permanently
+            // wrong icon.
+            clearTimeout(pendingTimerRef.current);
+            pendingTimerRef.current = setTimeout(() => setPendingPlay(null), 6000);
+            call(next ? 'media_play' : 'media_pause');
+          }}
             icon={isPlaying ? '❚❚' : '▶'} size={64} primary/>
           <HeroBtn onClick={() => call('media_next_track')} icon="››" size={44}/>
         </div>
@@ -524,6 +581,23 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                      hidden, setHidden, autoVisible, manageOpen, setManageOpen }) => {
   const { p, fonts } = ctx;
   const [chooserOpen, setChooserOpen] = React.useState(false);
+  const dropdownRef = React.useRef(null);
+  // Close the dropdown when the user taps outside it. Without this it
+  // sticks open until the chevron is tapped again.
+  React.useEffect(() => {
+    if (!chooserOpen) return;
+    const onDown = (e) => {
+      if (!dropdownRef.current) return;
+      if (!dropdownRef.current.contains(e.target)) setChooserOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+    };
+  }, [chooserOpen]);
+
   const groupable = speakers.filter(s => (s.supportedFeatures & GROUPING_FEATURE) !== 0);
   const hiddenSpeakers = (autoVisible || []).filter(s => hidden?.has?.(s.id));
   const active = speakers.find(s => s.id === activeId) || speakers[0];
@@ -534,6 +608,26 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
     if (!hass?.callService) return;
     try { hass.callService('media_player', service, { entity_id: entityId, ...data }); } catch {}
   };
+
+  // Volume slider: optimistic local value per speaker + a trailing
+  // debounce on volume_set so a long drag doesn't fire 30 service
+  // calls per second (Sonos rate-limits and the slider feels sluggish
+  // because each change waits on a round-trip).
+  const [volOverrides, setVolOverrides] = React.useState({});
+  const volTimersRef = React.useRef({});
+  const setVolume = (sp, pct) => {
+    setVolOverrides(prev => ({ ...prev, [sp.id]: pct }));
+    clearTimeout(volTimersRef.current[sp.id]);
+    volTimersRef.current[sp.id] = setTimeout(() => {
+      try { call(sp.id, 'volume_set', { volume_level: pct / 100 }); } catch {}
+      // Drop the override 1 s after dispatch so HA's reported value
+      // takes back over once it's fresh.
+      setTimeout(() => {
+        setVolOverrides(prev => { const n = { ...prev }; delete n[sp.id]; return n; });
+      }, 1000);
+    }, 150);
+  };
+
   // Is this speaker grouped with the currently-active speaker?
   // Either it's the leader or shares the active's group_members list
   // (Sonos mirrors the list across all members).
@@ -560,7 +654,7 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
     <window.Card p={p} style={{padding: 0, overflow: 'visible'}}>
       <div style={{padding: '12px 14px', display: 'grid', gap: 8}}>
         {/* Choose Room dropdown — also hosts grouping toggles + manage */}
-        <div style={{position: 'relative'}}>
+        <div ref={dropdownRef} style={{position: 'relative'}}>
           <button onClick={() => setChooserOpen(v => !v)} style={{
             width: '100%', padding: '12px 14px', borderRadius: 10,
             background: p.surface, border: `.5px solid ${p.border2}`, color: p.fg,
@@ -652,8 +746,19 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                           }}>{grouped ? '✓ Grouped' : '+ Group'}</button>
                       )}
                       {manageOpen && (
-                        <button onClick={(e) => { e.stopPropagation(); setHidden(prev => { const n = new Set(prev); n.add(sp.id); return n; }); }}
-                          title="Hide this speaker"
+                        <button onClick={(e) => {
+                          e.stopPropagation();
+                          // Unjoin the speaker from whatever group it's
+                          // in before hiding it. Otherwise Sonos keeps
+                          // the speaker in its group and music played
+                          // to the leader continues to spill out of a
+                          // device the user explicitly wanted gone.
+                          if ((sp.supportedFeatures & GROUPING_FEATURE) !== 0) {
+                            try { call(sp.id, 'unjoin'); } catch {}
+                          }
+                          setHidden(prev => { const n = new Set(prev); n.add(sp.id); return n; });
+                        }}
+                          title="Hide & ungroup this speaker"
                           style={{
                             width: 24, height: 24, borderRadius: '50%',
                             border: `.5px solid ${p.border2}`,
@@ -662,17 +767,24 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
                       )}
                     </div>
                     {/* Per-speaker volume slider — visible always so the
-                        user can nudge volume without leaving the dropdown. */}
-                    {!manageOpen && (
-                      <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
-                        <window.Icon name="speaker" size={11} style={{color: p.fg3}}/>
-                        <input type="range" min="0" max="100" value={sp.vol}
-                          onChange={(e) => call(sp.id, 'volume_set', { volume_level: (+e.target.value) / 100 })}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{flex: 1, accentColor: p.accent, height: 3}}/>
-                        <span style={{fontSize: 10, color: p.fg3, fontVariantNumeric: 'tabular-nums', width: 22, textAlign: 'right'}}>{sp.vol}</span>
-                      </div>
-                    )}
+                        user can nudge volume without leaving the dropdown.
+                        Uses an optimistic local value while dragging so
+                        the UI tracks the thumb instead of HA's lagging
+                        reported value. */}
+                    {!manageOpen && (() => {
+                      const override = volOverrides[sp.id];
+                      const v = override !== undefined ? override : sp.vol;
+                      return (
+                        <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
+                          <window.Icon name="speaker" size={11} style={{color: p.fg3}}/>
+                          <input type="range" min="0" max="100" value={v}
+                            onChange={(e) => setVolume(sp, +e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{flex: 1, accentColor: p.accent, height: 3}}/>
+                          <span style={{fontSize: 10, color: p.fg3, fontVariantNumeric: 'tabular-nums', width: 22, textAlign: 'right'}}>{v}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -707,7 +819,7 @@ const RoomPanel = ({ ctx, hassRef, speakers, activeId, setActiveId,
 };
 
 // ── Playlists card — pinned/customizable ──────────────────────────────────
-const PlaylistsCard = ({ ctx, hassRef, conn, speakerId, playMedia, isMA }) => {
+const PlaylistsCard = ({ ctx, hassRef, conn, speakerId, playMedia, isMA, onDrillInto }) => {
   const { p, fonts } = ctx;
   const [items, setItems] = React.useState(null);
   const [error, setError] = React.useState(null);
@@ -805,6 +917,7 @@ const PlaylistsCard = ({ ctx, hassRef, conn, speakerId, playMedia, isMA }) => {
         }}>
           {visible.map(it => (
             <PlaylistTile key={it.media_content_id} item={it} ctx={ctx}
+              onOpen={() => onDrillInto?.(it)}
               onPlay={() => playMedia(it, 'play')}
               editing={editing}
               onHide={() => setHidden(prev => { const n = new Set(prev); n.add(it.media_content_id); return n; })}/>
@@ -834,11 +947,13 @@ const PlaylistsCard = ({ ctx, hassRef, conn, speakerId, playMedia, isMA }) => {
   );
 };
 
-const PlaylistTile = ({ item, ctx, onPlay, editing, onHide }) => {
+const PlaylistTile = ({ item, ctx, onOpen, onPlay, editing, onHide }) => {
   const { p } = ctx;
+  // Tap the tile = drill in (show tracks). The small ▶ button in the
+  // corner = play immediately.
   return (
     <div style={{position: 'relative'}}>
-      <button onClick={editing ? undefined : onPlay} disabled={editing}
+      <button onClick={editing ? undefined : onOpen} disabled={editing}
         style={{
           padding: 0, border: 0, background: 'transparent',
           cursor: editing ? 'default' : 'pointer', textAlign: 'left',
@@ -859,6 +974,16 @@ const PlaylistTile = ({ item, ctx, onPlay, editing, onHide }) => {
           {item.title}
         </div>
       </button>
+      {!editing && (
+        <button onClick={(e) => { e.stopPropagation(); onPlay(); }} title="Play now"
+          style={{
+            position: 'absolute', top: 6, right: 6,
+            width: 26, height: 26, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.65)', color: '#fff',
+            border: 0, cursor: 'pointer', fontSize: 11,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          }}>▶</button>
+      )}
       {editing && (
         <button onClick={onHide} title="Hide"
           style={{
@@ -888,9 +1013,9 @@ const PlaylistTile = ({ item, ctx, onPlay, editing, onHide }) => {
 //                it and queues the rest of the album as Up Next.
 //
 // The mode is determined by the path stack and the head's media_class.
-const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onClose }) => {
+const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onClose, initialPath }) => {
   const { p, fonts } = ctx;
-  const [path, setPath] = React.useState([]);
+  const [path, setPath] = React.useState(initialPath || []);
   const [items, setItems] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [query, setQuery] = React.useState('');
@@ -958,8 +1083,16 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
     setQuery('');
   };
 
+  // Albums, playlists, and artists ALWAYS drill in instead of playing
+  // their first track, even when MA marks them can_expand=false. The
+  // user expects to see the track list before committing to play.
+  const DRILL_CLASSES = new Set(['artist', 'album', 'playlist', 'directory', 'genre', 'composer']);
   const onItemClick = async (item) => {
-    if (item.can_expand) { drillInto(item); return; }
+    const cls = (item.media_class || '').toLowerCase();
+    if (item.can_expand || DRILL_CLASSES.has(cls)) {
+      drillInto(item);
+      return;
+    }
     if (item.can_play) { playMedia(item, 'play'); onClose(); }
   };
 
