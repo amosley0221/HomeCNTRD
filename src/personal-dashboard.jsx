@@ -40,15 +40,26 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   // `calendar/list_events` don't exist in HA core). REST is tried first;
   // if it returns nothing we fall back to the subscribe path the HA
   // frontend itself uses for live calendar cards.
+  //
+  // We deliberately do NOT depend on `hass` directly in the effect — HA
+  // hands us a new `hass` reference on every state update (battery,
+  // motion, anything), which would re-fire the effect, cancel the
+  // in-flight fetch via `alive=false`, and never let setFetchedEvents
+  // land. Instead we depend on a `hassReady` boolean that only flips
+  // when callApi becomes available, and read the latest `hass` through
+  // a ref inside fetchAll.
   const [viewMonth, setViewMonth] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [fetchedEvents, setFetchedEvents] = React.useState([]);
   const [fetchStatus, setFetchStatus] = React.useState(null); // diag: { transport, raw, parsed, error }
   const calendarIds = (state.calendar || []).map(c => c.id).join(',');
   const viewMonthKey = `${viewMonth.getFullYear()}-${viewMonth.getMonth()}`;
+  const hassReady = Boolean(hass && typeof hass.callApi === 'function');
+  const hassRef = React.useRef(hass);
+  hassRef.current = hass;
   React.useEffect(() => {
-    if (!hass || !calendarIds) {
+    if (!hassReady || !calendarIds) {
       setFetchedEvents([]);
-      setFetchStatus({ transport: 'skipped', raw: 0, parsed: 0, error: !hass ? 'no hass' : 'no calendarIds' });
+      setFetchStatus({ transport: 'skipped', raw: 0, parsed: 0, error: !hassReady ? 'hass not ready' : 'no calendarIds' });
       return;
     }
     let alive = true;
@@ -95,7 +106,8 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
     // either `{ event: {...} }` (single) or `{ events: [...] }` (initial
     // batch) depending on HA version, so handle both.
     const fetchViaSubscribe = (id, startISO, endISO) => new Promise((resolve) => {
-      if (!hass.connection?.subscribeMessage) return resolve([]);
+      const h = hassRef.current;
+      if (!h?.connection?.subscribeMessage) return resolve([]);
       const events = [];
       let unsub = null;
       let done = false;
@@ -106,7 +118,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
         resolve(events);
       };
       const timeout = setTimeout(finish, 1200);
-      hass.connection.subscribeMessage(
+      h.connection.subscribeMessage(
         (msg) => {
           if (Array.isArray(msg?.events)) events.push(...msg.events);
           else if (msg?.event) events.push(msg.event);
@@ -146,8 +158,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       try {
         await Promise.all(ids.map(async (id) => {
           try {
+            const h = hassRef.current;
+            if (!h?.callApi) {
+              if (!firstErr) firstErr = `${id}: no hass.callApi`;
+              return;
+            }
             const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
-            const events = await hass.callApi('GET', path);
+            const events = await h.callApi('GET', path);
             if (!Array.isArray(events)) {
               if (!firstErr) firstErr = `${id}: not array (${typeof events})`;
               return;
@@ -195,7 +212,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
     fetchAll();
     const t = setInterval(fetchAll, 5 * 60 * 1000); // refresh every 5 min
     return () => { alive = false; clearInterval(t); };
-  }, [hass, calendarIds, viewMonthKey]);
+  }, [hassReady, calendarIds, viewMonthKey]);
 
   // Use fetched events when we have them; otherwise fall back to the
   // single-event preview from state.
@@ -1974,6 +1991,11 @@ const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, fetchStatus
             }
           }
           const matched = eventEntities.filter(id => id.endsWith('_latest_feed') || id.startsWith('event.feedreader'));
+          // Filter out the obvious noise (Hue button events, backups,
+          // doorbell rings, etc.) so we see what's left — feedreader, if
+          // it created anything, will be in the unusual remainder.
+          const NOISE = /^event\.(hue_|backup_|reolink_|doorbell_|amcrest_|abode_|deconz_|zha_|zwave_)/;
+          const interesting = eventEntities.filter(id => !NOISE.test(id));
           return (
             <div style={{
               marginTop: 12, padding: '8px 10px',
@@ -1986,8 +2008,10 @@ const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, fetchStatus
               <div style={{color: accent, fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4}}>Diag</div>
               <div>cal: state.cal.length={calendar?.length || 0} · fetch={fetchStatus ? `${fetchStatus.transport}/${fetchStatus.raw}/${fetchStatus.parsed}` : 'null'}{fetchStatus?.error ? ` err:${fetchStatus.error.slice(0, 60)}` : ''}</div>
               <div>news: state.news.length={newsCount} · event.* total={eventEntities.length} · feedreader-shape={matched.length}{matched.length ? ` → ${matched.slice(0, 3).join(', ')}${matched.length > 3 ? '…' : ''}` : ''}</div>
-              {!matched.length && eventEntities.length > 0 && (
-                <div style={{marginTop: 4, color: fg3}}>event.* sample: {eventEntities.slice(0, 5).join(', ')}</div>
+              {!matched.length && (
+                <div style={{marginTop: 4, color: fg3}}>
+                  non-noise event.* ({interesting.length}): {interesting.length ? interesting.slice(0, 12).join(', ') : '(none)'}
+                </div>
               )}
             </div>
           );
