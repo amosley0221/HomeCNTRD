@@ -267,26 +267,30 @@ isn't subject to the 403. Don't try `git push origin main` directly
 
 ## Calendar fetch — what works, what doesn't
 
-The user's HA exposes a Microsoft 365 / Outlook calendar entity for
-their work calendar. The bridge translates each `calendar.*` entity
-into `state.calendar` (entity list) AND, if the entity carries an
-upcoming event in attributes, into `state.calendarEvents` (single-
-event preview). PersonalDashboard fetches a 14-day window directly
-from HA and merges that into the same display list.
+The bridge translates each `calendar.*` entity into `state.calendar`
+(entity list) AND, if the entity carries an upcoming event in
+attributes, into `state.calendarEvents` (next-event preview).
+PersonalDashboard fetches a wider event window directly from HA per
+calendar entity.
 
-Three transports the dashboard knows about:
+The fetch window follows the calendar grid's currently-viewed month.
+`viewMonth` lives in PersonalDashboard (lifted from CalendarColumn
+so the fetch effect can depend on it); the < › buttons in
+CalendarColumn call `setViewMonth` and the effect re-fires. The
+window is roughly `[viewMonth - 1 week, viewMonth + 1 week + 1
+month]`, but always extended to include `today + 14d` so 'Next 3
+days' keeps populating when navigated forward.
+
+Two transports:
 
 1. **REST `GET /api/calendars/<entity_id>?start=...&end=...`** —
    the canonical bulk fetch. The HA frontend calendar page uses
-   this. On this user's install it has historically returned
-   nothing useful for the Outlook calendar.
-2. **WebSocket `calendar/event/subscribe`** — what the HA frontend
-   uses for live calendar cards. Open subscription, collect pushed
-   events, unsubscribe after a short window. Currently used as
-   fallback when REST returns 0.
-3. **`state.calendarEvents` (next-event-only preview)** — last-
-   resort fallback. Always exactly one entry per calendar entity,
-   sourced from the entity's own `attributes.message`.
+   this. Works for the user's Microsoft 365 / Outlook calendar.
+2. **WebSocket `calendar/event/subscribe`** — fallback only. Open
+   subscription, collect pushed events, unsubscribe after a short
+   window. The `fetchViaSubscribe` helper does this for cases where
+   REST returns 0 events for an integration that nevertheless
+   answers the live-stream subscription.
 
 **`calendar/get_events` and `calendar/list_events` do NOT exist as
 WS commands in HA core.** I tried both during this work; they always
@@ -295,12 +299,17 @@ fail with `unknown_command`. If a future session is tempted to
 `homeassistant/components/calendar/__init__.py` first — there isn't
 one.
 
-While calendar fetching is unreliable, `personal-dashboard.jsx`
-renders an accent-bordered `Calendar debug` line at the bottom of
-the "Next 3 days" card showing transport, raw count, parsed count,
-and any errors. **Remove that block once fetching works reliably
-across both calendars.** The `fetchStatus` state and the
-`fetchViaSubscribe` helper in the same file go with it.
+**Earlier bug, resolved (left here as a tripwire):** `ha-bridge.js`'s
+`translate()` ends with `return { ...out, ...defaults(out) };`. The
+`defaults` function used to return `calendar: []` and `alarms: []`
+unconditionally, which silently overwrote the populated arrays on
+the way out. `state.calendarEvents` survived because `defaults`
+doesn't list it, producing the contradictory diagnostic
+`state.calendar.length=0` while `state.calendarEvents.length=1`.
+`defaults` now reads `out?.alarms || []` / `out?.calendar || []`
+like it does for the other fields. If you add new array-shaped
+state to `out`, either don't list it in `defaults` or use the
+`out?.X || []` pattern.
 
 ## Presence avatar — entity discovery pattern
 
