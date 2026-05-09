@@ -70,6 +70,18 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       window.__hcDiag.push(entry);
       while (window.__hcDiag.length > 50) window.__hcDiag.shift();
     };
+    // Errors from hass.callApi can be plain strings, Error objects, or
+    // raw response objects with no .message — the latter rendered as
+    // "[object Object]" in the previous diag and hid the real failure.
+    const errStr = (e) => {
+      if (e == null) return '(null)';
+      if (typeof e === 'string') return e;
+      if (e?.message) return String(e.message);
+      if (e?.error) return String(e.error);
+      if (e?.body) return String(e.body).slice(0, 200);
+      try { const j = JSON.stringify(e); if (j && j !== '{}') return j.slice(0, 200); } catch {}
+      return String(e);
+    };
 
     // Normalise one HA calendar event into the shape the dashboard
     // renders. Handles all four start/end shapes HA integrations use in
@@ -175,13 +187,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
               if (parsed) allEvents.push(parsed);
             }
           } catch (e) {
-            if (!firstErr) firstErr = `${id} REST: ${e?.message || e}`;
-            diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${e?.message || e}` });
+            if (!firstErr) firstErr = `${id} REST: ${errStr(e)}`;
+            diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${errStr(e)}` });
           }
         }));
       } catch (e) {
-        if (!firstErr) firstErr = `REST batch: ${e?.message || e}`;
-        diag({ ts: Date.now(), kind: 'error', message: `calendar REST batch failed — ${e?.message || e}` });
+        if (!firstErr) firstErr = `REST batch: ${errStr(e)}`;
+        diag({ ts: Date.now(), kind: 'error', message: `calendar REST batch failed — ${errStr(e)}` });
       }
 
       // If REST returned nothing, try the subscribe path the HA frontend
@@ -197,8 +209,8 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             }
           });
         } catch (e) {
-          if (!firstErr) firstErr = `subscribe: ${e?.message || e}`;
-          diag({ ts: Date.now(), kind: 'error', message: `calendar subscribe batch failed — ${e?.message || e}` });
+          if (!firstErr) firstErr = `subscribe: ${errStr(e)}`;
+          diag({ ts: Date.now(), kind: 'error', message: `calendar subscribe batch failed — ${errStr(e)}` });
         }
       }
 

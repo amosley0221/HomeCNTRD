@@ -386,26 +386,24 @@ function translate(states) {
       case 'event': {
         const a = e.attributes || {};
 
-        // Modern HA feedreader (2024+): one event entity per feed,
-        // entity_id like `event.<slug>_latest_feed`. The latest entry is
-        // exposed directly on the entity's attributes (title / link /
-        // description); the integration intentionally only tracks the
-        // most recent item per feed. The entity state is the timestamp
-        // of that entry.
-        if (id.endsWith('_latest_feed')) {
-          if (a.title && a.link) {
-            const cleanSource =
-              (a.friendly_name || '').replace(/\s*latest feed\s*$/i, '').trim() ||
-              id.replace(/^event\./, '').replace(/_latest_feed$/, '').replace(/_/g, ' ');
-            out.news.push({
-              id: `${id}-${a.link}`,
-              title: a.title,
-              url: a.link,
-              source: cleanSource,
-              timeAgo: friendlyTime(e.state),
-              sortKey: e.state ? new Date(e.state).getTime() : 0,
-            });
-          }
+        // Modern HA feedreader. The integration creates one event entity
+        // per feed; the entity_id varies (some HA versions use
+        // `event.<slug>_latest_feed`, others just `event.<slug>` —
+        // the user's install does the latter, e.g. `event.bbc_news`).
+        // The reliable signal is the attribute shape: each feed entity
+        // exposes the latest entry's title + link directly. Detecting
+        // by shape means we don't have to track every naming change.
+        if (typeof a.title === 'string' && a.title && typeof a.link === 'string' && a.link) {
+          const fname = (a.friendly_name || '').replace(/\s*latest feed\s*$/i, '').trim();
+          const source = fname || id.replace(/^event\./, '').replace(/_latest_feed$/, '').replace(/_/g, ' ');
+          out.news.push({
+            id: `${id}-${a.link}`,
+            title: a.title,
+            url: a.link,
+            source,
+            timeAgo: friendlyTime(e.state),
+            sortKey: e.state ? new Date(e.state).getTime() : 0,
+          });
           break;
         }
 
