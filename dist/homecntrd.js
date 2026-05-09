@@ -11278,23 +11278,24 @@ const GE = ({ todos: n, accent: e, fonts: t, surface: i, fg: r, fg2: s, fg3: o, 
   }, []);
   const { visible: m, hiddenCount: y } = React.useMemo(() => {
     if (!a || !a.length) return { visible: [], hiddenCount: 0 };
+    const x = Date.now() + 7 * 24 * 60 * 60 * 1e3, S = a.filter((k) => !k.startTime || k.startTime.getTime() < x);
     if (p !== "all") {
-      const b = a.filter((k) => k.leagueId === p), T = f ? b.length : 6;
-      return { visible: b.slice(0, T), hiddenCount: Math.max(0, b.length - T) };
+      const k = S.filter((A) => A.leagueId === p), E = f ? k.length : 6;
+      return { visible: k.slice(0, E), hiddenCount: Math.max(0, k.length - E) };
     }
     if (f)
-      return { visible: a.slice(0, 12), hiddenCount: Math.max(0, a.length - 12) };
-    const x = a.filter((b) => b.isFavorite);
-    let S;
-    if (x.length >= 3)
-      S = x;
+      return { visible: S.slice(0, 12), hiddenCount: Math.max(0, S.length - 12) };
+    const b = S.filter((k) => k.isFavorite);
+    let T;
+    if (b.length >= 3)
+      T = b;
     else {
-      const b = a.filter(
-        (T) => !T.isFavorite && (T.status.state === "in" || T.status.state === "pre")
+      const k = S.filter(
+        (E) => !E.isFavorite && (E.status.state === "in" || E.status.state === "pre")
       );
-      S = [...x, ...b].slice(0, Math.max(3, x.length));
+      T = [...b, ...k].slice(0, Math.max(3, b.length));
     }
-    return { visible: S, hiddenCount: Math.max(0, a.length - S.length) };
+    return { visible: T, hiddenCount: Math.max(0, S.length - T.length) };
   }, [a, p, f]), v = React.useMemo(() => {
     if (!a) return [];
     const x = new Set(a.map((S) => S.leagueId));

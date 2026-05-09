@@ -1415,28 +1415,36 @@ const SportsCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
   // upcoming/live games to a minimum of 3. Expanded view: top 12 across
   // all leagues. League filter overrides everything: show that league's
   // full schedule (capped to keep the column tight).
+  //
+  // Hide anything kicking off more than a week out — ESPN's CFB / EPL
+  // feeds happily return September fixtures in May, and showing a
+  // favorite team's September opener on the dashboard in May is noise,
+  // not signal. Live and recently-finished games pass through naturally
+  // since their startTime is in the past or now.
   const { visible, hiddenCount } = React.useMemo(() => {
     if (!games || !games.length) return { visible: [], hiddenCount: 0 };
+    const cutoff = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const inWindow = games.filter(g => !g.startTime || g.startTime.getTime() < cutoff);
     if (leagueFilter !== 'all') {
-      const filtered = games.filter(g => g.leagueId === leagueFilter);
+      const filtered = inWindow.filter(g => g.leagueId === leagueFilter);
       const cap = expanded ? filtered.length : 6;
       return { visible: filtered.slice(0, cap), hiddenCount: Math.max(0, filtered.length - cap) };
     }
     if (expanded) {
       const cap = 12;
-      return { visible: games.slice(0, cap), hiddenCount: Math.max(0, games.length - cap) };
+      return { visible: inWindow.slice(0, cap), hiddenCount: Math.max(0, inWindow.length - cap) };
     }
-    const favs = games.filter(g => g.isFavorite);
+    const favs = inWindow.filter(g => g.isFavorite);
     let pick;
     if (favs.length >= 3) {
       pick = favs;
     } else {
-      const fillers = games.filter(g =>
+      const fillers = inWindow.filter(g =>
         !g.isFavorite && (g.status.state === 'in' || g.status.state === 'pre')
       );
       pick = [...favs, ...fillers].slice(0, Math.max(3, favs.length));
     }
-    return { visible: pick, hiddenCount: Math.max(0, games.length - pick.length) };
+    return { visible: pick, hiddenCount: Math.max(0, inWindow.length - pick.length) };
   }, [games, leagueFilter, expanded]);
 
   // Only list leagues in the filter dropdown that actually have games on
