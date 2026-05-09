@@ -299,6 +299,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             injectAfterFirst={narrow ? (
               <CalendarColumn
                 calendar={state.calendar} events={allEvents} fetchStatus={fetchStatus}
+                hassStates={hass?.states} calendarEventsRaw={state.calendarEvents}
                 accent={accent} fonts={fonts} surface={surface} surface2={surface2}
                 fg={fg} fg2={fg2} fg3={fg3} border={border}
               />
@@ -323,6 +324,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
         {!narrow && (
           <CalendarColumn
             calendar={state.calendar} events={allEvents} fetchStatus={fetchStatus}
+            hassStates={hass?.states} calendarEventsRaw={state.calendarEvents}
             accent={accent} fonts={fonts} surface={surface} surface2={surface2}
             fg={fg} fg2={fg2} fg3={fg3} border={border}
           />
@@ -1806,7 +1808,7 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
 };
 
 // ── Right column: Calendar + upcoming events ──────────────────────────────
-const CalendarColumn = ({ calendar, events, fetchStatus, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
+const CalendarColumn = ({ calendar, events, fetchStatus, hassStates, calendarEventsRaw, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
   const today = new Date();
   const todayKey = ymd(today);
   const [viewMonth, setViewMonth] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
@@ -1948,30 +1950,52 @@ const CalendarColumn = ({ calendar, events, fetchStatus, accent, fonts, surface,
             {selectedKey ? 'Nothing scheduled this day.' : 'Nothing scheduled in the next 3 days.'}
           </div>
         )}
-        {/* Diagnostic line — temporary while we figure out why the
+        {/* Diagnostic block — temporary while we figure out why the
             Outlook integration isn't returning the full event list.
-            Surfaces the fetch outcome inline so it can be screenshot
-            without opening browser DevTools. Always renders something
-            so we can tell the difference between "effect didn't run"
-            and "ran but found nothing". */}
-        <div style={{
-          marginTop: 14, padding: '8px 10px',
-          borderRadius: 6, border: `.5px dashed ${accent}`,
-          background: 'rgba(255,138,61,0.06)',
-          fontSize: 11, color: fg2, lineHeight: 1.4,
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          wordBreak: 'break-word',
-        }}>
-          <div style={{color: accent, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4}}>Calendar debug</div>
-          {!fetchStatus
-            ? `waiting · cals=${calendar?.length || 0} · ids=[${(calendar || []).map(c => c.id).join(', ')}]`
-            : <>
-                cals=[{(calendar || []).map(c => c.id).join(', ')}]<br/>
-                transport={fetchStatus.transport} · raw={fetchStatus.raw} · parsed={fetchStatus.parsed}
-                {fetchStatus.errors?.length ? <><br/>err: {fetchStatus.errors.join(' | ').slice(0, 200)}</> : null}
-              </>
+            Surfaces the fetch outcome AND raw inputs so we can crack
+            the contradictions remotely (the user is on iPad with no
+            DevTools). Remove once calendar fetching is reliable. */}
+        {(() => {
+          // Sniff the raw hass.states for anything that looks like a
+          // calendar so we can see whether the entity exists at all,
+          // and under what domain.
+          const haCals = [];
+          if (hassStates && typeof hassStates === 'object') {
+            for (const id in hassStates) {
+              if (id.startsWith('calendar.')) haCals.push(id);
+            }
           }
-        </div>
+          const inventory = {};
+          if (hassStates && typeof hassStates === 'object') {
+            for (const id in hassStates) {
+              const d = id.split('.')[0];
+              inventory[d] = (inventory[d] || 0) + 1;
+            }
+          }
+          const inventoryStr = Object.entries(inventory).sort().map(([k, v]) => `${k}=${v}`).join(' ') || '(empty)';
+          const rawCe = Array.isArray(calendarEventsRaw) ? calendarEventsRaw : [];
+          const ceTitles = rawCe.slice(0, 3).map(e => `${e.id || '?'}:${(e.title || '').slice(0, 24)}`).join(' | ');
+          return (
+            <div style={{
+              marginTop: 14, padding: '10px 12px',
+              borderRadius: 6, border: `.5px dashed ${accent}`,
+              background: 'rgba(255,138,61,0.06)',
+              fontSize: 11, color: fg2, lineHeight: 1.5,
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              wordBreak: 'break-word',
+            }}>
+              <div style={{color: accent, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6}}>Calendar debug</div>
+              <div>state.calendar.length={calendar?.length || 0}</div>
+              <div>state.calendarEvents.length={rawCe.length}{rawCe.length ? ` → ${ceTitles}` : ''}</div>
+              <div>hass.states calendar.* → [{haCals.join(', ') || '(none)'}]</div>
+              <div style={{marginTop: 4, fontSize: 10, color: fg3}}>inventory: {inventoryStr}</div>
+              {fetchStatus
+                ? <div style={{marginTop: 6}}>fetch: transport={fetchStatus.transport} · raw={fetchStatus.raw} · parsed={fetchStatus.parsed}{fetchStatus.errors?.length ? ` · err: ${fetchStatus.errors.join(' | ').slice(0, 180)}` : ''}</div>
+                : <div style={{marginTop: 6}}>fetch: waiting (no calendar entity ⇒ effect skipped)</div>
+              }
+            </div>
+          );
+        })()}
       </Card>
     </div>
   );
