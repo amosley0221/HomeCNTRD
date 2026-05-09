@@ -26,28 +26,26 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const dayName = today.toLocaleDateString([], { weekday: 'long' });
   const dateStr = today.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
 
-  // Fetch a 14-day window of events.
+  // Calendar events. Fetch window follows the currently-viewed month
+  // (CalendarColumn's < › nav) so the user can scroll forward/back and
+  // see real dots + day filtering, but always includes the next two
+  // weeks from today so 'Next 3 days' keeps working when navigated to a
+  // different month.
   //
   // HA exposes calendar events via:
   //   - REST:       GET /api/calendars/<entity_id>?start=...&end=...
   //   - WebSocket:  calendar/event/subscribe (live stream)
   //
   // There is no bulk "list events" WS command (`calendar/get_events` and
-  // `calendar/list_events` don't exist in HA core — the previous version
-  // of this code tried `calendar/get_events`, the WS call always errored
-  // with `unknown_command`, and we silently fell through to the REST
-  // path).
-  //
-  // We try REST first per calendar; if that fails or returns empty, we
-  // try the WS subscribe path the HA frontend itself uses (subscribe,
-  // collect events for ~1.2s, then unsubscribe). That path consistently
-  // works with the Microsoft 365 / Outlook integrations even when their
-  // REST handler returns empty.
+  // `calendar/list_events` don't exist in HA core). REST is tried first;
+  // if it returns nothing we fall back to the subscribe path the HA
+  // frontend itself uses for live calendar cards.
+  const [viewMonth, setViewMonth] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [fetchedEvents, setFetchedEvents] = React.useState([]);
-  const [fetchStatus, setFetchStatus] = React.useState(null); // { transport, raw, parsed, errors, ts }
   const calendarIds = (state.calendar || []).map(c => c.id).join(',');
+  const viewMonthKey = `${viewMonth.getFullYear()}-${viewMonth.getMonth()}`;
   React.useEffect(() => {
-    if (!hass || !calendarIds) { setFetchedEvents([]); setFetchStatus(null); return; }
+    if (!hass || !calendarIds) { setFetchedEvents([]); return; }
     let alive = true;
     const ids = calendarIds.split(',').filter(Boolean);
     const diag = (entry) => {
@@ -118,14 +116,23 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
     });
 
     const fetchAll = async () => {
-      const start = new Date(); start.setHours(0, 0, 0, 0);
-      const end = new Date(start); end.setDate(end.getDate() + 14);
+      // Window covers the visible month grid (which spills a few days
+      // into the prior / next months at the edges) AND today + 14 days,
+      // so 'Next 3 days' keeps populating even when the user has scrolled
+      // the grid off the current month.
+      const monthStart = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
+      const monthEnd = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1);
+      const todayMid = new Date(today); todayMid.setHours(0, 0, 0, 0);
+      const todayPlus14 = new Date(todayMid); todayPlus14.setDate(todayPlus14.getDate() + 14);
+      const start = new Date(Math.min(monthStart.getTime(), todayMid.getTime()));
+      // Pad each end of the visible grid by a week so the spillover days
+      // also dot correctly.
+      start.setDate(start.getDate() - 7);
+      const end = new Date(Math.max(monthEnd.getTime(), todayPlus14.getTime()));
+      end.setDate(end.getDate() + 7);
       const startISO = start.toISOString();
       const endISO = end.toISOString();
       const allEvents = [];
-      let rawTotal = 0;
-      const errors = [];
-      let usedTransport = 'rest';
 
       // REST path — bulk fetch, the canonical HA pattern.
       try {
@@ -133,59 +140,44 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
           try {
             const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
             const events = await hass.callApi('GET', path);
-            if (!Array.isArray(events)) {
-              errors.push(`${id} REST: not array (${typeof events})`);
-              return;
-            }
-            rawTotal += events.length;
+            if (!Array.isArray(events)) return;
             for (const ev of events) {
               const parsed = parseEvent(ev, id);
               if (parsed) allEvents.push(parsed);
             }
           } catch (e) {
-            errors.push(`${id} REST: ${e?.message || e}`);
             diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${e?.message || e}` });
           }
         }));
       } catch (e) {
-        errors.push(`REST Promise.all: ${e?.message || e}`);
+        diag({ ts: Date.now(), kind: 'error', message: `calendar REST batch failed — ${e?.message || e}` });
       }
 
-      // If REST returned nothing useful, try the subscribe path that the
-      // HA frontend uses for live cards.
+      // If REST returned nothing, try the subscribe path the HA frontend
+      // uses for live cards.
       if (allEvents.length === 0) {
         try {
           const subscribeResults = await Promise.all(ids.map(id => fetchViaSubscribe(id, startISO, endISO)));
-          let subRaw = 0;
           subscribeResults.forEach((events, i) => {
-            subRaw += events.length;
             for (const ev of events) {
               const parsed = parseEvent(ev, ids[i]);
               if (parsed) allEvents.push(parsed);
             }
           });
-          if (subRaw > 0) {
-            usedTransport = 'subscribe';
-            rawTotal = subRaw;
-          } else {
-            errors.push('subscribe: 0 events from all calendars');
-          }
         } catch (e) {
-          errors.push(`subscribe: ${e?.message || e}`);
+          diag({ ts: Date.now(), kind: 'error', message: `calendar subscribe batch failed — ${e?.message || e}` });
         }
       }
 
       if (alive) {
         allEvents.sort((a, b) => a.sortKey - b.sortKey);
-        diag({ ts: Date.now(), kind: 'info', message: `calendar (${usedTransport}): ${allEvents.length} parsed from raw ${rawTotal}; errors=${errors.length}` });
         setFetchedEvents(allEvents);
-        setFetchStatus({ transport: usedTransport, raw: rawTotal, parsed: allEvents.length, errors, ts: Date.now() });
       }
     };
     fetchAll();
     const t = setInterval(fetchAll, 5 * 60 * 1000); // refresh every 5 min
     return () => { alive = false; clearInterval(t); };
-  }, [hass, calendarIds]);
+  }, [hass, calendarIds, viewMonthKey]);
 
   // Use fetched events when we have them; otherwise fall back to the
   // single-event preview from state.
@@ -298,8 +290,8 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             theme={tileTheme}
             injectAfterFirst={narrow ? (
               <CalendarColumn
-                calendar={state.calendar} events={allEvents} fetchStatus={fetchStatus}
-                hassStates={hass?.states} calendarEventsRaw={state.calendarEvents}
+                calendar={state.calendar} events={allEvents}
+                viewMonth={viewMonth} setViewMonth={setViewMonth}
                 accent={accent} fonts={fonts} surface={surface} surface2={surface2}
                 fg={fg} fg2={fg2} fg3={fg3} border={border}
               />
@@ -323,8 +315,8 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             inline above via injectAfterFirst). */}
         {!narrow && (
           <CalendarColumn
-            calendar={state.calendar} events={allEvents} fetchStatus={fetchStatus}
-            hassStates={hass?.states} calendarEventsRaw={state.calendarEvents}
+            calendar={state.calendar} events={allEvents}
+            viewMonth={viewMonth} setViewMonth={setViewMonth}
             accent={accent} fonts={fonts} surface={surface} surface2={surface2}
             fg={fg} fg2={fg2} fg3={fg3} border={border}
           />
@@ -1808,10 +1800,9 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
 };
 
 // ── Right column: Calendar + upcoming events ──────────────────────────────
-const CalendarColumn = ({ calendar, events, fetchStatus, hassStates, calendarEventsRaw, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
+const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
   const today = new Date();
   const todayKey = ymd(today);
-  const [viewMonth, setViewMonth] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedKey, setSelectedKey] = React.useState(null); // YYYY-MM-DD
 
   const month = viewMonth.getMonth();
@@ -1950,52 +1941,6 @@ const CalendarColumn = ({ calendar, events, fetchStatus, hassStates, calendarEve
             {selectedKey ? 'Nothing scheduled this day.' : 'Nothing scheduled in the next 3 days.'}
           </div>
         )}
-        {/* Diagnostic block — temporary while we figure out why the
-            Outlook integration isn't returning the full event list.
-            Surfaces the fetch outcome AND raw inputs so we can crack
-            the contradictions remotely (the user is on iPad with no
-            DevTools). Remove once calendar fetching is reliable. */}
-        {(() => {
-          // Sniff the raw hass.states for anything that looks like a
-          // calendar so we can see whether the entity exists at all,
-          // and under what domain.
-          const haCals = [];
-          if (hassStates && typeof hassStates === 'object') {
-            for (const id in hassStates) {
-              if (id.startsWith('calendar.')) haCals.push(id);
-            }
-          }
-          const inventory = {};
-          if (hassStates && typeof hassStates === 'object') {
-            for (const id in hassStates) {
-              const d = id.split('.')[0];
-              inventory[d] = (inventory[d] || 0) + 1;
-            }
-          }
-          const inventoryStr = Object.entries(inventory).sort().map(([k, v]) => `${k}=${v}`).join(' ') || '(empty)';
-          const rawCe = Array.isArray(calendarEventsRaw) ? calendarEventsRaw : [];
-          const ceTitles = rawCe.slice(0, 3).map(e => `${e.id || '?'}:${(e.title || '').slice(0, 24)}`).join(' | ');
-          return (
-            <div style={{
-              marginTop: 14, padding: '10px 12px',
-              borderRadius: 6, border: `.5px dashed ${accent}`,
-              background: 'rgba(255,138,61,0.06)',
-              fontSize: 11, color: fg2, lineHeight: 1.5,
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              wordBreak: 'break-word',
-            }}>
-              <div style={{color: accent, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6}}>Calendar debug</div>
-              <div>state.calendar.length={calendar?.length || 0}</div>
-              <div>state.calendarEvents.length={rawCe.length}{rawCe.length ? ` → ${ceTitles}` : ''}</div>
-              <div>hass.states calendar.* → [{haCals.join(', ') || '(none)'}]</div>
-              <div style={{marginTop: 4, fontSize: 10, color: fg3}}>inventory: {inventoryStr}</div>
-              {fetchStatus
-                ? <div style={{marginTop: 6}}>fetch: transport={fetchStatus.transport} · raw={fetchStatus.raw} · parsed={fetchStatus.parsed}{fetchStatus.errors?.length ? ` · err: ${fetchStatus.errors.join(' | ').slice(0, 180)}` : ''}</div>
-                : <div style={{marginTop: 6}}>fetch: waiting (no calendar entity ⇒ effect skipped)</div>
-              }
-            </div>
-          );
-        })()}
       </Card>
     </div>
   );
