@@ -384,18 +384,45 @@ function translate(states) {
       }
 
       case 'event': {
-        // HA's feedreader integration creates event.feedreader entities
-        // when an RSS update fires. The integration also exposes recent
-        // entries via attributes.
+        const a = e.attributes || {};
+
+        // Modern HA feedreader (2024+): one event entity per feed,
+        // entity_id like `event.<slug>_latest_feed`. The latest entry is
+        // exposed directly on the entity's attributes (title / link /
+        // description); the integration intentionally only tracks the
+        // most recent item per feed. The entity state is the timestamp
+        // of that entry.
+        if (id.endsWith('_latest_feed')) {
+          if (a.title && a.link) {
+            const cleanSource =
+              (a.friendly_name || '').replace(/\s*latest feed\s*$/i, '').trim() ||
+              id.replace(/^event\./, '').replace(/_latest_feed$/, '').replace(/_/g, ' ');
+            out.news.push({
+              id: `${id}-${a.link}`,
+              title: a.title,
+              url: a.link,
+              source: cleanSource,
+              timeAgo: friendlyTime(e.state),
+              sortKey: e.state ? new Date(e.state).getTime() : 0,
+            });
+          }
+          break;
+        }
+
+        // Legacy HA feedreader (pre-2024): single event.feedreader entity
+        // per feed exposing an attributes.entries[] array of recent items.
+        // Kept around in case someone runs an older HA install.
         if (id.startsWith('event.feedreader') || /feedreader|rss/i.test(name)) {
-          const entries = Array.isArray(e.attributes?.entries) ? e.attributes.entries : [];
+          const entries = Array.isArray(a.entries) ? a.entries : [];
           for (const entry of entries.slice(0, 5)) {
+            const stamp = entry.published || entry.updated || e.last_changed;
             out.news.push({
               id: `${id}-${entry.id || entry.link || entry.title}`,
               title: entry.title || 'Untitled',
               url: entry.link || '#',
-              source: e.attributes?.feed_title || name,
-              timeAgo: friendlyTime(entry.published || entry.updated || e.last_changed),
+              source: a.feed_title || name,
+              timeAgo: friendlyTime(stamp),
+              sortKey: stamp ? new Date(stamp).getTime() : 0,
             });
           }
         }
@@ -406,6 +433,11 @@ function translate(states) {
 
   // Sort upcoming events soonest-first.
   out.calendarEvents.sort((a, b) => (a.sortKey || 0) - (b.sortKey || 0));
+
+  // Sort news freshest-first so when the dashboard slices the top 5,
+  // the most recent headlines win regardless of which feed they came
+  // from.
+  out.news.sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
 
   // Cross-link motion to cameras via paired binary_sensor.*_motion entities.
   const motionMap = new Map();
