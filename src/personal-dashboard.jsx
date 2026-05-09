@@ -26,10 +26,14 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const dayName = today.toLocaleDateString([], { weekday: 'long' });
   const dateStr = today.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
 
-  // Fetch a 14-day window of events directly from HA's REST API. The
-  // single-event preview that arrives in `state.calendar*` only contains
-  // each calendar's next event — for the full upcoming list we ask each
-  // calendar entity for its events in [now, now + 14d].
+  // Fetch a 14-day window of events. Try the WebSocket calendar/get_events
+  // call first (the modern, bulk API every calendar integration supports
+  // through the entity base class) and fall back to the per-calendar REST
+  // endpoint only if WS isn't available. The previous code used REST
+  // exclusively; on this user's install that path silently returned no
+  // events, so the dashboard fell all the way back to the single-event
+  // preview in `state.calendarEvents` — which is why the panel only ever
+  // showed the next meeting.
   const [fetchedEvents, setFetchedEvents] = React.useState([]);
   const calendarIds = (state.calendar || []).map(c => c.id).join(',');
   React.useEffect(() => {
@@ -42,6 +46,36 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       window.__hcDiag.push(entry);
       while (window.__hcDiag.length > 50) window.__hcDiag.shift();
     };
+
+    // Normalise one HA calendar event (from either WS or REST) into the
+    // shape the dashboard renders. Handles all four start/end shapes HA
+    // integrations use in the wild: ISO string, "YYYY-MM-DD HH:MM:SS"
+    // (no T), `{ dateTime }`, or `{ date }`.
+    const parseEvent = (ev, calId) => {
+      const startVal = (ev.start && (ev.start.dateTime || ev.start.date)) || ev.start;
+      const endVal = (ev.end && (ev.end.dateTime || ev.end.date)) || ev.end;
+      if (!startVal) return null;
+      let isAllDay;
+      if (ev.start && typeof ev.start === 'object') {
+        isAllDay = !ev.start.dateTime && !!ev.start.date;
+      } else if (typeof startVal === 'string') {
+        isAllDay = !/\d{2}:\d{2}/.test(startVal);
+      } else {
+        isAllDay = false;
+      }
+      const startDate = new Date(startVal);
+      const endDate = endVal ? new Date(endVal) : null;
+      return {
+        id: `${calId}-${startVal}-${ev.summary || ''}`,
+        title: ev.summary || '(untitled)',
+        where: ev.location || '',
+        kind: /birthday|bday/i.test(ev.summary || '') ? 'birthday' : 'event',
+        start: startDate, end: endDate,
+        isAllDay,
+        sortKey: startDate.getTime(),
+      };
+    };
+
     const fetchAll = async () => {
       const start = new Date(); start.setHours(0, 0, 0, 0);
       const end = new Date(start); end.setDate(end.getDate() + 14);
@@ -49,53 +83,61 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       const endISO = end.toISOString();
       const allEvents = [];
       let totalCount = 0;
-      await Promise.all(ids.map(async (id) => {
+      let usedTransport = null;
+
+      // Try the WebSocket bulk API first.
+      if (typeof hass.callWS === 'function') {
         try {
-          const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
-          const events = await hass.callApi('GET', path);
-          if (!Array.isArray(events)) {
-            diag({ ts: Date.now(), kind: 'info', message: `calendar ${id}: response not an array (${typeof events})` });
-            return;
-          }
-          totalCount += events.length;
-          diag({ ts: Date.now(), kind: 'info', message: `calendar ${id}: fetched ${events.length} event(s) over 14 days` });
-          for (const ev of events) {
-            // HA returns events as either ISO strings or { date | dateTime } objects.
-            // - { dateTime: "2026-05-07T10:00:00-04:00" } → timed
-            // - { date: "2026-05-07" } → all-day
-            // - "2026-05-07 10:00:00" → timed (some integrations skip the T)
-            // - "2026-05-07"            → all-day
-            const startVal = (ev.start && (ev.start.dateTime || ev.start.date)) || ev.start;
-            const endVal = (ev.end && (ev.end.dateTime || ev.end.date)) || ev.end;
-            if (!startVal) continue;
-            let isAllDay;
-            if (ev.start && typeof ev.start === 'object') {
-              isAllDay = !ev.start.dateTime && !!ev.start.date;
-            } else if (typeof startVal === 'string') {
-              isAllDay = !/\d{2}:\d{2}/.test(startVal);
-            } else {
-              isAllDay = false;
+          const result = await hass.callWS({
+            type: 'calendar/get_events',
+            entity_ids: ids,
+            start_date_time: startISO,
+            end_date_time: endISO,
+          });
+          if (result && typeof result === 'object') {
+            for (const id of ids) {
+              const events = Array.isArray(result[id]?.events) ? result[id].events : [];
+              totalCount += events.length;
+              for (const ev of events) {
+                const parsed = parseEvent(ev, id);
+                if (parsed) allEvents.push(parsed);
+              }
             }
-            const startDate = new Date(startVal);
-            const endDate = endVal ? new Date(endVal) : null;
-            allEvents.push({
-              id: `${id}-${startVal}-${ev.summary || ''}`,
-              title: ev.summary || '(untitled)',
-              where: ev.location || '',
-              kind: /birthday|bday/i.test(ev.summary || '') ? 'birthday' : 'event',
-              start: startDate, end: endDate,
-              isAllDay,
-              sortKey: startDate.getTime(),
-            });
+            usedTransport = 'ws';
+            diag({ ts: Date.now(), kind: 'info', message: `calendar WS: ${totalCount} event(s) across ${ids.length} calendar(s)` });
           }
         } catch (e) {
-          diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: fetch failed — ${e?.message || e}` });
-          console.warn(`[dashboard] could not fetch events for ${id}:`, e?.message || e);
+          diag({ ts: Date.now(), kind: 'error', message: `calendar WS failed — ${e?.message || e}; falling back to REST` });
         }
-      }));
+      }
+
+      // REST fallback — per-calendar GET. Only runs if WS didn't return
+      // anything (either the method is missing or it threw).
+      if (!usedTransport) {
+        await Promise.all(ids.map(async (id) => {
+          try {
+            const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
+            const events = await hass.callApi('GET', path);
+            if (!Array.isArray(events)) {
+              diag({ ts: Date.now(), kind: 'info', message: `calendar ${id}: response not an array (${typeof events})` });
+              return;
+            }
+            totalCount += events.length;
+            for (const ev of events) {
+              const parsed = parseEvent(ev, id);
+              if (parsed) allEvents.push(parsed);
+            }
+          } catch (e) {
+            diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST fetch failed — ${e?.message || e}` });
+          }
+        }));
+        usedTransport = 'rest';
+        diag({ ts: Date.now(), kind: 'info', message: `calendar REST: ${totalCount} event(s) across ${ids.length} calendar(s)` });
+      }
+
       if (alive) {
         allEvents.sort((a, b) => a.sortKey - b.sortKey);
-        diag({ ts: Date.now(), kind: 'info', message: `calendar: ${allEvents.length} total events parsed from ${ids.length} calendar(s); raw=${totalCount}` });
+        diag({ ts: Date.now(), kind: 'info', message: `calendar (${usedTransport}): ${allEvents.length} parsed from raw ${totalCount}` });
         setFetchedEvents(allEvents);
       }
     };
