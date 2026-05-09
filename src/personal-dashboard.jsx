@@ -42,10 +42,15 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   // frontend itself uses for live calendar cards.
   const [viewMonth, setViewMonth] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [fetchedEvents, setFetchedEvents] = React.useState([]);
+  const [fetchStatus, setFetchStatus] = React.useState(null); // diag: { transport, raw, parsed, error }
   const calendarIds = (state.calendar || []).map(c => c.id).join(',');
   const viewMonthKey = `${viewMonth.getFullYear()}-${viewMonth.getMonth()}`;
   React.useEffect(() => {
-    if (!hass || !calendarIds) { setFetchedEvents([]); return; }
+    if (!hass || !calendarIds) {
+      setFetchedEvents([]);
+      setFetchStatus({ transport: 'skipped', raw: 0, parsed: 0, error: !hass ? 'no hass' : 'no calendarIds' });
+      return;
+    }
     let alive = true;
     const ids = calendarIds.split(',').filter(Boolean);
     const diag = (entry) => {
@@ -133,6 +138,9 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       const startISO = start.toISOString();
       const endISO = end.toISOString();
       const allEvents = [];
+      let restRaw = 0;
+      let subscribeRaw = 0;
+      let firstErr = null;
 
       // REST path — bulk fetch, the canonical HA pattern.
       try {
@@ -140,16 +148,22 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
           try {
             const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
             const events = await hass.callApi('GET', path);
-            if (!Array.isArray(events)) return;
+            if (!Array.isArray(events)) {
+              if (!firstErr) firstErr = `${id}: not array (${typeof events})`;
+              return;
+            }
+            restRaw += events.length;
             for (const ev of events) {
               const parsed = parseEvent(ev, id);
               if (parsed) allEvents.push(parsed);
             }
           } catch (e) {
+            if (!firstErr) firstErr = `${id} REST: ${e?.message || e}`;
             diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${e?.message || e}` });
           }
         }));
       } catch (e) {
+        if (!firstErr) firstErr = `REST batch: ${e?.message || e}`;
         diag({ ts: Date.now(), kind: 'error', message: `calendar REST batch failed — ${e?.message || e}` });
       }
 
@@ -159,12 +173,14 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
         try {
           const subscribeResults = await Promise.all(ids.map(id => fetchViaSubscribe(id, startISO, endISO)));
           subscribeResults.forEach((events, i) => {
+            subscribeRaw += events.length;
             for (const ev of events) {
               const parsed = parseEvent(ev, ids[i]);
               if (parsed) allEvents.push(parsed);
             }
           });
         } catch (e) {
+          if (!firstErr) firstErr = `subscribe: ${e?.message || e}`;
           diag({ ts: Date.now(), kind: 'error', message: `calendar subscribe batch failed — ${e?.message || e}` });
         }
       }
@@ -172,6 +188,8 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       if (alive) {
         allEvents.sort((a, b) => a.sortKey - b.sortKey);
         setFetchedEvents(allEvents);
+        const transport = restRaw > 0 ? 'rest' : (subscribeRaw > 0 ? 'subscribe' : (firstErr ? 'failed' : 'empty'));
+        setFetchStatus({ transport, raw: restRaw + subscribeRaw, parsed: allEvents.length, error: firstErr });
       }
     };
     fetchAll();
@@ -292,6 +310,8 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
               <CalendarColumn
                 calendar={state.calendar} events={allEvents}
                 viewMonth={viewMonth} setViewMonth={setViewMonth}
+                fetchStatus={fetchStatus}
+                hassStates={hass?.states} newsCount={(state.news || []).length}
                 accent={accent} fonts={fonts} surface={surface} surface2={surface2}
                 fg={fg} fg2={fg2} fg3={fg3} border={border}
               />
@@ -317,6 +337,8 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
           <CalendarColumn
             calendar={state.calendar} events={allEvents}
             viewMonth={viewMonth} setViewMonth={setViewMonth}
+            fetchStatus={fetchStatus}
+            hassStates={hass?.states} newsCount={(state.news || []).length}
             accent={accent} fonts={fonts} surface={surface} surface2={surface2}
             fg={fg} fg2={fg2} fg3={fg3} border={border}
           />
@@ -1800,7 +1822,7 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
 };
 
 // ── Right column: Calendar + upcoming events ──────────────────────────────
-const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
+const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, fetchStatus, hassStates, newsCount, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
   const today = new Date();
   const todayKey = ymd(today);
   const [selectedKey, setSelectedKey] = React.useState(null); // YYYY-MM-DD
@@ -1941,6 +1963,35 @@ const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, accent, fon
             {selectedKey ? 'Nothing scheduled this day.' : 'Nothing scheduled in the next 3 days.'}
           </div>
         )}
+        {/* Compact diag — temporary while we chase the calendar
+            refresh-drop and feedreader entity-shape mismatch. Remove
+            once both are reliable. */}
+        {(() => {
+          const eventEntities = [];
+          if (hassStates && typeof hassStates === 'object') {
+            for (const id in hassStates) {
+              if (id.startsWith('event.')) eventEntities.push(id);
+            }
+          }
+          const matched = eventEntities.filter(id => id.endsWith('_latest_feed') || id.startsWith('event.feedreader'));
+          return (
+            <div style={{
+              marginTop: 12, padding: '8px 10px',
+              borderRadius: 6, border: `.5px dashed ${accent}`,
+              background: 'rgba(255,138,61,0.05)',
+              fontSize: 10, color: fg2, lineHeight: 1.5,
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              wordBreak: 'break-word',
+            }}>
+              <div style={{color: accent, fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4}}>Diag</div>
+              <div>cal: state.cal.length={calendar?.length || 0} · fetch={fetchStatus ? `${fetchStatus.transport}/${fetchStatus.raw}/${fetchStatus.parsed}` : 'null'}{fetchStatus?.error ? ` err:${fetchStatus.error.slice(0, 60)}` : ''}</div>
+              <div>news: state.news.length={newsCount} · event.* total={eventEntities.length} · feedreader-shape={matched.length}{matched.length ? ` → ${matched.slice(0, 3).join(', ')}${matched.length > 3 ? '…' : ''}` : ''}</div>
+              {!matched.length && eventEntities.length > 0 && (
+                <div style={{marginTop: 4, color: fg3}}>event.* sample: {eventEntities.slice(0, 5).join(', ')}</div>
+              )}
+            </div>
+          );
+        })()}
       </Card>
     </div>
   );
