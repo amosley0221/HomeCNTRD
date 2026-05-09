@@ -7165,8 +7165,8 @@ function jp(n) {
       software: "—",
       valet: !1
     },
-    alarms: [],
-    calendar: [],
+    alarms: n?.alarms || [],
+    calendar: n?.calendar || [],
     dnd: { active: !1, until: null, source: null }
   };
 }

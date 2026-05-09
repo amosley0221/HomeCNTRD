@@ -551,8 +551,8 @@ function defaults(out) {
       climateOn: false, sentry: false, location: '—', odometer: 0, frunk: false,
       trunk: false, sunroof: 0, software: '—', valet: false,
     },
-    alarms: [],
-    calendar: [],
+    alarms: out?.alarms || [],
+    calendar: out?.calendar || [],
     dnd: { active: false, until: null, source: null },
   };
 }
