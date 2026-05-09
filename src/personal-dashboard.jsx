@@ -128,40 +128,50 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       let usedTransport = 'rest';
 
       // REST path — bulk fetch, the canonical HA pattern.
-      await Promise.all(ids.map(async (id) => {
-        try {
-          const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
-          const events = await hass.callApi('GET', path);
-          if (!Array.isArray(events)) {
-            errors.push(`${id}: response not an array (${typeof events})`);
-            return;
+      try {
+        await Promise.all(ids.map(async (id) => {
+          try {
+            const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
+            const events = await hass.callApi('GET', path);
+            if (!Array.isArray(events)) {
+              errors.push(`${id} REST: not array (${typeof events})`);
+              return;
+            }
+            rawTotal += events.length;
+            for (const ev of events) {
+              const parsed = parseEvent(ev, id);
+              if (parsed) allEvents.push(parsed);
+            }
+          } catch (e) {
+            errors.push(`${id} REST: ${e?.message || e}`);
+            diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${e?.message || e}` });
           }
-          rawTotal += events.length;
-          for (const ev of events) {
-            const parsed = parseEvent(ev, id);
-            if (parsed) allEvents.push(parsed);
-          }
-        } catch (e) {
-          errors.push(`${id}: ${e?.message || e}`);
-          diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${e?.message || e}` });
-        }
-      }));
+        }));
+      } catch (e) {
+        errors.push(`REST Promise.all: ${e?.message || e}`);
+      }
 
       // If REST returned nothing useful, try the subscribe path that the
       // HA frontend uses for live cards.
       if (allEvents.length === 0) {
-        const subscribeResults = await Promise.all(ids.map(id => fetchViaSubscribe(id, startISO, endISO)));
-        let subRaw = 0;
-        subscribeResults.forEach((events, i) => {
-          subRaw += events.length;
-          for (const ev of events) {
-            const parsed = parseEvent(ev, ids[i]);
-            if (parsed) allEvents.push(parsed);
+        try {
+          const subscribeResults = await Promise.all(ids.map(id => fetchViaSubscribe(id, startISO, endISO)));
+          let subRaw = 0;
+          subscribeResults.forEach((events, i) => {
+            subRaw += events.length;
+            for (const ev of events) {
+              const parsed = parseEvent(ev, ids[i]);
+              if (parsed) allEvents.push(parsed);
+            }
+          });
+          if (subRaw > 0) {
+            usedTransport = 'subscribe';
+            rawTotal = subRaw;
+          } else {
+            errors.push('subscribe: 0 events from all calendars');
           }
-        });
-        if (subRaw > 0) {
-          usedTransport = 'subscribe';
-          rawTotal = subRaw;
+        } catch (e) {
+          errors.push(`subscribe: ${e?.message || e}`);
         }
       }
 
@@ -1941,18 +1951,27 @@ const CalendarColumn = ({ calendar, events, fetchStatus, accent, fonts, surface,
         {/* Diagnostic line — temporary while we figure out why the
             Outlook integration isn't returning the full event list.
             Surfaces the fetch outcome inline so it can be screenshot
-            without opening browser DevTools. Remove once calendar
-            fetching is reliable. */}
-        {fetchStatus && (
-          <div style={{
-            marginTop: 14, paddingTop: 10, borderTop: `.5px dashed ${border}`,
-            fontSize: 10, color: fg3, lineHeight: 1.5,
-            fontFamily: 'ui-monospace, Menlo, monospace',
-          }}>
-            cal: {fetchStatus.transport} · raw {fetchStatus.raw} · parsed {fetchStatus.parsed}
-            {fetchStatus.errors?.length ? ` · err: ${fetchStatus.errors[0].slice(0, 80)}` : ''}
-          </div>
-        )}
+            without opening browser DevTools. Always renders something
+            so we can tell the difference between "effect didn't run"
+            and "ran but found nothing". */}
+        <div style={{
+          marginTop: 14, padding: '8px 10px',
+          borderRadius: 6, border: `.5px dashed ${accent}`,
+          background: 'rgba(255,138,61,0.06)',
+          fontSize: 11, color: fg2, lineHeight: 1.4,
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          wordBreak: 'break-word',
+        }}>
+          <div style={{color: accent, fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4}}>Calendar debug</div>
+          {!fetchStatus
+            ? `waiting · cals=${calendar?.length || 0} · ids=[${(calendar || []).map(c => c.id).join(', ')}]`
+            : <>
+                cals=[{(calendar || []).map(c => c.id).join(', ')}]<br/>
+                transport={fetchStatus.transport} · raw={fetchStatus.raw} · parsed={fetchStatus.parsed}
+                {fetchStatus.errors?.length ? <><br/>err: {fetchStatus.errors.join(' | ').slice(0, 200)}</> : null}
+              </>
+          }
+        </div>
       </Card>
     </div>
   );
