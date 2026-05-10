@@ -347,6 +347,16 @@ const HomeView = ({ ctx }) => {
       : sectionList.filter(id => id !== deviceId);
     return { ...u, roomDeviceHidden: { ...allRooms, [room]: { ...cur, [hideKey]: next } } };
   });
+  // Bulk variant for the Hide all / Show all buttons in the picker.
+  // Replaces the whole section's hide list in one patch instead of
+  // firing N individual setDeviceHidden calls (matters when there are
+  // 80+ scenes — each call would re-render the whole panel).
+  const setAllHidden = (hideKey, deviceIds, hidden) => patchUser?.(u => {
+    const allRooms = u.roomDeviceHidden || {};
+    const cur = allRooms[room] || {};
+    const next = hidden ? Array.from(new Set(deviceIds)) : [];
+    return { ...u, roomDeviceHidden: { ...allRooms, [room]: { ...cur, [hideKey]: next } } };
+  });
 
   // Headline lamp count uses the visible-set just like LightsSection
   // does — keeps "X lamps softly lit" honest.
@@ -402,10 +412,27 @@ const HomeView = ({ ctx }) => {
                   if (visible[s.sectionId] === false) return null;
                   const items = s.pick(state);
                   if (!items.length) return null;
+                  const visibleCount = items.filter(d => !isHidden(s.hideKey, d.id)).length;
+                  const allHidden = visibleCount === 0;
+                  const allShown = visibleCount === items.length;
+                  const ids = items.map(d => d.id);
+                  const bulkBtn = (label, disabled, onClick) => (
+                    <button onClick={onClick} disabled={disabled} style={{
+                      padding:'3px 8px', borderRadius:5, fontSize:10,
+                      border:`.5px solid ${disabled ? p.border : p.border2}`,
+                      background:'transparent', color:disabled ? p.fg3 : p.fg2,
+                      cursor:disabled ? 'default' : 'pointer', fontFamily:fonts.body,
+                      opacity: disabled ? 0.5 : 1,
+                    }}>{label}</button>
+                  );
                   return (
                     <div key={s.sectionId}>
-                      <div style={{fontSize:11, color:p.fg2, marginBottom:6, fontWeight:500}}>
-                        {s.label} <span style={{color:p.fg3, fontWeight:400}}>· {items.length}</span>
+                      <div style={{fontSize:11, color:p.fg2, marginBottom:6, fontWeight:500, display:'flex', alignItems:'center', gap:8}}>
+                        <span>{s.label}</span>
+                        <span style={{color:p.fg3, fontWeight:400}}>· {visibleCount}/{items.length}</span>
+                        <div style={{flex:1}}/>
+                        {bulkBtn('Show all', allShown, () => setAllHidden(s.hideKey, ids, false))}
+                        {bulkBtn('Hide all', allHidden, () => setAllHidden(s.hideKey, ids, true))}
                       </div>
                       <div style={{display:'grid', gridTemplateColumns:`repeat(auto-fill, minmax(200px, 1fr))`, gap:4}}>
                         {items.map(d => {
