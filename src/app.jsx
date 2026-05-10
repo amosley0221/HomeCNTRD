@@ -101,11 +101,20 @@ function App({ hass, narrow, panel }) {
   }, [hass?.user, hass?.config?.location_name]);
 
   // User-state patches (per-room section toggles via roomSections,
-  // home customization, etc.) live in localStorage so they survive a
-  // panel reload after every deploy. Without this, toggling 'hide
-  // Scenes' on the Living Room view would reset every `?v=N` bump and
-  // the user would have to re-hide it forever.
+  // per-room device blacklists via roomDeviceHidden, etc.) live in
+  // localStorage as a fast cold-load mirror AND in HA's
+  // frontend/{get,set}_user_data store so they survive iOS Companion
+  // dropping site data between deploys (which the user reports does
+  // happen) and follow the user across any device they sign into HA on.
+  //
+  // Order:
+  //   1. Init from localStorage (instant render).
+  //   2. Once hass is ready, fetch HA's saved value; if present, it
+  //      overrides the localStorage mirror.
+  //   3. Every patch writes to localStorage immediately + debounces
+  //      600 ms then syncs to HA.
   const USER_PATCHES_KEY = 'homecntrd:user-patches';
+  const USER_PATCHES_HA_KEY = 'homecntrd_user_patches';
   const [localPatches, setLocalPatches] = React.useState(() => {
     try {
       const raw = localStorage.getItem(USER_PATCHES_KEY);
@@ -116,6 +125,28 @@ function App({ hass, narrow, panel }) {
     } catch {}
     return {};
   });
+  const haLoaded = React.useRef(false);
+  const patchTimer = React.useRef(null);
+  const hassRef = React.useRef(hass);
+  hassRef.current = hass;
+  const hassReady = Boolean(hass && typeof hass.callWS === 'function');
+  React.useEffect(() => {
+    if (haLoaded.current || !hassReady) return;
+    let alive = true;
+    hass.callWS({ type: 'frontend/get_user_data', key: USER_PATCHES_HA_KEY })
+      .then((res) => {
+        if (!alive) return;
+        haLoaded.current = true;
+        const fromHa = res?.value && typeof res.value === 'object' ? res.value : null;
+        if (fromHa && Object.keys(fromHa).length > 0) {
+          setLocalPatches(fromHa);
+          try { localStorage.setItem(USER_PATCHES_KEY, JSON.stringify(fromHa)); } catch {}
+        }
+      })
+      .catch(() => { haLoaded.current = true; });
+    return () => { alive = false; };
+  }, [hassReady]);
+
   const patchUser = React.useCallback((patch) => {
     setLocalPatches(prev => {
       const base = { ...user, ...prev };
@@ -128,6 +159,16 @@ function App({ hass, narrow, panel }) {
       // / email / location and ignore future hass updates.
       const { firstName, email, plan, location, createdAt, ...editable } = merged;
       try { localStorage.setItem(USER_PATCHES_KEY, JSON.stringify(editable)); } catch {}
+      // Debounce the HA-side write so a flurry of toggles doesn't fire
+      // a set_user_data per click. Read hass through the ref so we
+      // always use the latest connection without re-binding setTweak.
+      clearTimeout(patchTimer.current);
+      patchTimer.current = setTimeout(() => {
+        const h = hassRef.current;
+        if (typeof h?.callWS !== 'function') return;
+        h.callWS({ type: 'frontend/set_user_data', key: USER_PATCHES_HA_KEY, value: editable })
+          .catch((err) => console.warn('[user-patches] HA sync failed', err?.message || err));
+      }, 600);
       return editable;
     });
   }, [user]);
