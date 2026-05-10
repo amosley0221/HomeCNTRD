@@ -301,10 +301,25 @@ const SECTIONS = [
   { id:'today',    label:"Today's schedule" },
 ];
 
+// Device-source tables for the Customize → device picker. Maps each
+// section the room view exposes to (a) the array of devices it draws
+// from and (b) the slug used in user.roomDeviceHidden. `music` and
+// `speakers` share a hide list because they target the same underlying
+// state.speakers entities.
+const DEVICE_PICKER_SECTIONS = [
+  { sectionId: 'lights',   label: 'Lights',   hideKey: 'lights',   pick: (s) => s.lights || [] },
+  { sectionId: 'music',    label: 'Music speakers',     hideKey: 'speakers', pick: (s) => s.speakers || [] },
+  { sectionId: 'speakers', label: 'Speaker volume',     hideKey: 'speakers', pick: (s) => s.speakers || [] },
+  { sectionId: 'tvs',      label: 'TVs',      hideKey: 'tvs',      pick: (s) => s.tvs || [] },
+  { sectionId: 'scenes',   label: 'Scenes',   hideKey: 'scenes',   pick: (s) => s.scenes || [] },
+  { sectionId: 'cameras',  label: 'Cameras',  hideKey: 'cameras',  pick: (s) => s.cameras || [] },
+  { sectionId: 'security', label: 'Locks',    hideKey: 'locks',    pick: (s) => s.locks || [] },
+];
+
 const HomeView = ({ ctx }) => {
   const { p, fonts, dens, state, setState, room, user, patchUser, narrow } = ctx;
   const roomMeta = window.ROOMS.find(r => r.id === room);
-  const lights = state.lights.filter(l => l.room === room);
+
   // Per-room section visibility. Falls back to legacy global homeSections, then all-on.
   const allRoomSections = user?.roomSections || {};
   const legacy = user?.homeSections;
@@ -314,6 +329,33 @@ const HomeView = ({ ctx }) => {
     const cur = (u.roomSections && u.roomSections[room]) || (u.homeSections) || Object.fromEntries(SECTIONS.map(s => [s.id, true]));
     return {...u, roomSections: {...(u.roomSections || {}), [room]: {...cur, [id]: v}}};
   });
+
+  // Per-room device blacklist. Each device defaults to visible in every
+  // room; the user blacklists what doesn't belong via the picker. Stored
+  // at user.roomDeviceHidden[room][hideKey] = ['entity.id', ...].
+  const roomDeviceHidden = (user?.roomDeviceHidden && user.roomDeviceHidden[room]) || {};
+  const isHidden = React.useCallback((hideKey, deviceId) => {
+    const list = roomDeviceHidden[hideKey];
+    return Array.isArray(list) && list.includes(deviceId);
+  }, [roomDeviceHidden]);
+  const setDeviceHidden = (hideKey, deviceId, hidden) => patchUser?.(u => {
+    const allRooms = u.roomDeviceHidden || {};
+    const cur = allRooms[room] || {};
+    const sectionList = Array.isArray(cur[hideKey]) ? cur[hideKey] : [];
+    const next = hidden
+      ? (sectionList.includes(deviceId) ? sectionList : [...sectionList, deviceId])
+      : sectionList.filter(id => id !== deviceId);
+    return { ...u, roomDeviceHidden: { ...allRooms, [room]: { ...cur, [hideKey]: next } } };
+  });
+
+  // Headline lamp count uses the visible-set just like LightsSection
+  // does — keeps "X lamps softly lit" honest.
+  const visibleLights = state.lights.filter(l => !isHidden('lights', l.id));
+
+  // Augment ctx so each section gets isHidden / setDeviceHidden without
+  // having to plumb props through every existing call site.
+  const sectionCtx = { ...ctx, isHidden, setDeviceHidden };
+
   const [picking, setPicking] = React.useState(false);
 
   return (
@@ -321,7 +363,7 @@ const HomeView = ({ ctx }) => {
       <window.PageHead ctx={ctx}
         eyebrow="Currently in"
         title={`The ${roomMeta?.name || 'house'}`}
-        sub={`${lights.filter(l => l.on).length} lamps softly lit · ${state.thermostat.temp}° · the cat is asleep on the rug`}
+        sub={`${visibleLights.filter(l => l.on).length} lamps softly lit · ${state.thermostat.temp}° · the cat is asleep on the rug`}
         right={
           <button onClick={() => setPicking(v => !v)} style={{
             padding:'8px 14px', borderRadius:9, border:`.5px solid ${picking ? p.accent : p.border2}`,
@@ -345,20 +387,58 @@ const HomeView = ({ ctx }) => {
               </div>
             ))}
           </div>
+
+          {/* Device-level pickers — only shown for sections that have a
+              device list AND are currently visible. New devices default
+              to visible in every room; user toggles the ones not
+              belonging in this room off. */}
+          {DEVICE_PICKER_SECTIONS.some(s => visible[s.sectionId] !== false && (s.pick(state) || []).length) && (
+            <div style={{marginTop: 14, paddingTop: 14, borderTop: `.5px solid ${p.border}`}}>
+              <div style={{fontSize:11, color:p.fg3, letterSpacing:'.1em', textTransform:'uppercase', marginBottom:10}}>
+                Devices in {roomMeta?.name || 'this room'}
+              </div>
+              <div style={{display:'flex', flexDirection:'column', gap: 14}}>
+                {DEVICE_PICKER_SECTIONS.map(s => {
+                  if (visible[s.sectionId] === false) return null;
+                  const items = s.pick(state);
+                  if (!items.length) return null;
+                  return (
+                    <div key={s.sectionId}>
+                      <div style={{fontSize:11, color:p.fg2, marginBottom:6, fontWeight:500}}>
+                        {s.label} <span style={{color:p.fg3, fontWeight:400}}>· {items.length}</span>
+                      </div>
+                      <div style={{display:'grid', gridTemplateColumns:`repeat(auto-fill, minmax(200px, 1fr))`, gap:4}}>
+                        {items.map(d => {
+                          const hidden = isHidden(s.hideKey, d.id);
+                          return (
+                            <div key={d.id} style={{display:'flex', alignItems:'center', gap:10, padding:'6px 10px', borderRadius:6, background:p.surface, border:`.5px solid ${p.border}`}}>
+                              <span style={{flex:1, fontSize:12, color:hidden ? p.fg3 : p.fg, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{d.name || d.id}</span>
+                              <window.Toggle p={p} on={!hidden} onChange={(v) => setDeviceHidden(s.hideKey, d.id, !v)} size={14}/>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div style={{fontSize:11, color:p.fg3, fontStyle:'italic', marginTop:10}}>Each room remembers its own layout.</div>
         </window.Card>
       )}
 
-      {visible.climate  !== false && <window.ClimateSection ctx={ctx}/>}
-      {visible.lights   !== false && <window.LightsSection ctx={ctx}/>}
-      {visible.music    !== false && <window.MusicSection ctx={ctx}/>}
-      {visible.speakers !== false && <window.SpeakersSection ctx={ctx}/>}
-      {visible.tvs      !== false && <window.TvsSection ctx={ctx}/>}
-      {visible.scenes   !== false && <window.ScenesSection ctx={ctx}/>}
-      {visible.cameras  !== false && <window.CamerasSection ctx={ctx}/>}
-      {visible.security !== false && <window.SecuritySection ctx={ctx}/>}
-      {visible.car      !== false && <window.CarSection ctx={ctx}/>}
-      {visible.today    !== false && <window.TodaySection ctx={ctx}/>}
+      {visible.climate  !== false && <window.ClimateSection ctx={sectionCtx}/>}
+      {visible.lights   !== false && <window.LightsSection ctx={sectionCtx}/>}
+      {visible.music    !== false && <window.MusicSection ctx={sectionCtx}/>}
+      {visible.speakers !== false && <window.SpeakersSection ctx={sectionCtx}/>}
+      {visible.tvs      !== false && <window.TvsSection ctx={sectionCtx}/>}
+      {visible.scenes   !== false && <window.ScenesSection ctx={sectionCtx}/>}
+      {visible.cameras  !== false && <window.CamerasSection ctx={sectionCtx}/>}
+      {visible.security !== false && <window.SecuritySection ctx={sectionCtx}/>}
+      {visible.car      !== false && <window.CarSection ctx={sectionCtx}/>}
+      {visible.today    !== false && <window.TodaySection ctx={sectionCtx}/>}
       <div style={{height:80}}/>
     </>
   );
@@ -507,12 +587,20 @@ const ClimateSection = ({ ctx }) => {
 
 // ── LIGHTS ──────────────────────────────────────────────────────────────
 const LightsSection = ({ ctx }) => {
-  const { p, fonts, dens, state, setState, room } = ctx;
-  const lights = state.lights.filter(l => l.room === room);
+  const { p, fonts, dens, state, setState, room, isHidden } = ctx;
+  // Each room shows every light by default; the user blacklists per
+  // room via the Customize panel. ctx.isHidden('lights', id) is the
+  // single source of truth for that filter.
+  const lights = state.lights.filter(l => !(isHidden && isHidden('lights', l.id)));
   const allOn = lights.every(l => l.on);
   return (
     <window.Section title="Lighting" subtitle={`${lights.filter(l=>l.on).length} of ${lights.length} on`} p={p} fonts={fonts}
-      action={<button onClick={() => setState(s => ({...s, lights: s.lights.map(l => l.room===room ? {...l, on: !allOn} : l)}))} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>{allOn ? 'All off' : 'All on'}</button>}>
+      action={<button onClick={() => {
+        // 'All on/off' toggles only the lights currently visible in
+        // this room (i.e. not hidden via the per-room blacklist).
+        const visibleIds = new Set(lights.map(l => l.id));
+        setState(s => ({...s, lights: s.lights.map(l => visibleIds.has(l.id) ? {...l, on: !allOn} : l)}));
+      }} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>{allOn ? 'All off' : 'All on'}</button>}>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(190px, 1fr))', gap:dens.tileGap}}>
         {lights.map(l => (
           <window.Card key={l.id} p={p} style={{padding:14, position:'relative', overflow:'hidden'}}>
@@ -536,15 +624,16 @@ const LightsSection = ({ ctx }) => {
 
 // ── MUSIC ───────────────────────────────────────────────────────────────
 const MusicSection = ({ ctx }) => {
-  const { p, fonts, state, room, setPage } = ctx;
+  const { p, fonts, state, room, setPage, isHidden } = ctx;
   const hass = React.useContext(HassContext);
-  if (!state.speakers?.length) return null;
+  // Speakers blacklisted in this room shouldn't be eligible to feature.
+  const visibleSpeakers = (state.speakers || []).filter(s => !(isHidden && isHidden('speakers', s.id)));
+  if (!visibleSpeakers.length) return null;
 
   // Pick the speaker to feature: prefer any speaker actually playing,
-  // then anything in the current room, otherwise the first one.
-  const playing = state.speakers.find(s => s.playing);
-  const inRoom = state.speakers.find(s => s.room === room);
-  const speaker = playing || inRoom || state.speakers[0];
+  // then the first one not blacklisted in this room.
+  const playing = visibleSpeakers.find(s => s.playing);
+  const speaker = playing || visibleSpeakers[0];
 
   const title = speaker.haMediaTitle;
   const artist = speaker.haMediaArtist;
@@ -630,7 +719,7 @@ const MusicSection = ({ ctx }) => {
 
 // ── SPEAKERS — per-Sonos volume tiles ──────────────────────────────────
 const SpeakersSection = ({ ctx }) => {
-  const { p, fonts, dens, state } = ctx;
+  const { p, fonts, dens, state, isHidden } = ctx;
   const hass = React.useContext(HassContext);
 
   // Dashboard speaker tiles should only show real Sonos rooms, not the
@@ -638,6 +727,8 @@ const SpeakersSection = ({ ctx }) => {
   // exposes. Determine "is Sonos" by entity platform first (most
   // reliable), then by the sonos_group attribute, then by the GROUPING
   // feature flag as a last resort if the registry isn't loaded yet.
+  // After Sonos detection, also drop anything blacklisted for this
+  // room via the per-room device picker.
   const speakers = React.useMemo(() => {
     if (!state.speakers?.length) return [];
     const ent = hass?.entities;
@@ -666,8 +757,9 @@ const SpeakersSection = ({ ctx }) => {
       const existing = seen.get(key);
       if (!existing || (s.isMAAttr && !existing.isMAAttr)) seen.set(key, s);
     }
-    return Array.from(seen.values());
-  }, [state.speakers, hass?.entities]);
+    const all = Array.from(seen.values());
+    return all.filter(s => !(isHidden && isHidden('speakers', s.id)));
+  }, [state.speakers, hass?.entities, isHidden]);
 
   // Optimistic local volume override during slider drag — Sonos rate-
   // limits volume_set, so we debounce the HA call and let the slider
@@ -741,11 +833,13 @@ const SpeakersSection = ({ ctx }) => {
 
 // ── SCENES ──────────────────────────────────────────────────────────────
 const ScenesSection = ({ ctx }) => {
-  const { p, fonts, dens, state, setState } = ctx;
+  const { p, fonts, dens, state, setState, isHidden } = ctx;
+  const scenes = (state.scenes || []).filter(sc => !(isHidden && isHidden('scenes', sc.id)));
+  if (!scenes.length) return null;
   return (
     <window.Section title="Scenes" subtitle="Tap to activate" p={p} fonts={fonts}>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(150px, 1fr))', gap:dens.tileGap}}>
-        {state.scenes.map(sc => (
+        {scenes.map(sc => (
           <button key={sc.id} onClick={() => setState(s => ({...s, scenes: s.scenes.map(x => ({...x, active: x.id===sc.id}))}))} style={{
             padding:14, borderRadius:11, cursor:'pointer', textAlign:'left', fontFamily:fonts.body,
             background: sc.active ? p.accent : p.surface2, color: sc.active ? '#fff' : p.fg,
@@ -764,12 +858,14 @@ const ScenesSection = ({ ctx }) => {
 
 // ── CAMERAS ─────────────────────────────────────────────────────────────
 const CamerasSection = ({ ctx }) => {
-  const { p, fonts, dens, state, setPage } = ctx;
+  const { p, fonts, dens, state, setPage, isHidden } = ctx;
+  const cameras = (state.cameras || []).filter(c => !(isHidden && isHidden('cameras', c.id)));
+  if (!cameras.length) return null;
   return (
-    <window.Section title="Cameras" subtitle={`${state.cameras.filter(c=>c.online).length} live · ${state.cameras.filter(c=>c.motion).length} motion`} p={p} fonts={fonts}
+    <window.Section title="Cameras" subtitle={`${cameras.filter(c=>c.online).length} live · ${cameras.filter(c=>c.motion).length} motion`} p={p} fonts={fonts}
       action={<button onClick={() => setPage('cameras')} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>Open feeds →</button>}>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:dens.tileGap}}>
-        {state.cameras.map(c => <window.CamThumb key={c.id} c={c} ctx={ctx}/>)}
+        {cameras.map(c => <window.CamThumb key={c.id} c={c} ctx={ctx}/>)}
       </div>
     </window.Section>
   );
@@ -967,20 +1063,24 @@ const BypassDialog = ({ mode, reason, p, fonts, onCancel, onConfirm }) => (
 
 // ── SECURITY ────────────────────────────────────────────────────────────
 const SecuritySection = ({ ctx }) => {
-  const { p, fonts, dens, state, setState } = ctx;
-  const allLocked = state.locks.every(l => l.locked);
+  const { p, fonts, dens, state, setState, isHidden } = ctx;
+  const locks = (state.locks || []).filter(l => !(isHidden && isHidden('locks', l.id)));
+  const allLocked = locks.length ? locks.every(l => l.locked) : true;
   const ringMode = state.ring?.mode || 'disarmed';
   const ringMeta = RING_MODES.find(m => m.id === ringMode);
   return (
     <window.Section title="Security & access" subtitle={`${ringMeta.label} · ${allLocked ? 'all locked' : 'something is open'}`} p={p} fonts={fonts}
-      action={<button onClick={() => setState(s => ({...s, locks: s.locks.map(l => ({...l, locked:true}))}))} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>Lock all</button>}>
+      action={<button onClick={() => {
+        const visibleIds = new Set(locks.map(l => l.id));
+        setState(s => ({...s, locks: s.locks.map(l => visibleIds.has(l.id) ? {...l, locked:true} : l)}));
+      }} style={{padding:'6px 12px', borderRadius:7, border:`.5px solid ${p.border2}`, background:'transparent', color:p.fg2, fontSize:11, cursor:'pointer', fontFamily:fonts.body}}>Lock all</button>}>
       {state.ring?.id && (
         <div style={{marginBottom:dens.tileGap}}>
           <RingModeSwitcher ctx={ctx}/>
         </div>
       )}
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:dens.tileGap}}>
-        {state.locks.map(l => (
+        {locks.map(l => (
           <window.Card key={l.id} p={p} style={{padding:14, display:'flex', alignItems:'center', gap:12}}>
             <window.Icon name="lock" size={20} style={{color: l.locked ? 'oklch(60% 0.13 145)' : p.accent}}/>
             <div style={{flex:1, minWidth:0}}>
