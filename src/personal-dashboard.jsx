@@ -10,7 +10,7 @@ import {
 } from './lib/layout.js';
 
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
-  const { p, fonts, state, user, narrow, setPage } = ctx;
+  const { p, fonts, state, user, narrow, setPage, openBrowser } = ctx;
   const hass = React.useContext(HassContext);
   const accent = p.accent;
   const surface = '#1a1612';
@@ -50,18 +50,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   // a ref inside fetchAll.
   const [viewMonth, setViewMonth] = React.useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [fetchedEvents, setFetchedEvents] = React.useState([]);
-  const [fetchStatus, setFetchStatus] = React.useState(null); // diag: { transport, raw, parsed, error }
   const calendarIds = (state.calendar || []).map(c => c.id).join(',');
   const viewMonthKey = `${viewMonth.getFullYear()}-${viewMonth.getMonth()}`;
   const hassReady = Boolean(hass && typeof hass.callApi === 'function');
   const hassRef = React.useRef(hass);
   hassRef.current = hass;
   React.useEffect(() => {
-    if (!hassReady || !calendarIds) {
-      setFetchedEvents([]);
-      setFetchStatus({ transport: 'skipped', raw: 0, parsed: 0, error: !hassReady ? 'hass not ready' : 'no calendarIds' });
-      return;
-    }
+    if (!hassReady || !calendarIds) { setFetchedEvents([]); return; }
     let alive = true;
     const ids = calendarIds.split(',').filter(Boolean);
     const diag = (entry) => {
@@ -69,18 +64,6 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       if (!window.__hcDiag) window.__hcDiag = [];
       window.__hcDiag.push(entry);
       while (window.__hcDiag.length > 50) window.__hcDiag.shift();
-    };
-    // Errors from hass.callApi can be plain strings, Error objects, or
-    // raw response objects with no .message — the latter rendered as
-    // "[object Object]" in the previous diag and hid the real failure.
-    const errStr = (e) => {
-      if (e == null) return '(null)';
-      if (typeof e === 'string') return e;
-      if (e?.message) return String(e.message);
-      if (e?.error) return String(e.error);
-      if (e?.body) return String(e.body).slice(0, 200);
-      try { const j = JSON.stringify(e); if (j && j !== '{}') return j.slice(0, 200); } catch {}
-      return String(e);
     };
 
     // Normalise one HA calendar event into the shape the dashboard
@@ -162,38 +145,26 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       const startISO = start.toISOString();
       const endISO = end.toISOString();
       const allEvents = [];
-      let restRaw = 0;
-      let subscribeRaw = 0;
-      let firstErr = null;
 
       // REST path — bulk fetch, the canonical HA pattern.
       try {
         await Promise.all(ids.map(async (id) => {
           try {
             const h = hassRef.current;
-            if (!h?.callApi) {
-              if (!firstErr) firstErr = `${id}: no hass.callApi`;
-              return;
-            }
+            if (!h?.callApi) return;
             const path = `calendars/${id}?start=${encodeURIComponent(startISO)}&end=${encodeURIComponent(endISO)}`;
             const events = await h.callApi('GET', path);
-            if (!Array.isArray(events)) {
-              if (!firstErr) firstErr = `${id}: not array (${typeof events})`;
-              return;
-            }
-            restRaw += events.length;
+            if (!Array.isArray(events)) return;
             for (const ev of events) {
               const parsed = parseEvent(ev, id);
               if (parsed) allEvents.push(parsed);
             }
           } catch (e) {
-            if (!firstErr) firstErr = `${id} REST: ${errStr(e)}`;
-            diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${errStr(e)}` });
+            diag({ ts: Date.now(), kind: 'error', message: `calendar ${id}: REST failed — ${e?.message || JSON.stringify(e) || e}` });
           }
         }));
       } catch (e) {
-        if (!firstErr) firstErr = `REST batch: ${errStr(e)}`;
-        diag({ ts: Date.now(), kind: 'error', message: `calendar REST batch failed — ${errStr(e)}` });
+        diag({ ts: Date.now(), kind: 'error', message: `calendar REST batch failed — ${e?.message || e}` });
       }
 
       // If REST returned nothing, try the subscribe path the HA frontend
@@ -202,23 +173,19 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
         try {
           const subscribeResults = await Promise.all(ids.map(id => fetchViaSubscribe(id, startISO, endISO)));
           subscribeResults.forEach((events, i) => {
-            subscribeRaw += events.length;
             for (const ev of events) {
               const parsed = parseEvent(ev, ids[i]);
               if (parsed) allEvents.push(parsed);
             }
           });
         } catch (e) {
-          if (!firstErr) firstErr = `subscribe: ${errStr(e)}`;
-          diag({ ts: Date.now(), kind: 'error', message: `calendar subscribe batch failed — ${errStr(e)}` });
+          diag({ ts: Date.now(), kind: 'error', message: `calendar subscribe batch failed — ${e?.message || e}` });
         }
       }
 
       if (alive) {
         allEvents.sort((a, b) => a.sortKey - b.sortKey);
         setFetchedEvents(allEvents);
-        const transport = restRaw > 0 ? 'rest' : (subscribeRaw > 0 ? 'subscribe' : (firstErr ? 'failed' : 'empty'));
-        setFetchStatus({ transport, raw: restRaw + subscribeRaw, parsed: allEvents.length, error: firstErr });
       }
     };
     fetchAll();
@@ -258,7 +225,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       case 'weather': return <WeatherCard weather={state.weather} hass={hass} {...tileTheme}/>;
       case 'car':     return <CarCard hass={hass} {...tileTheme}/>;
       case 'sports':  return <SportsCard {...tileTheme}/>;
-      case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
+      case 'news':    return <NewsCard news={state.news} openBrowser={openBrowser} {...tileTheme}/>;
       case 'todo':    return <TodoCard todos={state.todos} {...tileTheme}/>;
       case 'notes':   return <NotesCard {...tileTheme}/>;
       default: return null;
@@ -339,8 +306,6 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
               <CalendarColumn
                 calendar={state.calendar} events={allEvents}
                 viewMonth={viewMonth} setViewMonth={setViewMonth}
-                fetchStatus={fetchStatus}
-                hassStates={hass?.states} newsCount={(state.news || []).length}
                 accent={accent} fonts={fonts} surface={surface} surface2={surface2}
                 fg={fg} fg2={fg2} fg3={fg3} border={border}
               />
@@ -366,8 +331,6 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
           <CalendarColumn
             calendar={state.calendar} events={allEvents}
             viewMonth={viewMonth} setViewMonth={setViewMonth}
-            fetchStatus={fetchStatus}
-            hassStates={hass?.states} newsCount={(state.news || []).length}
             accent={accent} fonts={fonts} surface={surface} surface2={surface2}
             fg={fg} fg2={fg2} fg3={fg3} border={border}
           />
@@ -1644,18 +1607,27 @@ const TeamLine = ({ c, fg, fg3, fonts, dim, showScore }) => (
 );
 
 // ── Section: News ─────────────────────────────────────────────────────────
-const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
+const NewsCard = ({ news, openBrowser, accent, fonts, surface, fg, fg2, fg3, border }) => {
   if (!news || !news.length) {
     return <EmptyCard title="Breaking news" hint="Add Feedreader in configuration.yaml with your favourite RSS URLs (NYT, BBC, etc.). I can wire this up if you want." surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} fonts={fonts} accent={accent}/>;
   }
+  // Prefer the in-app BrowserView overlay so reading a headline doesn't
+  // bounce the user out of HomeCNTRD into Safari (and on iPad Companion
+  // out of the Companion app entirely). Falls back to a plain link if
+  // openBrowser isn't wired in for some reason.
+  const handleOpen = (n) => (e) => {
+    if (!openBrowser || !n?.url) return;
+    e.preventDefault();
+    openBrowser(n.url, n.source || 'News');
+  };
   return (
     <Card surface={surface} border={border}>
       <CardHeader title="Breaking news" right={<span style={{fontSize: 11, color: fg3}}>{news.length} headlines</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
       <div style={{display:'flex', flexDirection:'column', gap: 10}}>
         {news.slice(0, 5).map((n, i) => (
-          <a key={i} href={n.url || '#'} target="_blank" rel="noopener noreferrer" style={{
+          <a key={i} href={n.url || '#'} onClick={handleOpen(n)} target="_blank" rel="noopener noreferrer" style={{
             padding: '8px 0', borderBottom: `.5px solid ${border}`,
-            textDecoration: 'none', color: 'inherit',
+            textDecoration: 'none', color: 'inherit', cursor: 'pointer',
           }}>
             <div style={{fontSize: 13, color: fg, lineHeight: 1.4, marginBottom: 4}}>{n.title}</div>
             <div style={{fontSize: 10.5, color: fg3, letterSpacing: '.04em', textTransform: 'uppercase'}}>{n.source} · {n.timeAgo}</div>
@@ -1851,7 +1823,7 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
 };
 
 // ── Right column: Calendar + upcoming events ──────────────────────────────
-const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, fetchStatus, hassStates, newsCount, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
+const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
   const today = new Date();
   const todayKey = ymd(today);
   const [selectedKey, setSelectedKey] = React.useState(null); // YYYY-MM-DD
@@ -1992,42 +1964,6 @@ const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, fetchStatus
             {selectedKey ? 'Nothing scheduled this day.' : 'Nothing scheduled in the next 3 days.'}
           </div>
         )}
-        {/* Compact diag — temporary while we chase the calendar
-            refresh-drop and feedreader entity-shape mismatch. Remove
-            once both are reliable. */}
-        {(() => {
-          const eventEntities = [];
-          if (hassStates && typeof hassStates === 'object') {
-            for (const id in hassStates) {
-              if (id.startsWith('event.')) eventEntities.push(id);
-            }
-          }
-          const matched = eventEntities.filter(id => id.endsWith('_latest_feed') || id.startsWith('event.feedreader'));
-          // Filter out the obvious noise (Hue button events, backups,
-          // doorbell rings, etc.) so we see what's left — feedreader, if
-          // it created anything, will be in the unusual remainder.
-          const NOISE = /^event\.(hue_|backup_|reolink_|doorbell_|amcrest_|abode_|deconz_|zha_|zwave_)/;
-          const interesting = eventEntities.filter(id => !NOISE.test(id));
-          return (
-            <div style={{
-              marginTop: 12, padding: '8px 10px',
-              borderRadius: 6, border: `.5px dashed ${accent}`,
-              background: 'rgba(255,138,61,0.05)',
-              fontSize: 10, color: fg2, lineHeight: 1.5,
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              wordBreak: 'break-word',
-            }}>
-              <div style={{color: accent, fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4}}>Diag</div>
-              <div>cal: state.cal.length={calendar?.length || 0} · fetch={fetchStatus ? `${fetchStatus.transport}/${fetchStatus.raw}/${fetchStatus.parsed}` : 'null'}{fetchStatus?.error ? ` err:${fetchStatus.error.slice(0, 60)}` : ''}</div>
-              <div>news: state.news.length={newsCount} · event.* total={eventEntities.length} · feedreader-shape={matched.length}{matched.length ? ` → ${matched.slice(0, 3).join(', ')}${matched.length > 3 ? '…' : ''}` : ''}</div>
-              {!matched.length && (
-                <div style={{marginTop: 4, color: fg3}}>
-                  non-noise event.* ({interesting.length}): {interesting.length ? interesting.slice(0, 12).join(', ') : '(none)'}
-                </div>
-              )}
-            </div>
-          );
-        })()}
       </Card>
     </div>
   );
