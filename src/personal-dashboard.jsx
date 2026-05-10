@@ -9,16 +9,38 @@ import {
   moveTile, moveTileUp, moveTileDown, setTileSpan, setTileHidden,
 } from './lib/layout.js';
 
+// Dark vs light palette for the dashboard. Light mode is opt-in via the
+// dashboardLight tweak (default off) and only affects this view — every
+// other page in the app keeps its existing dark/light handling.
+const dashboardPalette = (light) => light ? {
+  pageBg:    '#f5f0e6',
+  surface:   '#ffffff',
+  surface2:  '#f2ecde',
+  fg:        '#2a2520',
+  fg2:       'rgba(42,37,32,0.7)',
+  fg3:       'rgba(42,37,32,0.45)',
+  border:    'rgba(42,37,32,0.12)',
+  modalBg:   'rgba(42,37,32,0.32)',
+  pillStop:  '#ffffffe8',
+} : {
+  pageBg:    '#0d0b09',
+  surface:   '#1a1612',
+  surface2:  '#221d18',
+  fg:        '#f1ead9',
+  fg2:       'rgba(241,234,217,0.7)',
+  fg3:       'rgba(241,234,217,0.42)',
+  border:    'rgba(241,234,217,0.1)',
+  modalBg:   'rgba(0,0,0,0.6)',
+  pillStop:  '#0d0b09e8',
+};
+
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
-  const { p, fonts, state, user, narrow, setPage } = ctx;
+  const { p, fonts, state, user, narrow, setPage, settings, setSetting } = ctx;
   const hass = React.useContext(HassContext);
+  const lightMode = settings?.dashboardLight === true;
+  const theme = dashboardPalette(lightMode);
   const accent = p.accent;
-  const surface = '#1a1612';
-  const surface2 = '#221d18';
-  const fg = '#f1ead9';
-  const fg2 = 'rgba(241,234,217,0.7)';
-  const fg3 = 'rgba(241,234,217,0.42)';
-  const border = 'rgba(241,234,217,0.1)';
+  const { surface, surface2, fg, fg2, fg3, border, pageBg } = theme;
   const display = fonts.display;
   const body = fonts.body;
 
@@ -219,22 +241,22 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const exitEdit = () => setEditMode(false);
   const doReset = () => { const next = resetLayout(); setLayout(next); };
 
-  const tileTheme = { accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow };
+  const tileTheme = { accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow, lightMode };
   const renderTile = (id) => {
     switch (id) {
       case 'weather': return <WeatherCard weather={state.weather} hass={hass} {...tileTheme}/>;
       case 'car':     return <CarCard hass={hass} {...tileTheme}/>;
       case 'sports':  return <SportsCard {...tileTheme}/>;
       case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
-      case 'todo':    return <TodoCard todos={state.todos} {...tileTheme}/>;
-      case 'notes':   return <NotesCard {...tileTheme}/>;
+      case 'todo':    return <TodoCard todos={state.todos} hass={hass} {...tileTheme}/>;
+      case 'notes':   return <NotesCard hass={hass} {...tileTheme}/>;
       default: return null;
     }
   };
 
   return (
     <div style={{
-      background: '#0d0b09', color: fg, fontFamily: body,
+      background: pageBg, color: fg, fontFamily: body,
       minHeight: '100%',
       // Safe-area aware so the status bar / home indicator don't clip
       // the rounded card corners on iPad / iOS Companion.
@@ -261,10 +283,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             hass={hass} user={user}
             accent={accent} fg={fg} fg2={fg2} fg3={fg3} border={border}
             surface={surface} surface2={surface2} fonts={fonts}
+            pageBg={pageBg}
             narrow={false}
             editMode={editMode}
             onToggleEdit={() => setEditMode(v => !v)}
             onOpenMenu={onOpenMenu}
+            lightMode={lightMode}
+            onToggleLight={() => setSetting && setSetting('dashboardLight', !lightMode)}
           />
         )}
         <div style={{flex: 1, minWidth: 0}}>
@@ -278,10 +303,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             hass={hass} user={user}
             accent={accent} fg={fg} fg2={fg2} fg3={fg3} border={border}
             surface={surface} surface2={surface2} fonts={fonts}
+            pageBg={pageBg}
             narrow={true}
             editMode={editMode}
             onToggleEdit={() => setEditMode(v => !v)}
             onOpenMenu={onOpenMenu}
+            lightMode={lightMode}
+            onToggleLight={() => setSetting && setSetting('dashboardLight', !lightMode)}
           />
         )}
       </div>
@@ -479,7 +507,7 @@ const TileFrame = ({
         <div style={{
           position: 'absolute', top: -10, right: 8, zIndex: 5,
           display: 'flex', gap: 4, padding: 4,
-          background: '#0d0b09e8', backdropFilter: 'blur(8px)',
+          background: theme.pillStop, backdropFilter: 'blur(8px)',
           borderRadius: 8, border: `.5px solid ${border}`,
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
         }}>
@@ -509,7 +537,7 @@ const TileFrame = ({
         <div style={{
           position: 'absolute', top: -10, left: 8, zIndex: 5,
           padding: '5px 8px',
-          background: '#0d0b09e8', backdropFilter: 'blur(8px)',
+          background: theme.pillStop, backdropFilter: 'blur(8px)',
           borderRadius: 8, border: `.5px solid ${border}`,
           color: fg3, cursor: 'grab',
           fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase',
@@ -725,8 +753,9 @@ const PresencePip = ({ icon, title, fg2 }) => (
 
 const PresenceAvatar = ({
   hass, user,
-  accent, fg, fg2, fg3, border, surface, surface2, fonts,
+  accent, fg, fg2, fg3, border, surface, surface2, fonts, pageBg,
   narrow, editMode, onToggleEdit, onOpenMenu,
+  lightMode, onToggleLight,
 }) => {
   const [open, setOpen] = React.useState(false);     // dropdown (narrow) / sticky-expanded (wide)
   const [hovering, setHovering] = React.useState(false);
@@ -824,7 +853,7 @@ const PresenceAvatar = ({
         position: 'absolute', bottom: 0, right: 0,
         width: 12, height: 12, borderRadius: '50%',
         background: presenceColor,
-        border: '2px solid #0d0b09',
+        border: `2px solid ${pageBg || '#0d0b09'}`,
         boxSizing: 'border-box',
       }}/>
     </div>
@@ -862,6 +891,26 @@ const PresenceAvatar = ({
               <StatusRow icon={focusIcon} label="Focus" value={focusLabel}
                 fg={fg} fg2={fg2} fg3={fg3} border={border}/>
             )}
+            {onToggleLight && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleLight();
+                }}
+                style={{
+                  marginTop: 12, width: '100%', height: 36,
+                  borderRadius: 8,
+                  background: 'transparent',
+                  border: `.5px solid ${border}`,
+                  color: fg,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 12, fontWeight: 500,
+                  letterSpacing: '.04em', textTransform: 'uppercase',
+                }}
+              >
+                {lightMode ? '🌙 Dark mode' : '☀ Light mode'}
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -869,7 +918,7 @@ const PresenceAvatar = ({
                 setOpen(false);
               }}
               style={{
-                marginTop: 12, width: '100%', height: 36,
+                marginTop: 8, width: '100%', height: 36,
                 borderRadius: 8,
                 background: editMode ? accent : 'transparent',
                 border: `.5px solid ${editMode ? accent : border}`,
@@ -940,6 +989,11 @@ const PresenceAvatar = ({
         {focusIcon && <PresencePip icon={focusIcon} title={focusLabel || ''} fg2={fg2}/>}
         <div style={{flex: 1}}/>
         <div onClick={(e) => e.stopPropagation()} style={{display: 'flex', gap: 6, flex: 'none'}}>
+          {onToggleLight && iconBtn(
+            lightMode ? 'Switch to dark mode' : 'Switch to light mode',
+            <span style={{color: fg, fontSize: 12}}>{lightMode ? '🌙' : '☀'}</span>,
+            onToggleLight,
+          )}
           {iconBtn(
             editMode ? 'Done editing' : 'Edit layout',
             <span style={{color: editMode ? accent : fg}}>{editMode ? '✓' : '✎'}</span>,
@@ -1380,25 +1434,161 @@ function formatTimeToFull(hours) {
 }
 
 // ── Section: Todo ─────────────────────────────────────────────────────────
-const TodoCard = ({ todos, accent, fonts, surface, fg, fg2, fg3, border }) => {
-  if (!todos || !todos.length) {
+// Pull the actual items from the first todo entity. HA core exposes
+// `todo/list_items` over WS for one-shot fetches and `todo.add_item` /
+// `todo.update_item` / `todo.remove_completed_items` services for
+// mutations. Polled every 30s — there's no native subscription for
+// individual todo items in current HA core.
+const useTodoItems = (hass, entityId) => {
+  const [items, setItems] = React.useState([]);
+  const [loaded, setLoaded] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+
+  React.useEffect(() => {
+    if (typeof hass?.callWS !== 'function' || !entityId) {
+      setItems([]); setLoaded(true);
+      return;
+    }
+    let alive = true;
+    const fetchItems = () => {
+      hass.callWS({ type: 'todo/list_items', entity_id: entityId })
+        .then((res) => {
+          if (!alive) return;
+          setItems(Array.isArray(res?.items) ? res.items : []);
+          setLoaded(true);
+        })
+        .catch(() => { if (alive) setLoaded(true); });
+    };
+    fetchItems();
+    const t = setInterval(fetchItems, 30_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [hass, entityId, reloadKey]);
+
+  // Force-refresh after a mutation so the UI reflects the change before
+  // the next 30s tick. Mutations call this from their service-call
+  // promise.
+  const refresh = React.useCallback(() => setReloadKey(k => k + 1), []);
+  return { items, loaded, refresh };
+};
+
+const TodoCard = ({ todos, hass, accent, fonts, surface, surface2, fg, fg2, fg3, border, lightMode }) => {
+  // Use the first todo entity. Multi-list support can come later.
+  const list = todos && todos.length ? todos[0] : null;
+  const { items, loaded, refresh } = useTodoItems(hass, list?.id);
+  const [filter, setFilter] = React.useState('all'); // 'all' | 'open'
+  const [draft, setDraft] = React.useState('');
+
+  if (!list) {
     return <EmptyCard title="To-do" hint="Add a To-do list in HA: Settings → Devices & Services → + Add Integration → Local To-do." surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} fonts={fonts} accent={accent}/>;
   }
+
+  const openCount = items.filter(i => i.status !== 'completed').length;
+  const doneCount = items.length - openCount;
+  const visible = filter === 'open' ? items.filter(i => i.status !== 'completed') : items;
+
+  const callTodo = (service, data) => {
+    if (typeof hass?.callService !== 'function') return Promise.resolve();
+    return hass.callService('todo', service, data).then(refresh, () => refresh());
+  };
+  const addItem = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setDraft('');
+    callTodo('add_item', { entity_id: list.id, item: text });
+  };
+  const toggle = (item) => {
+    callTodo('update_item', {
+      entity_id: list.id,
+      item: item.uid,
+      status: item.status === 'completed' ? 'needs_action' : 'completed',
+    });
+  };
+  const clearDone = () => {
+    if (!doneCount) return;
+    callTodo('remove_completed_items', { entity_id: list.id });
+  };
+
   return (
     <Card surface={surface} border={border}>
-      <CardHeader title="To-do" right={<span style={{fontSize:11, color: fg3}}>{todos.reduce((s, t) => s + (t.count || 0), 0)} open</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
-      <div style={{display:'flex', flexDirection:'column', gap: 8}}>
-        {todos.slice(0, 5).map(t => (
-          <div key={t.id} style={{display:'flex', alignItems:'center', gap: 10, padding: '6px 0', borderBottom: `.5px solid ${border}`}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 14, gap: 8}}>
+        <div style={{display:'flex', alignItems:'center', gap: 10}}>
+          <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase'}}>To-do</div>
+          {openCount > 0 && (
             <span style={{
-              width: 16, height: 16, borderRadius: 4, border: `.5px solid ${border}`,
-              flex: 'none',
-            }}/>
-            <span style={{flex: 1, fontSize: 13, color: fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</span>
-            <span style={{fontSize: 11, color: fg3, fontVariantNumeric: 'tabular-nums'}}>{t.count ?? 0}</span>
-          </div>
-        ))}
+              padding: '2px 8px', borderRadius: 999, fontSize: 10,
+              background: lightMode ? 'rgba(194,78,69,0.12)' : `${accent}22`, color: accent,
+              fontWeight: 500, fontFamily: 'inherit',
+            }}>{openCount}</span>
+          )}
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap: 8}}>
+          <button onClick={() => setFilter(f => f === 'open' ? 'all' : 'open')} style={{
+            padding: '4px 10px', borderRadius: 6, border: 'none',
+            background: 'transparent', color: filter === 'open' ? accent : fg2,
+            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+          }}>{filter === 'open' ? 'Open' : 'All'}</button>
+          <button onClick={clearDone} disabled={!doneCount} style={{
+            padding: '6px 12px', borderRadius: 999, border: `.5px solid ${border}`,
+            background: 'transparent', color: doneCount ? fg : fg3, fontSize: 12, fontWeight: 500,
+            cursor: doneCount ? 'pointer' : 'default', fontFamily: 'inherit',
+            opacity: doneCount ? 1 : 0.6,
+          }}>Clear done</button>
+        </div>
       </div>
+
+      <div style={{display: 'flex', gap: 6, marginBottom: 12}}>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') addItem(); }}
+          placeholder="Add a task… (press Enter)"
+          style={{
+            flex: 1, padding: '10px 14px', borderRadius: 999,
+            background: surface2, border: `.5px solid ${border}`,
+            color: fg, outline: 'none', fontFamily: fonts.body, fontSize: 13,
+            minWidth: 0,
+          }}
+        />
+        <button onClick={addItem} disabled={!draft.trim()} style={{
+          padding: '10px 18px', borderRadius: 999, border: 0,
+          background: draft.trim() ? accent : surface2,
+          color: draft.trim() ? '#fff' : fg3, fontSize: 12, fontWeight: 500,
+          cursor: draft.trim() ? 'pointer' : 'default', fontFamily: 'inherit',
+        }}>Add</button>
+      </div>
+
+      {visible.length === 0 ? (
+        <div style={{padding: '14px 0 2px', textAlign: 'center', color: fg3, fontSize: 12}}>
+          {loaded ? (filter === 'open' ? 'Nothing open.' : 'Nothing here yet.') : 'Loading…'}
+        </div>
+      ) : (
+        <div style={{display: 'flex', flexDirection: 'column', gap: 4}}>
+          {visible.slice(0, 8).map(item => {
+            const done = item.status === 'completed';
+            return (
+              <button key={item.uid} onClick={() => toggle(item)} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '8px 4px',
+                background: 'transparent', border: 'none', borderRadius: 6,
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                width: '100%',
+              }}>
+                <span style={{
+                  width: 22, height: 22, borderRadius: 6, flex: 'none',
+                  background: done ? accent : 'transparent',
+                  border: `.5px solid ${done ? accent : border}`,
+                  display: 'grid', placeItems: 'center',
+                  color: '#fff', fontSize: 13, lineHeight: 1,
+                }}>{done ? '✓' : ''}</span>
+                <span style={{
+                  flex: 1, fontSize: 13.5, color: done ? fg3 : fg, lineHeight: 1.4,
+                  textDecoration: done ? 'line-through' : 'none',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{item.summary || '(untitled)'}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 };
@@ -1636,82 +1826,366 @@ const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
 };
 
 // ── Section: Notes (text + handwritten) ───────────────────────────────────
-const NOTES_TEXT_KEY = 'homecntrd_notes_v1';
-const NOTES_DRAW_KEY = 'homecntrd_drawing_v1';
-const NOTES_MODE_KEY = 'homecntrd_notes_mode_v1';
+// ── Notes ────────────────────────────────────────────────────────────────
+//
+// Multiple notes, each its own square tile in a grid. Click a tile to
+// open a modal with title + body editor + draw mode.
+//
+// Storage: each note's full payload (text body as HTML, optional drawing
+// as a base64-encoded PNG data URL, mode, timestamps) lives in a single
+// JSON blob synced via HA's `frontend/{get,set}_user_data` WS API. That
+// API persists per-user JSON across devices, so notes follow the user
+// to any device they sign into HA on. A localStorage mirror keyed by
+// `homecntrd:notes` is kept so the panel renders instantly on cold load
+// before the WS round-trip lands, and so notes still work if HA is
+// unreachable.
+const NOTES_HA_KEY = 'homecntrd_notes';
+const NOTES_LS_KEY = 'homecntrd:notes';
 
-const NotesCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
-  const [mode, setMode] = React.useState(() => {
-    try { return localStorage.getItem(NOTES_MODE_KEY) || 'text'; } catch { return 'text'; }
+const useNotes = (hass) => {
+  const [notes, setNotes] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem(NOTES_LS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
   });
-  const switchMode = (m) => {
-    setMode(m);
-    try { localStorage.setItem(NOTES_MODE_KEY, m); } catch {}
+  // Track whether HA's payload has overridden the localStorage mirror so
+  // we don't redundantly re-fetch on every hass reference change.
+  const haLoaded = React.useRef(false);
+  const persistTimer = React.useRef(null);
+
+  React.useEffect(() => {
+    if (haLoaded.current || typeof hass?.callWS !== 'function') return;
+    let alive = true;
+    hass.callWS({ type: 'frontend/get_user_data', key: NOTES_HA_KEY })
+      .then((res) => {
+        if (!alive) return;
+        haLoaded.current = true;
+        const fromHa = Array.isArray(res?.value?.notes) ? res.value.notes : null;
+        if (fromHa) setNotes(fromHa);
+      })
+      .catch(() => { haLoaded.current = true; });
+    return () => { alive = false; };
+  }, [hass]);
+
+  const persist = React.useCallback((next) => {
+    setNotes(next);
+    try { localStorage.setItem(NOTES_LS_KEY, JSON.stringify(next)); } catch {}
+    clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(() => {
+      if (typeof hass?.callWS !== 'function') return;
+      hass.callWS({ type: 'frontend/set_user_data', key: NOTES_HA_KEY, value: { notes: next } })
+        .catch((err) => console.warn('[notes] HA sync failed', err?.message || err));
+    }, 600);
+  }, [hass]);
+
+  const addNote = React.useCallback(() => {
+    const id = `n_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const fresh = { id, title: '', body: '', drawing: '', mode: 'text', created: Date.now(), updated: Date.now() };
+    persist([fresh, ...notes]);
+    return fresh;
+  }, [notes, persist]);
+  const updateNote = React.useCallback((id, patch) => {
+    persist(notes.map(n => n.id === id ? { ...n, ...patch, updated: Date.now() } : n));
+  }, [notes, persist]);
+  const deleteNote = React.useCallback((id) => {
+    persist(notes.filter(n => n.id !== id));
+  }, [notes, persist]);
+
+  return { notes, addNote, updateNote, deleteNote };
+};
+
+const relativeTime = (ts) => {
+  if (!ts) return '';
+  const d = Date.now() - ts;
+  if (d < 60_000) return 'NOW';
+  if (d < 3_600_000) return `${Math.floor(d / 60_000)}M`;
+  if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}H`;
+  return `${Math.floor(d / 86_400_000)}D`;
+};
+
+// Strip HTML tags for the tile preview without pulling DOMParser into
+// the bundle — covers <b>/<i>/<ul>/etc. without breaking on entities.
+const stripHtml = (html) => {
+  if (!html) return '';
+  return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+};
+
+const NotesCard = ({ hass, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow, lightMode }) => {
+  const { notes, addNote, updateNote, deleteNote } = useNotes(hass);
+  const [openId, setOpenId] = React.useState(null);
+
+  const handleNew = () => {
+    const fresh = addNote();
+    setOpenId(fresh.id);
   };
+
+  const cols = narrow ? 2 : 3;
 
   return (
     <Card surface={surface} border={border}>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12, gap: 8}}>
-        <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500}}>Notes</div>
-        <div style={{display:'flex', gap: 4, padding: 3, borderRadius: 8, background: 'rgba(241,234,217,0.04)', border: `.5px solid ${border}`}}>
-          <button onClick={() => switchMode('text')} style={tabPill(mode === 'text', accent, fg2)}>Text</button>
-          <button onClick={() => switchMode('draw')} style={tabPill(mode === 'draw', accent, fg2)}>Draw</button>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 14, gap: 8}}>
+        <div style={{display:'flex', alignItems:'center', gap: 10}}>
+          <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase'}}>Notes</div>
+          {notes.length > 0 && (
+            <span style={{
+              padding: '2px 8px', borderRadius: 999, fontSize: 10,
+              background: lightMode ? 'rgba(194,78,69,0.12)' : `${accent}22`, color: accent,
+              fontWeight: 500, fontFamily: 'inherit',
+            }}>{notes.length}</span>
+          )}
         </div>
+        <button onClick={handleNew} style={{
+          padding: '7px 14px', borderRadius: 999, border: 0,
+          background: accent, color: '#fff',
+          fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+        }}>+ New note</button>
       </div>
 
-      {mode === 'text' && <TextNotes fg={fg} border={border} fonts={fonts} />}
-      {mode === 'draw' && <DrawNotes accent={accent} fg={fg} fg3={fg3} border={border} fonts={fonts} />}
+      <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10}}>
+        <button onClick={handleNew} style={{
+          aspectRatio: '1', borderRadius: 12,
+          background: 'transparent', border: `1px dashed ${border}`,
+          color: fg3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+          display: 'grid', placeItems: 'center',
+        }}>
+          + New note
+        </button>
+        {notes.map(n => (
+          <NoteTile key={n.id} note={n} onClick={() => setOpenId(n.id)}
+            surface2={surface2} fg={fg} fg3={fg3} border={border} fonts={fonts}/>
+        ))}
+      </div>
+
+      {openId && notes.find(n => n.id === openId) && (
+        <NoteModal
+          key={openId}
+          note={notes.find(n => n.id === openId)}
+          onClose={() => setOpenId(null)}
+          onUpdate={(patch) => updateNote(openId, patch)}
+          onDelete={() => { deleteNote(openId); setOpenId(null); }}
+          surface={surface} surface2={surface2}
+          fg={fg} fg2={fg2} fg3={fg3} border={border} accent={accent} fonts={fonts}
+          lightMode={lightMode}
+        />
+      )}
     </Card>
   );
 };
 
-const tabPill = (active, accent, fg2) => ({
-  padding: '5px 12px', borderRadius: 6, border: 0,
-  background: active ? accent : 'transparent',
-  color: active ? '#fff' : fg2,
-  fontSize: 11.5, fontWeight: active ? 500 : 400,
-  cursor: 'pointer', fontFamily: 'inherit',
-});
-
-const TextNotes = ({ fg, border, fonts }) => {
-  const [text, setText] = React.useState(() => {
-    try { return localStorage.getItem(NOTES_TEXT_KEY) || ''; } catch { return ''; }
-  });
-  const save = (v) => {
-    setText(v);
-    try { localStorage.setItem(NOTES_TEXT_KEY, v); } catch {}
-  };
+const NoteTile = ({ note, onClick, surface2, fg, fg3, border, fonts }) => {
+  const title = (note.title || '').trim() || 'Untitled';
+  const bodyText = stripHtml(note.body);
+  const preview = bodyText || (note.drawing ? '' : 'Empty note');
+  const ago = relativeTime(note.updated || note.created);
   return (
-    <textarea
-      value={text}
-      onChange={(e) => save(e.target.value)}
-      placeholder="Quick thoughts, reminders, things to remember…"
-      style={{
-        width: '100%', minHeight: 160, padding: '10px 12px', borderRadius: 8,
-        background: 'rgba(241,234,217,0.03)', color: fg,
-        border: `.5px solid ${border}`, outline: 'none', resize: 'vertical',
-        fontFamily: fonts.body, fontSize: 13, lineHeight: 1.5, boxSizing: 'border-box',
-      }}
-    />
+    <button onClick={onClick} style={{
+      aspectRatio: '1', borderRadius: 12,
+      background: surface2, border: `.5px solid ${border}`,
+      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+      padding: 12, display: 'flex', flexDirection: 'column', gap: 6,
+      overflow: 'hidden', position: 'relative', color: fg,
+    }}>
+      {note.drawing && (
+        <img src={note.drawing} alt="" style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', opacity: 0.5, pointerEvents: 'none',
+        }}/>
+      )}
+      <div style={{position: 'relative', fontFamily: fonts.display, fontSize: 14, fontWeight: 500, color: fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{title}</div>
+      <div style={{
+        position: 'relative', flex: 1, fontSize: 11.5, color: fg3, lineHeight: 1.4,
+        overflow: 'hidden', display: '-webkit-box',
+        WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
+      }}>{preview}</div>
+      <div style={{position: 'relative', fontSize: 10, color: fg3, letterSpacing: '.08em', textTransform: 'uppercase'}}>{ago}</div>
+    </button>
   );
 };
 
-const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
+const NoteModal = ({ note, onClose, onUpdate, onDelete, surface, surface2, fg, fg2, fg3, border, accent, fonts, lightMode }) => {
+  const [title, setTitle] = React.useState(note.title || '');
+  const [body, setBody] = React.useState(note.body || '');
+  const [drawing, setDrawing] = React.useState(note.drawing || '');
+  const [mode, setMode] = React.useState(note.mode || (note.drawing ? 'draw' : 'text'));
+  const editorRef = React.useRef(null);
+
+  // Save + close. Title/body/drawing/mode are in component state; we
+  // commit them up to the parent in one patch on close so partial edits
+  // don't write to HA on every keystroke (we'd hit set_user_data 50+
+  // times typing a sentence).
+  const close = () => {
+    onUpdate({ title, body, drawing, mode });
+    onClose();
+  };
+  const handleDelete = () => {
+    if (!confirmDelete()) return;
+    onDelete();
+  };
+  const confirmDelete = () => {
+    if (typeof window === 'undefined') return true;
+    return window.confirm('Delete this note?');
+  };
+
+  // Esc to close.
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  });
+
+  const exec = (cmd, arg) => {
+    if (mode !== 'text') return;
+    editorRef.current?.focus();
+    try { document.execCommand(cmd, false, arg); } catch {}
+    if (editorRef.current) setBody(editorRef.current.innerHTML);
+  };
+
+  return (
+    <div onClick={close} style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: lightMode ? 'rgba(42,37,32,0.42)' : 'rgba(0,0,0,0.6)',
+      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+      display: 'grid', placeItems: 'center', padding: 16,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 720, maxHeight: '92vh',
+        background: surface, borderRadius: 16, border: `.5px solid ${border}`,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        boxShadow: '0 18px 48px rgba(0,0,0,0.45)',
+      }}>
+        <div style={{padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `.5px solid ${border}`}}>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Untitled"
+            style={{
+              flex: 1, fontFamily: fonts.display, fontSize: 22, fontWeight: 500,
+              fontStyle: title ? 'normal' : 'italic',
+              background: 'transparent', border: 0, outline: 'none', color: fg,
+              padding: 0, minWidth: 0,
+            }}
+          />
+          <button onClick={handleDelete} style={{
+            padding: '8px 14px', borderRadius: 999, border: `.5px solid ${border}`,
+            background: 'transparent', color: fg2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+          }}>Delete</button>
+          <button onClick={close} style={{
+            padding: '8px 18px', borderRadius: 999, border: 0,
+            background: accent, color: '#fff', fontSize: 12, fontWeight: 500,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>Done</button>
+        </div>
+
+        <div style={{padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6, borderBottom: `.5px solid ${border}`, flexWrap: 'wrap'}}>
+          <NoteToolBtn label="B" disabled={mode !== 'text'} onClick={() => exec('bold')} fg={fg} border={border} bold/>
+          <NoteToolBtn label="I" disabled={mode !== 'text'} onClick={() => exec('italic')} fg={fg} border={border} italic/>
+          <NoteToolBtn label="U" disabled={mode !== 'text'} onClick={() => exec('underline')} fg={fg} border={border} underline/>
+          <NoteToolBtn label="• List" disabled={mode !== 'text'} onClick={() => exec('insertUnorderedList')} fg={fg} border={border}/>
+          <NoteToolBtn label="1. List" disabled={mode !== 'text'} onClick={() => exec('insertOrderedList')} fg={fg} border={border}/>
+          <NoteToolBtn label="H" disabled={mode !== 'text'} onClick={() => exec('formatBlock', '<h2>')} fg={fg} border={border}/>
+          <NoteToolBtn label='"' disabled={mode !== 'text'} onClick={() => exec('formatBlock', '<blockquote>')} fg={fg} border={border}/>
+          <div style={{flex: 1}}/>
+          <button
+            onClick={() => setMode(mode === 'draw' ? 'text' : 'draw')}
+            style={{
+              padding: '6px 12px', borderRadius: 999, border: `.5px solid ${border}`,
+              background: mode === 'draw' ? accent : 'transparent',
+              color: mode === 'draw' ? '#fff' : fg, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>✎ Draw</button>
+        </div>
+
+        <div style={{flex: 1, padding: 20, overflow: 'auto', minHeight: 280}}>
+          {mode === 'text' ? (
+            <NoteTextEditor ref={editorRef} body={body} setBody={setBody} fg={fg} fg3={fg3} fonts={fonts}/>
+          ) : (
+            <NoteCanvas drawing={drawing} setDrawing={setDrawing} fg={fg} border={border} surface2={surface2}/>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NoteToolBtn = ({ label, onClick, disabled, fg, border, bold, italic, underline }) => (
+  <button
+    disabled={disabled}
+    onMouseDown={(e) => e.preventDefault()}  // keep editor focused
+    onClick={onClick}
+    style={{
+      minWidth: 36, padding: '5px 11px', borderRadius: 999,
+      border: `.5px solid ${border}`,
+      background: 'transparent', color: fg, fontSize: 13, lineHeight: 1,
+      fontFamily: 'inherit',
+      fontWeight: bold ? 700 : 500,
+      fontStyle: italic ? 'italic' : 'normal',
+      textDecoration: underline ? 'underline' : 'none',
+      cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.4 : 1,
+    }}
+  >{label}</button>
+);
+
+const NoteTextEditor = React.forwardRef(({ body, setBody, fg, fg3, fonts }, ref) => {
+  // contentEditable is uncontrolled; sync the initial HTML in once on
+  // mount and let execCommand drive subsequent state without React
+  // round-trips (which would move the cursor every keystroke).
+  React.useImperativeHandle(ref, () => ({
+    focus: () => ref?.current?.focus(),
+  }));
+  const elRef = React.useRef(null);
+  React.useEffect(() => {
+    if (elRef.current && elRef.current.innerHTML !== body) {
+      elRef.current.innerHTML = body || '';
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const handleInput = () => {
+    if (elRef.current) setBody(elRef.current.innerHTML);
+  };
+  const isEmpty = !body || body === '<br>' || stripHtml(body).length === 0;
+  return (
+    <div style={{position: 'relative'}}>
+      <div
+        ref={(node) => {
+          elRef.current = node;
+          if (typeof ref === 'function') ref(node);
+          else if (ref) ref.current = node;
+        }}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        style={{
+          minHeight: 280, outline: 'none', color: fg, fontFamily: fonts.body,
+          fontSize: 15, lineHeight: 1.6,
+        }}
+      />
+      {isEmpty && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, pointerEvents: 'none',
+          color: fg3, fontFamily: fonts.body, fontSize: 15, lineHeight: 1.6, fontStyle: 'italic',
+        }}>Begin your note…</div>
+      )}
+    </div>
+  );
+});
+
+const NoteCanvas = ({ drawing, setDrawing, fg, border, surface2 }) => {
   const canvasRef = React.useRef(null);
   const wrapRef = React.useRef(null);
   const drawingRef = React.useRef(false);
   const lastRef = React.useRef({ x: 0, y: 0 });
-  const [tool, setTool] = React.useState('pen'); // pen | eraser
 
-  // Resize the canvas to its layout size while preserving the drawing.
-  // Re-bind on mount + on the wrap element resizing.
-  const resizeAndRestore = React.useCallback(() => {
+  React.useEffect(() => {
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
     const dpr = window.devicePixelRatio || 1;
     const cssW = wrap.clientWidth;
-    const cssH = 240;
+    const cssH = 360;
     canvas.width = cssW * dpr;
     canvas.height = cssH * dpr;
     canvas.style.width = `${cssW}px`;
@@ -1720,37 +2194,25 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    // Restore from storage.
-    try {
-      const stored = localStorage.getItem(NOTES_DRAW_KEY);
-      if (stored) {
-        const img = new Image();
-        img.onload = () => ctx.drawImage(img, 0, 0, cssW, cssH);
-        img.src = stored;
-      }
-    } catch {}
+    if (drawing) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, cssW, cssH);
+      img.src = drawing;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  React.useEffect(() => {
-    resizeAndRestore();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(resizeAndRestore);
-    if (wrapRef.current) ro.observe(wrapRef.current);
-    return () => ro.disconnect();
-  }, [resizeAndRestore]);
 
   const getPos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
-
-  const onPointerDown = (e) => {
+  const onDown = (e) => {
     e.preventDefault();
     canvasRef.current.setPointerCapture?.(e.pointerId);
     drawingRef.current = true;
     lastRef.current = getPos(e);
   };
-  const onPointerMove = (e) => {
+  const onMove = (e) => {
     if (!drawingRef.current) return;
     e.preventDefault();
     const ctx = canvasRef.current.getContext('2d');
@@ -1758,63 +2220,48 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
     ctx.beginPath();
     ctx.moveTo(lastRef.current.x, lastRef.current.y);
     ctx.lineTo(x, y);
-    ctx.lineWidth = tool === 'eraser' ? 18 : 2.5;
-    ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : '#f1ead9';
-    ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = fg;
+    ctx.globalCompositeOperation = 'source-over';
     ctx.stroke();
     lastRef.current = { x, y };
   };
-  const onPointerUp = () => {
+  const onUp = () => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
-    try {
-      localStorage.setItem(NOTES_DRAW_KEY, canvasRef.current.toDataURL('image/png'));
-    } catch {}
+    setDrawing(canvasRef.current.toDataURL('image/png'));
   };
 
   const clear = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const c = canvasRef.current;
+    const ctx = c.getContext('2d');
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, c.width, c.height);
     ctx.restore();
-    try { localStorage.removeItem(NOTES_DRAW_KEY); } catch {}
+    setDrawing('');
   };
 
   return (
-    <div>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap: 8, marginBottom: 8}}>
-        <div style={{display:'flex', gap: 4, padding: 3, borderRadius: 7, background: 'rgba(241,234,217,0.03)', border: `.5px solid ${border}`}}>
-          <button onClick={() => setTool('pen')} style={tabPill(tool === 'pen', accent, fg3)}>Pen</button>
-          <button onClick={() => setTool('eraser')} style={tabPill(tool === 'eraser', accent, fg3)}>Eraser</button>
-        </div>
-        <button onClick={clear} style={{
-          padding: '5px 10px', borderRadius: 6, border: `.5px solid ${border}`,
-          background: 'transparent', color: fg3, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-        }}>Clear</button>
-      </div>
-      <div ref={wrapRef} style={{
-        background: 'rgba(241,234,217,0.03)', border: `.5px solid ${border}`,
-        borderRadius: 8, overflow: 'hidden',
-      }}>
-        <canvas
-          ref={canvasRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          onPointerLeave={onPointerUp}
-          style={{
-            display: 'block', width: '100%', height: 240,
-            touchAction: 'none', // critical: stops the page from scrolling while you draw with a finger or stylus
-            cursor: tool === 'eraser' ? 'cell' : 'crosshair',
-          }}
-        />
-      </div>
-      <div style={{fontSize: 10.5, color: fg3, marginTop: 6, lineHeight: 1.4}}>
-        Use Apple Pencil, stylus, or finger. Drawings save automatically per device.
-      </div>
+    <div ref={wrapRef} style={{
+      position: 'relative',
+      background: surface2, border: `.5px solid ${border}`,
+      borderRadius: 8, overflow: 'hidden',
+    }}>
+      <canvas
+        ref={canvasRef}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+        onPointerLeave={onUp}
+        style={{display: 'block', width: '100%', height: 360, touchAction: 'none', cursor: 'crosshair'}}
+      />
+      <button onClick={clear} style={{
+        position: 'absolute', top: 8, right: 8,
+        padding: '4px 10px', borderRadius: 6, border: `.5px solid ${border}`,
+        background: surface2, color: fg, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+      }}>Clear</button>
     </div>
   );
 };
