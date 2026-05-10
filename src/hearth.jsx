@@ -132,7 +132,7 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
   }, []);
 
   const visible = visibleDevices || { lights:true, music:true, cameras:true, climate:true, locks:true, scenes:true, calendar:true, weather:true, alarms:true, tv:true };
-  const ctx = { p, fonts, dens, state, setState, room, setRoom, page, setPage, visible, accent, dark, settings, setSetting, user, patchUser, doLogout, narrow };
+  const ctx = { p, fonts, dens, state, setState, room, setRoom, page, setPage, visible, accent, dark, settings, setSetting, user, patchUser, doLogout, narrow, openBrowser };
 
   return (
     <div data-screen-label="HomeCNTRD" style={{
