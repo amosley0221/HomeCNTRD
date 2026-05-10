@@ -1032,46 +1032,6 @@ const conditionIcon = (c) => CONDITION_ICON[c] || '☁️';
 const conditionLabel = (c) => (c || 'unknown').replace(/-/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
 
 const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow }) => {
-  // Try to surface a friendly "City, ST" label. iOS Companion exposes
-  // `sensor.<phone>_geocoded_location` whose state is a multi-line
-  // address — the second line is usually `Charlotte, NC 28202`. Parse
-  // for a `City, ST` pattern; on no match, fall back to HA's own
-  // `location_name`, which the user may have set to something useful.
-  const locationLabel = React.useMemo(() => {
-    if (!hass) return null;
-    // iOS Companion's `sensor.<phone>_geocoded_location` carries the
-    // address both as the entity state (a multi-line string) and as
-    // structured CLPlacemark attributes (`Locality`, `Administrative
-    // Area`, etc.). Attributes are more reliable than parsing the
-    // state, so try those first.
-    let sensor = null;
-    if (hass.states) {
-      for (const id in hass.states) {
-        if (id.startsWith('sensor.') && id.endsWith('_geocoded_location')) {
-          sensor = hass.states[id];
-          break;
-        }
-      }
-    }
-    if (sensor) {
-      const a = sensor.attributes || {};
-      const city = a.Locality || a.locality || a.City || a.city;
-      const region = a['Administrative Area'] || a.administrative_area || a['Administrative_Area'] || a.State || a.state || a.region;
-      if (city && region) return `${city}, ${region}`;
-      // Fallback: pull a `City, ST` pattern out of the multi-line state.
-      if (sensor.state) {
-        const m = String(sensor.state).match(/([A-Z][a-zA-Z\s.'-]+),\s*([A-Z]{2})\b/);
-        if (m) return `${m[1].trim()}, ${m[2]}`;
-      }
-    }
-    // Always show HA's `location_name` if it's set to anything,
-    // including the default "Home" — at least the chip isn't silently
-    // missing while the user figures out the Companion sensor toggle.
-    const cfg = hass.config?.location_name;
-    if (cfg && cfg.trim()) return cfg.trim();
-    return null;
-  }, [hass]);
-
   // Pull a daily forecast via the get_forecasts service. Newer HA versions
   // (2024.1+) deprecated the inline forecast attribute; this is the right
   // path going forward and works across most weather integrations.
@@ -1123,15 +1083,7 @@ const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2,
       padding: narrow ? '20px 18px' : '24px 28px',
       borderRadius: 16, background: surface, border: `.5px solid ${border}`,
     }}>
-      <div style={{
-        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-        gap: 10, marginBottom: narrow ? 12 : 16,
-      }}>
-        <div style={{fontSize:11, color:fg3, letterSpacing:'.06em', textTransform:'uppercase'}}>Weather</div>
-        {locationLabel && (
-          <div style={{fontSize: 11, color: fg2, fontStyle: 'italic', fontFamily: fonts.display, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0}}>{locationLabel}</div>
-        )}
-      </div>
+      <div style={{fontSize:11, color:fg3, letterSpacing:'.06em', textTransform:'uppercase', marginBottom: narrow ? 12 : 16}}>Weather</div>
 
       <div style={{
         display:'flex', alignItems:'center',
