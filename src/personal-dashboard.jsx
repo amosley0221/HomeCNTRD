@@ -246,7 +246,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       case 'car':     return <CarCard hass={hass} {...tileTheme}/>;
       case 'sports':  return <SportsCard {...tileTheme}/>;
       case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
-      case 'todo':    return <TodoCard todos={state.todos} {...tileTheme}/>;
+      case 'todo':    return <TodoCard todos={state.todos} hass={hass} {...tileTheme}/>;
       case 'notes':   return <NotesCard hass={hass} {...tileTheme}/>;
       default: return null;
     }
@@ -1432,25 +1432,157 @@ function formatTimeToFull(hours) {
 }
 
 // ── Section: Todo ─────────────────────────────────────────────────────────
-const TodoCard = ({ todos, accent, fonts, surface, fg, fg2, fg3, border }) => {
-  if (!todos || !todos.length) {
+// Pull actual items from the first todo entity. HA core exposes
+// todo/list_items over WS for one-shot fetches and todo.add_item /
+// todo.update_item / todo.remove_completed_items services for
+// mutations. Polled every 30 s — there's no native subscription for
+// individual todo items in current HA core.
+const useTodoItems = (hass, entityId) => {
+  const [items, setItems] = React.useState([]);
+  const [loaded, setLoaded] = React.useState(false);
+  const [reloadKey, setReloadKey] = React.useState(0);
+
+  React.useEffect(() => {
+    if (typeof hass?.callWS !== 'function' || !entityId) {
+      setItems([]); setLoaded(true);
+      return;
+    }
+    let alive = true;
+    const fetchItems = () => {
+      hass.callWS({ type: 'todo/list_items', entity_id: entityId })
+        .then((res) => {
+          if (!alive) return;
+          setItems(Array.isArray(res?.items) ? res.items : []);
+          setLoaded(true);
+        })
+        .catch(() => { if (alive) setLoaded(true); });
+    };
+    fetchItems();
+    const t = setInterval(fetchItems, 30_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [hass, entityId, reloadKey]);
+
+  const refresh = React.useCallback(() => setReloadKey(k => k + 1), []);
+  return { items, loaded, refresh };
+};
+
+const TodoCard = ({ todos, hass, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
+  const list = todos && todos.length ? todos[0] : null;
+  const { items, loaded, refresh } = useTodoItems(hass, list?.id);
+  const [filter, setFilter] = React.useState('all'); // 'all' | 'open'
+  const [draft, setDraft] = React.useState('');
+
+  if (!list) {
     return <EmptyCard title="To-do" hint="Add a To-do list in HA: Settings → Devices & Services → + Add Integration → Local To-do." surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} fonts={fonts} accent={accent}/>;
   }
+
+  const openCount = items.filter(i => i.status !== 'completed').length;
+  const doneCount = items.length - openCount;
+  const visible = filter === 'open' ? items.filter(i => i.status !== 'completed') : items;
+
+  const callTodo = (service, data) => {
+    if (typeof hass?.callService !== 'function') return Promise.resolve();
+    return hass.callService('todo', service, data).then(refresh, () => refresh());
+  };
+  const addItem = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setDraft('');
+    callTodo('add_item', { entity_id: list.id, item: text });
+  };
+  const toggle = (item) => {
+    callTodo('update_item', {
+      entity_id: list.id,
+      item: item.uid,
+      status: item.status === 'completed' ? 'needs_action' : 'completed',
+    });
+  };
+  const clearDone = () => {
+    if (!doneCount) return;
+    callTodo('remove_completed_items', { entity_id: list.id });
+  };
+
   return (
     <Card surface={surface} border={border}>
-      <CardHeader title="To-do" right={<span style={{fontSize:11, color: fg3}}>{todos.reduce((s, t) => s + (t.count || 0), 0)} open</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
-      <div style={{display:'flex', flexDirection:'column', gap: 8}}>
-        {todos.slice(0, 5).map(t => (
-          <div key={t.id} style={{display:'flex', alignItems:'center', gap: 10, padding: '6px 0', borderBottom: `.5px solid ${border}`}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 14, gap: 8}}>
+        <div style={{display:'flex', alignItems:'center', gap: 10}}>
+          <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase'}}>To-do</div>
+          {openCount > 0 && (
             <span style={{
-              width: 16, height: 16, borderRadius: 4, border: `.5px solid ${border}`,
-              flex: 'none',
-            }}/>
-            <span style={{flex: 1, fontSize: 13, color: fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</span>
-            <span style={{fontSize: 11, color: fg3, fontVariantNumeric: 'tabular-nums'}}>{t.count ?? 0}</span>
-          </div>
-        ))}
+              padding: '2px 8px', borderRadius: 999, fontSize: 10,
+              background: `${accent}22`, color: accent,
+              fontWeight: 500, fontFamily: 'inherit',
+            }}>{openCount}</span>
+          )}
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap: 8}}>
+          <button onClick={() => setFilter(f => f === 'open' ? 'all' : 'open')} style={{
+            padding: '4px 10px', borderRadius: 6, border: 'none',
+            background: 'transparent', color: filter === 'open' ? accent : fg2,
+            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+          }}>{filter === 'open' ? 'Open' : 'All'}</button>
+          <button onClick={clearDone} disabled={!doneCount} style={{
+            padding: '6px 12px', borderRadius: 999, border: `.5px solid ${border}`,
+            background: 'transparent', color: doneCount ? fg : fg3, fontSize: 12, fontWeight: 500,
+            cursor: doneCount ? 'pointer' : 'default', fontFamily: 'inherit',
+            opacity: doneCount ? 1 : 0.6,
+          }}>Clear done</button>
+        </div>
       </div>
+
+      <div style={{display: 'flex', gap: 6, marginBottom: 12}}>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') addItem(); }}
+          placeholder="Add a task… (press Enter)"
+          style={{
+            flex: 1, padding: '10px 14px', borderRadius: 999,
+            background: surface2, border: `.5px solid ${border}`,
+            color: fg, outline: 'none', fontFamily: fonts.body, fontSize: 13,
+            minWidth: 0,
+          }}
+        />
+        <button onClick={addItem} disabled={!draft.trim()} style={{
+          padding: '10px 18px', borderRadius: 999, border: 0,
+          background: draft.trim() ? accent : surface2,
+          color: draft.trim() ? '#fff' : fg3, fontSize: 12, fontWeight: 500,
+          cursor: draft.trim() ? 'pointer' : 'default', fontFamily: 'inherit',
+        }}>Add</button>
+      </div>
+
+      {visible.length === 0 ? (
+        <div style={{padding: '14px 0 2px', textAlign: 'center', color: fg3, fontSize: 12}}>
+          {loaded ? (filter === 'open' ? 'Nothing open.' : 'Nothing here yet.') : 'Loading…'}
+        </div>
+      ) : (
+        <div style={{display: 'flex', flexDirection: 'column', gap: 4}}>
+          {visible.slice(0, 8).map(item => {
+            const done = item.status === 'completed';
+            return (
+              <button key={item.uid} onClick={() => toggle(item)} style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '8px 4px',
+                background: 'transparent', border: 'none', borderRadius: 6,
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                width: '100%',
+              }}>
+                <span style={{
+                  width: 22, height: 22, borderRadius: 6, flex: 'none',
+                  background: done ? accent : 'transparent',
+                  border: `.5px solid ${done ? accent : border}`,
+                  display: 'grid', placeItems: 'center',
+                  color: '#fff', fontSize: 13, lineHeight: 1,
+                }}>{done ? '✓' : ''}</span>
+                <span style={{
+                  flex: 1, fontSize: 13.5, color: done ? fg3 : fg, lineHeight: 1.4,
+                  textDecoration: done ? 'line-through' : 'none',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{item.summary || '(untitled)'}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 };
