@@ -1039,23 +1039,36 @@ const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2,
   // `location_name`, which the user may have set to something useful.
   const locationLabel = React.useMemo(() => {
     if (!hass) return null;
-    let geoState = null;
+    // iOS Companion's `sensor.<phone>_geocoded_location` carries the
+    // address both as the entity state (a multi-line string) and as
+    // structured CLPlacemark attributes (`Locality`, `Administrative
+    // Area`, etc.). Attributes are more reliable than parsing the
+    // state, so try those first.
+    let sensor = null;
     if (hass.states) {
       for (const id in hass.states) {
         if (id.startsWith('sensor.') && id.endsWith('_geocoded_location')) {
-          geoState = hass.states[id]?.state;
+          sensor = hass.states[id];
           break;
         }
       }
     }
-    if (geoState) {
-      // Pull the first "City, ST" (state is 2 uppercase letters); allow
-      // a trailing zip. Handles both single-line and multi-line states.
-      const match = String(geoState).match(/([A-Z][a-zA-Z\s.'-]+),\s*([A-Z]{2})\b/);
-      if (match) return `${match[1].trim()}, ${match[2]}`;
+    if (sensor) {
+      const a = sensor.attributes || {};
+      const city = a.Locality || a.locality || a.City || a.city;
+      const region = a['Administrative Area'] || a.administrative_area || a['Administrative_Area'] || a.State || a.state || a.region;
+      if (city && region) return `${city}, ${region}`;
+      // Fallback: pull a `City, ST` pattern out of the multi-line state.
+      if (sensor.state) {
+        const m = String(sensor.state).match(/([A-Z][a-zA-Z\s.'-]+),\s*([A-Z]{2})\b/);
+        if (m) return `${m[1].trim()}, ${m[2]}`;
+      }
     }
+    // Always show HA's `location_name` if it's set to anything,
+    // including the default "Home" — at least the chip isn't silently
+    // missing while the user figures out the Companion sensor toggle.
     const cfg = hass.config?.location_name;
-    if (cfg && cfg.trim() && cfg.trim().toLowerCase() !== 'home') return cfg.trim();
+    if (cfg && cfg.trim()) return cfg.trim();
     return null;
   }, [hass]);
 
