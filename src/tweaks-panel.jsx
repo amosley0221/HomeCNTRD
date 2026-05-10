@@ -157,17 +157,41 @@ const __TWEAKS_STYLE = `
 `;
 
 // ── useTweaks ───────────────────────────────────────────────────────────────
-// Single source of truth for tweak values. setTweak persists via the host
-// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+// Single source of truth for tweak values. Two persistence layers:
+//
+//   1. Deck-stage editor: postMessage(__edit_mode_set_keys) → host
+//      rewrites the EDITMODE block in app.jsx on disk. The host doesn't
+//      exist on real HA installs, so this is a no-op there.
+//   2. localStorage: a durable fallback keyed by `homecntrd:tweaks`.
+//      This is what makes user choices (theme, accent, font pair, "show
+//      X" device toggles, agent personality, etc.) survive a panel
+//      reload after a deploy/`?v=N` bump on real HA installs.
+//
+// On mount, persisted values overlay the supplied defaults so user
+// preferences win over whatever defaults a release happens to ship.
+const TWEAKS_KEY = 'homecntrd:tweaks';
 function useTweaks(defaults) {
-  const [values, setValues] = React.useState(defaults);
+  const [values, setValues] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem(TWEAKS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return { ...defaults, ...parsed };
+      }
+    } catch {}
+    return defaults;
+  });
   // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
   // useState-style call doesn't write a "[object Object]" key into the persisted
   // JSON block.
   const setTweak = React.useCallback((keyOrEdits, val) => {
     const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
       ? keyOrEdits : { [keyOrEdits]: val };
-    setValues((prev) => ({ ...prev, ...edits }));
+    setValues((prev) => {
+      const next = { ...prev, ...edits };
+      try { localStorage.setItem(TWEAKS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
     // Same-window signal so in-page listeners (deck-stage rail thumbnails)
     // can react — the parent message only reaches the host, not peers.
