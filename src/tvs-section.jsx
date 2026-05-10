@@ -26,7 +26,7 @@ const TvsSection = ({ ctx }) => {
   };
 
   return (
-    <window.Section title="TVs" subtitle={`${tvs.filter(t => t.on).length} of ${tvs.length} on${inRoom.length ? '' : ' · whole house'}`} p={p} fonts={fonts}>
+    <window.Section title="TVs" subtitle={`${tvs.filter(t => t.on).length} of ${tvs.length} on`} p={p} fonts={fonts}>
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:dens.tileGap}}>
         {tvs.map(tv => <TvCard key={tv.id} ctx={ctx} tv={tv} togglePlay={togglePlay} togglePower={togglePower} openRemote={() => setRemoteFor(tv.id)}/>)}
       </div>
