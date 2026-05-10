@@ -1,7 +1,48 @@
 // calendar-view.jsx — Outlook calendar with per-event Do Not Disturb
+//
+// Originally written against the prototype's mock-data shape:
+//   state.calendar = [{ id, title, t, end, where, organizer, dot, dnd, preMins }]
+// In the real-HA-backed build, `state.calendar` is the entity list
+// (`{ id, name }`) and the closest thing to "upcoming events" is
+// `state.calendarEvents` (next-event preview per calendar). The
+// timeline-with-DND UX below doesn't translate cleanly to that shape,
+// and the personal dashboard already covers upcoming events properly.
+// Render a redirect-style empty state when we detect the mock shape
+// isn't present, so navigating to the Calendar tab no longer crashes.
 
 const CalendarView = ({ ctx }) => {
-  const { p, fonts, dens, state, setState } = ctx;
+  const { p, fonts, dens, state, setState, setPage } = ctx;
+  const events = (state.calendar || []).filter(e => e && typeof e.t === 'string' && typeof e.end === 'string');
+  const haShape = !events.length && (state.calendar || []).length > 0;
+
+  if (haShape) {
+    return (
+      <>
+        <window.PageHead ctx={ctx}
+          eyebrow="Calendar"
+          title="Upcoming events on the dashboard"
+          sub="The full calendar view is being reworked for live HA data. For now, your Outlook events appear in the dashboard's Next 3 days panel."
+        />
+        <window.Card p={p} style={{padding:18}}>
+          <div style={{display:'flex', alignItems:'center', gap:16}}>
+            <div style={{flex:1, fontSize:13, color:p.fg2, lineHeight:1.5}}>
+              {(state.calendar || []).length} calendar{(state.calendar || []).length === 1 ? '' : 's'} connected. Open the dashboard to see today's events, navigate months, and click a date to filter.
+            </div>
+            {setPage && (
+              <button onClick={() => setPage('home')} style={{
+                padding:'8px 14px', borderRadius:9, border:`.5px solid ${p.accent}`,
+                background: p.accent, color: '#fff',
+                fontSize:12, cursor:'pointer', fontFamily:fonts.body,
+              }}>
+                Open dashboard
+              </button>
+            )}
+          </div>
+        </window.Card>
+      </>
+    );
+  }
+
   const set = (id, k, v) => setState(s => ({...s, calendar: s.calendar.map(e => e.id === id ? {...e, [k]: v} : e)}));
 
   const toggleEventDnd = (id, current) => set(id, 'dnd', !current);
