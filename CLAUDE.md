@@ -36,9 +36,10 @@ React 18 + Vite library build, no separate hosting, no auth, no CORS.
   `hass.callService(...)`.
 - `src/lib/hass-context.js` — React context for the live HA connection.
 - `src/tweaks-panel.jsx` — `useTweaks` hook + tweaks panel. Persists
-  via `__edit_mode_set_keys` postMessage (works only in the deck-stage
-  editor; on real HA installs tweaks reset on reload — use
-  `localStorage` directly for anything that has to survive reloads).
+  via `__edit_mode_set_keys` postMessage (deck-stage editor only) AND
+  via `localStorage` under `homecntrd:tweaks` (durable on real HA
+  installs). On mount, persisted values overlay the supplied defaults
+  so a user's choices survive panel reloads after deploys.
 - `static/` — files copied verbatim into `dist/` (Vite `publicDir`).
   Currently the three OpenWakeWord ONNX models.
 - `vite.config.js` — single-file bundle config. Notes inline.
@@ -176,15 +177,20 @@ If you bump the `onnxruntime-web` dep, re-copy the two
 
 Two systems, easy to confuse:
 
-- **Tweaks** (`useTweaks` hook in `tweaks-panel.jsx`) — sends
-  `__edit_mode_set_keys` postMessage to the parent window. Persists
-  only in the deck-stage editor environment. **In a real HA install
-  these are RAM-only and reset on reload.** Don't store anything
-  durable here.
-- **`localStorage`** — for anything the user expects to survive
-  reloads: voice toggle (`homecntrd:voice`), Apple Music token
-  (`INFINITY_KEY`), browse hidden flags (`BROWSE_HIDDEN_KEY`), etc.
-  Key prefix convention: `homecntrd:<thing>` for new settings.
+- **Tweaks** (`useTweaks` hook in `tweaks-panel.jsx`) — writes to
+  both the deck-stage editor host (via `__edit_mode_set_keys`
+  postMessage; no-op on real HA) AND localStorage under
+  `homecntrd:tweaks`. Persisted values overlay the supplied
+  `TWEAK_DEFAULTS` on mount, so user choices (theme, accent, fonts,
+  agent personality, "show X" device toggles, etc.) survive panel
+  reloads after deploys.
+- **`localStorage`** — durable storage for anything the user expects
+  to survive reloads: voice toggle (`homecntrd:voice`), tweaks blob
+  (`homecntrd:tweaks`), Apple Music token (`INFINITY_KEY`), browse
+  hidden flags (`BROWSE_HIDDEN_KEY`), tile layout
+  (`homecntrd_layout_v1`), etc. Key prefix convention:
+  `homecntrd:<thing>` for new settings; older keys predate that
+  convention but stay for compatibility.
 
 ## iOS / Companion-app quirks
 

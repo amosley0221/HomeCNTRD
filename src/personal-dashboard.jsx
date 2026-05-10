@@ -10,7 +10,7 @@ import {
 } from './lib/layout.js';
 
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
-  const { p, fonts, state, user, narrow, setPage, openBrowser } = ctx;
+  const { p, fonts, state, user, narrow, setPage } = ctx;
   const hass = React.useContext(HassContext);
   const accent = p.accent;
   const surface = '#1a1612';
@@ -225,7 +225,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       case 'weather': return <WeatherCard weather={state.weather} hass={hass} {...tileTheme}/>;
       case 'car':     return <CarCard hass={hass} {...tileTheme}/>;
       case 'sports':  return <SportsCard {...tileTheme}/>;
-      case 'news':    return <NewsCard news={state.news} openBrowser={openBrowser} {...tileTheme}/>;
+      case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
       case 'todo':    return <TodoCard todos={state.todos} {...tileTheme}/>;
       case 'notes':   return <NotesCard {...tileTheme}/>;
       default: return null;
@@ -1607,25 +1607,22 @@ const TeamLine = ({ c, fg, fg3, fonts, dim, showScore }) => (
 );
 
 // ── Section: News ─────────────────────────────────────────────────────────
-const NewsCard = ({ news, openBrowser, accent, fonts, surface, fg, fg2, fg3, border }) => {
+const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
   if (!news || !news.length) {
     return <EmptyCard title="Breaking news" hint="Add Feedreader in configuration.yaml with your favourite RSS URLs (NYT, BBC, etc.). I can wire this up if you want." surface={surface} fg={fg} fg2={fg2} fg3={fg3} border={border} fonts={fonts} accent={accent}/>;
   }
-  // Prefer the in-app BrowserView overlay so reading a headline doesn't
-  // bounce the user out of HomeCNTRD into Safari (and on iPad Companion
-  // out of the Companion app entirely). Falls back to a plain link if
-  // openBrowser isn't wired in for some reason.
-  const handleOpen = (n) => (e) => {
-    if (!openBrowser || !n?.url) return;
-    e.preventDefault();
-    openBrowser(n.url, n.source || 'News');
-  };
+  // News headlines open in a new tab rather than the in-app BrowserView
+  // overlay because every major news outlet (BBC, NYT, Al Jazeera, The
+  // Verge, etc.) sets X-Frame-Options: DENY or CSP frame-ancestors,
+  // which makes the iframe render black. The in-app browser overlay
+  // remains useful for other URL surfaces (chat-spawned 'open Esfand on
+  // Twitch' / YouTube / etc.) where iframe embedding is permitted.
   return (
     <Card surface={surface} border={border}>
       <CardHeader title="Breaking news" right={<span style={{fontSize: 11, color: fg3}}>{news.length} headlines</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
       <div style={{display:'flex', flexDirection:'column', gap: 10}}>
         {news.slice(0, 5).map((n, i) => (
-          <a key={i} href={n.url || '#'} onClick={handleOpen(n)} target="_blank" rel="noopener noreferrer" style={{
+          <a key={i} href={n.url || '#'} target="_blank" rel="noopener noreferrer" style={{
             padding: '8px 0', borderBottom: `.5px solid ${border}`,
             textDecoration: 'none', color: 'inherit', cursor: 'pointer',
           }}>
