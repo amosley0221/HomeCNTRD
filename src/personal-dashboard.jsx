@@ -247,7 +247,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       case 'sports':  return <SportsCard {...tileTheme}/>;
       case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
       case 'todo':    return <TodoCard todos={state.todos} {...tileTheme}/>;
-      case 'notes':   return <NotesCard {...tileTheme}/>;
+      case 'notes':   return <NotesCard hass={hass} {...tileTheme}/>;
       default: return null;
     }
   };
@@ -1688,82 +1688,339 @@ const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
 };
 
 // ── Section: Notes (text + handwritten) ───────────────────────────────────
-const NOTES_TEXT_KEY = 'homecntrd_notes_v1';
-const NOTES_DRAW_KEY = 'homecntrd_drawing_v1';
-const NOTES_MODE_KEY = 'homecntrd_notes_mode_v1';
+// ── Notes ────────────────────────────────────────────────────────────────
+//
+// Multiple notes, each its own square tile. Click a tile to open a modal
+// with title + body editor + draw mode.
+//
+// Storage: per-user JSON synced via HA's `frontend/{get,set}_user_data`
+// WS API so notes follow the user across devices. localStorage mirror at
+// `homecntrd:notes` lets the panel render instantly on cold load before
+// the WS round-trip resolves, and keeps notes working if HA's network
+// is down. Drawings are stored as PNG data URLs alongside the text body.
+const NOTES_HA_KEY = 'homecntrd_notes';
+const NOTES_LS_KEY = 'homecntrd:notes';
 
-const NotesCard = ({ accent, fonts, surface, fg, fg2, fg3, border }) => {
-  const [mode, setMode] = React.useState(() => {
-    try { return localStorage.getItem(NOTES_MODE_KEY) || 'text'; } catch { return 'text'; }
+const useNotes = (hass) => {
+  const [notes, setNotes] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem(NOTES_LS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
   });
-  const switchMode = (m) => {
-    setMode(m);
-    try { localStorage.setItem(NOTES_MODE_KEY, m); } catch {}
+  const haLoaded = React.useRef(false);
+  const persistTimer = React.useRef(null);
+
+  React.useEffect(() => {
+    if (haLoaded.current || typeof hass?.callWS !== 'function') return;
+    let alive = true;
+    hass.callWS({ type: 'frontend/get_user_data', key: NOTES_HA_KEY })
+      .then((res) => {
+        if (!alive) return;
+        haLoaded.current = true;
+        const fromHa = Array.isArray(res?.value?.notes) ? res.value.notes : null;
+        if (fromHa) setNotes(fromHa);
+      })
+      .catch(() => { haLoaded.current = true; });
+    return () => { alive = false; };
+  }, [hass]);
+
+  const persist = React.useCallback((next) => {
+    setNotes(next);
+    try { localStorage.setItem(NOTES_LS_KEY, JSON.stringify(next)); } catch {}
+    clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(() => {
+      if (typeof hass?.callWS !== 'function') return;
+      hass.callWS({ type: 'frontend/set_user_data', key: NOTES_HA_KEY, value: { notes: next } })
+        .catch((err) => console.warn('[notes] HA sync failed', err?.message || err));
+    }, 600);
+  }, [hass]);
+
+  const addNote = () => {
+    const id = `n_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const fresh = { id, title: '', body: '', drawing: '', mode: 'text', created: Date.now(), updated: Date.now() };
+    persist([fresh, ...notes]);
+    return fresh;
   };
+  const updateNote = (id, patch) => {
+    persist(notes.map(n => n.id === id ? { ...n, ...patch, updated: Date.now() } : n));
+  };
+  const deleteNote = (id) => {
+    persist(notes.filter(n => n.id !== id));
+  };
+
+  return { notes, addNote, updateNote, deleteNote };
+};
+
+const noteRelativeTime = (ts) => {
+  if (!ts) return '';
+  const d = Date.now() - ts;
+  if (d < 60_000) return 'NOW';
+  if (d < 3_600_000) return `${Math.floor(d / 60_000)}M`;
+  if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}H`;
+  return `${Math.floor(d / 86_400_000)}D`;
+};
+
+const noteStripHtml = (html) => {
+  if (!html) return '';
+  return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+};
+
+const NotesCard = ({ hass, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow, pillStop }) => {
+  const { notes, addNote, updateNote, deleteNote } = useNotes(hass);
+  const [openId, setOpenId] = React.useState(null);
+
+  const handleNew = () => {
+    const fresh = addNote();
+    setOpenId(fresh.id);
+  };
+  const cols = narrow ? 2 : 3;
+  const openNote = openId ? notes.find(n => n.id === openId) : null;
 
   return (
     <Card surface={surface} border={border}>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 12, gap: 8}}>
-        <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500}}>Notes</div>
-        <div style={{display:'flex', gap: 4, padding: 3, borderRadius: 8, background: 'rgba(241,234,217,0.04)', border: `.5px solid ${border}`}}>
-          <button onClick={() => switchMode('text')} style={tabPill(mode === 'text', accent, fg2)}>Text</button>
-          <button onClick={() => switchMode('draw')} style={tabPill(mode === 'draw', accent, fg2)}>Draw</button>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 14, gap: 8}}>
+        <div style={{display:'flex', alignItems:'center', gap: 10}}>
+          <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase'}}>Notes</div>
+          {notes.length > 0 && (
+            <span style={{
+              padding: '2px 8px', borderRadius: 999, fontSize: 10,
+              background: `${accent}22`, color: accent,
+              fontWeight: 500, fontFamily: 'inherit',
+            }}>{notes.length}</span>
+          )}
         </div>
+        <button onClick={handleNew} style={{
+          padding: '7px 14px', borderRadius: 999, border: 0,
+          background: accent, color: '#fff',
+          fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+        }}>+ New note</button>
       </div>
 
-      {mode === 'text' && <TextNotes fg={fg} border={border} fonts={fonts} />}
-      {mode === 'draw' && <DrawNotes accent={accent} fg={fg} fg3={fg3} border={border} fonts={fonts} />}
+      <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 10}}>
+        <button onClick={handleNew} style={{
+          aspectRatio: '1', borderRadius: 12,
+          background: 'transparent', border: `1px dashed ${border}`,
+          color: fg3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12,
+          display: 'grid', placeItems: 'center',
+        }}>+ New note</button>
+        {notes.map(n => (
+          <NoteTile key={n.id} note={n} onClick={() => setOpenId(n.id)}
+            surface2={surface2} fg={fg} fg3={fg3} border={border} fonts={fonts}/>
+        ))}
+      </div>
+
+      {openNote && (
+        <NoteModal
+          key={openNote.id}
+          note={openNote}
+          onClose={() => setOpenId(null)}
+          onUpdate={(patch) => updateNote(openNote.id, patch)}
+          onDelete={() => { deleteNote(openNote.id); setOpenId(null); }}
+          surface={surface} surface2={surface2}
+          fg={fg} fg2={fg2} fg3={fg3} border={border} accent={accent} fonts={fonts}
+          pillStop={pillStop}
+        />
+      )}
     </Card>
   );
 };
 
-const tabPill = (active, accent, fg2) => ({
-  padding: '5px 12px', borderRadius: 6, border: 0,
-  background: active ? accent : 'transparent',
-  color: active ? '#fff' : fg2,
-  fontSize: 11.5, fontWeight: active ? 500 : 400,
-  cursor: 'pointer', fontFamily: 'inherit',
-});
-
-const TextNotes = ({ fg, border, fonts }) => {
-  const [text, setText] = React.useState(() => {
-    try { return localStorage.getItem(NOTES_TEXT_KEY) || ''; } catch { return ''; }
-  });
-  const save = (v) => {
-    setText(v);
-    try { localStorage.setItem(NOTES_TEXT_KEY, v); } catch {}
-  };
+const NoteTile = ({ note, onClick, surface2, fg, fg3, border, fonts }) => {
+  const title = (note.title || '').trim() || 'Untitled';
+  const bodyText = noteStripHtml(note.body);
+  const preview = bodyText || (note.drawing ? '' : 'Empty note');
+  const ago = noteRelativeTime(note.updated || note.created);
   return (
-    <textarea
-      value={text}
-      onChange={(e) => save(e.target.value)}
-      placeholder="Quick thoughts, reminders, things to remember…"
-      style={{
-        width: '100%', minHeight: 160, padding: '10px 12px', borderRadius: 8,
-        background: 'rgba(241,234,217,0.03)', color: fg,
-        border: `.5px solid ${border}`, outline: 'none', resize: 'vertical',
-        fontFamily: fonts.body, fontSize: 13, lineHeight: 1.5, boxSizing: 'border-box',
-      }}
-    />
+    <button onClick={onClick} style={{
+      aspectRatio: '1', borderRadius: 12,
+      background: surface2, border: `.5px solid ${border}`,
+      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+      padding: 12, display: 'flex', flexDirection: 'column', gap: 6,
+      overflow: 'hidden', position: 'relative', color: fg,
+    }}>
+      {note.drawing && (
+        <img src={note.drawing} alt="" style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', opacity: 0.5, pointerEvents: 'none',
+        }}/>
+      )}
+      <div style={{position: 'relative', fontFamily: fonts.display, fontSize: 14, fontWeight: 500, color: fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{title}</div>
+      <div style={{
+        position: 'relative', flex: 1, fontSize: 11.5, color: fg3, lineHeight: 1.4,
+        overflow: 'hidden', display: '-webkit-box',
+        WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
+      }}>{preview}</div>
+      <div style={{position: 'relative', fontSize: 10, color: fg3, letterSpacing: '.08em', textTransform: 'uppercase'}}>{ago}</div>
+    </button>
   );
 };
 
-const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
+const NoteModal = ({ note, onClose, onUpdate, onDelete, surface, surface2, fg, fg2, fg3, border, accent, fonts, pillStop }) => {
+  const [title, setTitle] = React.useState(note.title || '');
+  const [body, setBody] = React.useState(note.body || '');
+  const [drawing, setDrawing] = React.useState(note.drawing || '');
+  const [mode, setMode] = React.useState(note.mode || (note.drawing ? 'draw' : 'text'));
+  const editorElRef = React.useRef(null);
+
+  const close = () => {
+    onUpdate({ title, body, drawing, mode });
+    onClose();
+  };
+  const handleDelete = () => {
+    if (typeof window !== 'undefined' && !window.confirm('Delete this note?')) return;
+    onDelete();
+  };
+
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, body, drawing, mode]);
+
+  const exec = (cmd, arg) => {
+    if (mode !== 'text') return;
+    if (editorElRef.current) editorElRef.current.focus();
+    try { document.execCommand(cmd, false, arg); } catch {}
+    if (editorElRef.current) setBody(editorElRef.current.innerHTML);
+  };
+
+  return (
+    <div onClick={close} style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: pillStop ? 'rgba(42,37,32,0.42)' : 'rgba(0,0,0,0.6)',
+      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+      display: 'grid', placeItems: 'center', padding: 16,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 720, maxHeight: '92vh',
+        background: surface, borderRadius: 16, border: `.5px solid ${border}`,
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        boxShadow: '0 18px 48px rgba(0,0,0,0.45)',
+      }}>
+        <div style={{padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `.5px solid ${border}`}}>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Untitled"
+            style={{
+              flex: 1, fontFamily: fonts.display, fontSize: 22, fontWeight: 500,
+              fontStyle: title ? 'normal' : 'italic',
+              background: 'transparent', border: 0, outline: 'none', color: fg,
+              padding: 0, minWidth: 0,
+            }}
+          />
+          <button onClick={handleDelete} style={{
+            padding: '8px 14px', borderRadius: 999, border: `.5px solid ${border}`,
+            background: 'transparent', color: fg2, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+          }}>Delete</button>
+          <button onClick={close} style={{
+            padding: '8px 18px', borderRadius: 999, border: 0,
+            background: accent, color: '#fff', fontSize: 12, fontWeight: 500,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>Done</button>
+        </div>
+
+        <div style={{padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 6, borderBottom: `.5px solid ${border}`, flexWrap: 'wrap'}}>
+          <NoteToolBtn label="B" disabled={mode !== 'text'} onClick={() => exec('bold')} fg={fg} border={border} bold/>
+          <NoteToolBtn label="I" disabled={mode !== 'text'} onClick={() => exec('italic')} fg={fg} border={border} italic/>
+          <NoteToolBtn label="U" disabled={mode !== 'text'} onClick={() => exec('underline')} fg={fg} border={border} underline/>
+          <NoteToolBtn label="• List" disabled={mode !== 'text'} onClick={() => exec('insertUnorderedList')} fg={fg} border={border}/>
+          <NoteToolBtn label="1. List" disabled={mode !== 'text'} onClick={() => exec('insertOrderedList')} fg={fg} border={border}/>
+          <NoteToolBtn label="H" disabled={mode !== 'text'} onClick={() => exec('formatBlock', '<h2>')} fg={fg} border={border}/>
+          <NoteToolBtn label='"' disabled={mode !== 'text'} onClick={() => exec('formatBlock', '<blockquote>')} fg={fg} border={border}/>
+          <div style={{flex: 1}}/>
+          <button
+            onClick={() => setMode(mode === 'draw' ? 'text' : 'draw')}
+            style={{
+              padding: '6px 12px', borderRadius: 999, border: `.5px solid ${border}`,
+              background: mode === 'draw' ? accent : 'transparent',
+              color: mode === 'draw' ? '#fff' : fg, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>✎ Draw</button>
+        </div>
+
+        <div style={{flex: 1, padding: 20, overflow: 'auto', minHeight: 280}}>
+          {mode === 'text' ? (
+            <NoteTextEditor body={body} setBody={setBody} fg={fg} fg3={fg3} fonts={fonts} elRef={editorElRef}/>
+          ) : (
+            <NoteCanvas drawing={drawing} setDrawing={setDrawing} fg={fg} border={border} surface2={surface2}/>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NoteToolBtn = ({ label, onClick, disabled, fg, border, bold, italic, underline }) => (
+  <button
+    disabled={disabled}
+    onMouseDown={(e) => e.preventDefault()}
+    onClick={onClick}
+    style={{
+      minWidth: 36, padding: '5px 11px', borderRadius: 999,
+      border: `.5px solid ${border}`,
+      background: 'transparent', color: fg, fontSize: 13, lineHeight: 1,
+      fontFamily: 'inherit',
+      fontWeight: bold ? 700 : 500,
+      fontStyle: italic ? 'italic' : 'normal',
+      textDecoration: underline ? 'underline' : 'none',
+      cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.4 : 1,
+    }}
+  >{label}</button>
+);
+
+const NoteTextEditor = ({ body, setBody, fg, fg3, fonts, elRef }) => {
+  React.useEffect(() => {
+    if (elRef && elRef.current && elRef.current.innerHTML !== (body || '')) {
+      elRef.current.innerHTML = body || '';
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const handleInput = () => {
+    if (elRef && elRef.current) setBody(elRef.current.innerHTML);
+  };
+  const isEmpty = !body || body === '<br>' || noteStripHtml(body).length === 0;
+  return (
+    <div style={{position: 'relative'}}>
+      <div
+        ref={elRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        style={{
+          minHeight: 280, outline: 'none', color: fg, fontFamily: fonts.body,
+          fontSize: 15, lineHeight: 1.6,
+        }}
+      />
+      {isEmpty && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, pointerEvents: 'none',
+          color: fg3, fontFamily: fonts.body, fontSize: 15, lineHeight: 1.6, fontStyle: 'italic',
+        }}>Begin your note…</div>
+      )}
+    </div>
+  );
+};
+
+const NoteCanvas = ({ drawing, setDrawing, fg, border, surface2 }) => {
   const canvasRef = React.useRef(null);
   const wrapRef = React.useRef(null);
   const drawingRef = React.useRef(false);
   const lastRef = React.useRef({ x: 0, y: 0 });
-  const [tool, setTool] = React.useState('pen'); // pen | eraser
 
-  // Resize the canvas to its layout size while preserving the drawing.
-  // Re-bind on mount + on the wrap element resizing.
-  const resizeAndRestore = React.useCallback(() => {
+  React.useEffect(() => {
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
     const dpr = window.devicePixelRatio || 1;
     const cssW = wrap.clientWidth;
-    const cssH = 240;
+    const cssH = 360;
     canvas.width = cssW * dpr;
     canvas.height = cssH * dpr;
     canvas.style.width = `${cssW}px`;
@@ -1772,37 +2029,25 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    // Restore from storage.
-    try {
-      const stored = localStorage.getItem(NOTES_DRAW_KEY);
-      if (stored) {
-        const img = new Image();
-        img.onload = () => ctx.drawImage(img, 0, 0, cssW, cssH);
-        img.src = stored;
-      }
-    } catch {}
+    if (drawing) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, cssW, cssH);
+      img.src = drawing;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  React.useEffect(() => {
-    resizeAndRestore();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(resizeAndRestore);
-    if (wrapRef.current) ro.observe(wrapRef.current);
-    return () => ro.disconnect();
-  }, [resizeAndRestore]);
 
   const getPos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
-
-  const onPointerDown = (e) => {
+  const onDown = (e) => {
     e.preventDefault();
     canvasRef.current.setPointerCapture?.(e.pointerId);
     drawingRef.current = true;
     lastRef.current = getPos(e);
   };
-  const onPointerMove = (e) => {
+  const onMove = (e) => {
     if (!drawingRef.current) return;
     e.preventDefault();
     const ctx = canvasRef.current.getContext('2d');
@@ -1810,66 +2055,52 @@ const DrawNotes = ({ accent, fg, fg3, border, fonts }) => {
     ctx.beginPath();
     ctx.moveTo(lastRef.current.x, lastRef.current.y);
     ctx.lineTo(x, y);
-    ctx.lineWidth = tool === 'eraser' ? 18 : 2.5;
-    ctx.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : '#f1ead9';
-    ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = fg;
+    ctx.globalCompositeOperation = 'source-over';
     ctx.stroke();
     lastRef.current = { x, y };
   };
-  const onPointerUp = () => {
+  const onUp = () => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
-    try {
-      localStorage.setItem(NOTES_DRAW_KEY, canvasRef.current.toDataURL('image/png'));
-    } catch {}
+    setDrawing(canvasRef.current.toDataURL('image/png'));
   };
 
   const clear = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const c = canvasRef.current;
+    const ctx = c.getContext('2d');
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, c.width, c.height);
     ctx.restore();
-    try { localStorage.removeItem(NOTES_DRAW_KEY); } catch {}
+    setDrawing('');
   };
 
   return (
-    <div>
-      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap: 8, marginBottom: 8}}>
-        <div style={{display:'flex', gap: 4, padding: 3, borderRadius: 7, background: 'rgba(241,234,217,0.03)', border: `.5px solid ${border}`}}>
-          <button onClick={() => setTool('pen')} style={tabPill(tool === 'pen', accent, fg3)}>Pen</button>
-          <button onClick={() => setTool('eraser')} style={tabPill(tool === 'eraser', accent, fg3)}>Eraser</button>
-        </div>
-        <button onClick={clear} style={{
-          padding: '5px 10px', borderRadius: 6, border: `.5px solid ${border}`,
-          background: 'transparent', color: fg3, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-        }}>Clear</button>
-      </div>
-      <div ref={wrapRef} style={{
-        background: 'rgba(241,234,217,0.03)', border: `.5px solid ${border}`,
-        borderRadius: 8, overflow: 'hidden',
-      }}>
-        <canvas
-          ref={canvasRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          onPointerLeave={onPointerUp}
-          style={{
-            display: 'block', width: '100%', height: 240,
-            touchAction: 'none', // critical: stops the page from scrolling while you draw with a finger or stylus
-            cursor: tool === 'eraser' ? 'cell' : 'crosshair',
-          }}
-        />
-      </div>
-      <div style={{fontSize: 10.5, color: fg3, marginTop: 6, lineHeight: 1.4}}>
-        Use Apple Pencil, stylus, or finger. Drawings save automatically per device.
-      </div>
+    <div ref={wrapRef} style={{
+      position: 'relative',
+      background: surface2, border: `.5px solid ${border}`,
+      borderRadius: 8, overflow: 'hidden',
+    }}>
+      <canvas
+        ref={canvasRef}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+        onPointerLeave={onUp}
+        style={{display: 'block', width: '100%', height: 360, touchAction: 'none', cursor: 'crosshair'}}
+      />
+      <button onClick={clear} style={{
+        position: 'absolute', top: 8, right: 8,
+        padding: '4px 10px', borderRadius: 6, border: `.5px solid ${border}`,
+        background: surface2, color: fg, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+      }}>Clear</button>
     </div>
   );
 };
+
 
 // ── Right column: Calendar + upcoming events ──────────────────────────────
 const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, accent, fonts, surface, surface2, fg, fg2, fg3, border }) => {
