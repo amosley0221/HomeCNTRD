@@ -99,14 +99,35 @@ function App({ hass, narrow, panel }) {
     };
   }, [hass?.user, hass?.config?.location_name]);
 
-  // patchUser is a no-op now (preferences would persist to HA's user
-  // storage in a follow-up). For now, just update local state so toggles
-  // in the UI don't throw.
-  const [localPatches, setLocalPatches] = React.useState({});
+  // User-state patches (per-room section toggles via roomSections,
+  // home customization, etc.) live in localStorage so they survive a
+  // panel reload after every deploy. Without this, toggling 'hide
+  // Scenes' on the Living Room view would reset every `?v=N` bump and
+  // the user would have to re-hide it forever.
+  const USER_PATCHES_KEY = 'homecntrd:user-patches';
+  const [localPatches, setLocalPatches] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem(USER_PATCHES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {}
+    return {};
+  });
   const patchUser = React.useCallback((patch) => {
     setLocalPatches(prev => {
-      const merged = typeof patch === 'function' ? patch({ ...user, ...prev }) : { ...prev, ...patch };
-      return merged;
+      const base = { ...user, ...prev };
+      const merged = typeof patch === 'function'
+        ? patch(base)
+        : { ...prev, ...patch };
+      // Strip the read-only fields from `user` that the patch function
+      // pulls in via `...u` spread — we only want to persist the
+      // genuinely-edited keys, otherwise we'd snapshot a stale firstName
+      // / email / location and ignore future hass updates.
+      const { firstName, email, plan, location, createdAt, ...editable } = merged;
+      try { localStorage.setItem(USER_PATCHES_KEY, JSON.stringify(editable)); } catch {}
+      return editable;
     });
   }, [user]);
   const userMerged = { ...user, ...localPatches };

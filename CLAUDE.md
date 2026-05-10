@@ -186,11 +186,17 @@ Two systems, easy to confuse:
   reloads after deploys.
 - **`localStorage`** — durable storage for anything the user expects
   to survive reloads: voice toggle (`homecntrd:voice`), tweaks blob
-  (`homecntrd:tweaks`), Apple Music token (`INFINITY_KEY`), browse
-  hidden flags (`BROWSE_HIDDEN_KEY`), tile layout
-  (`homecntrd_layout_v1`), etc. Key prefix convention:
+  (`homecntrd:tweaks`), user patches (`homecntrd:user-patches` —
+  per-room section toggles like `roomSections`, etc.), Apple Music
+  token (`INFINITY_KEY`), browse hidden flags (`BROWSE_HIDDEN_KEY`),
+  tile layout (`homecntrd_layout_v1`), etc. Key prefix convention:
   `homecntrd:<thing>` for new settings; older keys predate that
   convention but stay for compatibility.
+
+  `patchUser` in `app.jsx` strips the read-only HA-derived fields
+  (`firstName`, `email`, `plan`, `location`, `createdAt`) before
+  persisting so a stale snapshot doesn't shadow live HA updates on
+  the next mount.
 
 ## iOS / Companion-app quirks
 
