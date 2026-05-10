@@ -4,11 +4,11 @@
 import HassContext from './lib/hass-context.js';
 
 const TvsSection = ({ ctx }) => {
-  const { p, fonts, dens, state, room } = ctx;
+  const { p, fonts, dens, state, isHidden } = ctx;
   const hass = React.useContext(HassContext);
-  // Show TVs in the current room first; fall back to all if none here.
-  const inRoom = state.tvs.filter(tv => tv.room === room);
-  const tvs = inRoom.length ? inRoom : state.tvs;
+  // TVs default to visible in every room; user blacklists per-room
+  // through the Customize panel.
+  const tvs = (state.tvs || []).filter(tv => !(isHidden && isHidden('tvs', tv.id)));
   const [remoteFor, setRemoteFor] = React.useState(null); // tv id when remote is open
   if (!tvs.length) return null;
 
