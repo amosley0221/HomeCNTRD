@@ -1,6 +1,9 @@
 // personal-dashboard.jsx — the new Home page.
 //
-// Black background, tangerine accents, two-column layout (main + calendar).
+// Defaults to a dark cream-on-warm-black palette; opt-in light mode is
+// keyed on the `dashboardLight` tweak (the avatar exposes a sun/moon
+// toggle). Only this view honours the toggle — every other page keeps
+// its own dark/light handling.
 
 import HassContext from './lib/hass-context.js';
 import { fetchAllScores, LEAGUES as SPORT_LEAGUES } from './lib/sports.js';
@@ -9,16 +12,33 @@ import {
   moveTile, moveTileUp, moveTileDown, setTileSpan, setTileHidden,
 } from './lib/layout.js';
 
+const dashboardPalette = (light) => light ? {
+  pageBg:    '#f5f0e6',
+  surface:   '#ffffff',
+  surface2:  '#f2ecde',
+  fg:        '#2a2520',
+  fg2:       'rgba(42,37,32,0.7)',
+  fg3:       'rgba(42,37,32,0.45)',
+  border:    'rgba(42,37,32,0.12)',
+  pillStop:  '#ffffffe8',
+} : {
+  pageBg:    '#0d0b09',
+  surface:   '#1a1612',
+  surface2:  '#221d18',
+  fg:        '#f1ead9',
+  fg2:       'rgba(241,234,217,0.7)',
+  fg3:       'rgba(241,234,217,0.42)',
+  border:    'rgba(241,234,217,0.1)',
+  pillStop:  '#0d0b09e8',
+};
+
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
-  const { p, fonts, state, user, narrow, setPage } = ctx;
+  const { p, fonts, state, user, narrow, setPage, settings, setSetting } = ctx;
   const hass = React.useContext(HassContext);
+  const lightMode = settings?.dashboardLight === true;
+  const theme = dashboardPalette(lightMode);
   const accent = p.accent;
-  const surface = '#1a1612';
-  const surface2 = '#221d18';
-  const fg = '#f1ead9';
-  const fg2 = 'rgba(241,234,217,0.7)';
-  const fg3 = 'rgba(241,234,217,0.42)';
-  const border = 'rgba(241,234,217,0.1)';
+  const { surface, surface2, fg, fg2, fg3, border, pageBg } = theme;
   const display = fonts.display;
   const body = fonts.body;
 
@@ -219,7 +239,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const exitEdit = () => setEditMode(false);
   const doReset = () => { const next = resetLayout(); setLayout(next); };
 
-  const tileTheme = { accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow };
+  const tileTheme = { accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow, pillStop: theme.pillStop };
   const renderTile = (id) => {
     switch (id) {
       case 'weather': return <WeatherCard weather={state.weather} hass={hass} {...tileTheme}/>;
@@ -234,7 +254,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
 
   return (
     <div style={{
-      background: '#0d0b09', color: fg, fontFamily: body,
+      background: pageBg, color: fg, fontFamily: body,
       minHeight: '100%',
       // Safe-area aware so the status bar / home indicator don't clip
       // the rounded card corners on iPad / iOS Companion.
@@ -261,10 +281,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             hass={hass} user={user}
             accent={accent} fg={fg} fg2={fg2} fg3={fg3} border={border}
             surface={surface} surface2={surface2} fonts={fonts}
+            pageBg={pageBg}
             narrow={false}
             editMode={editMode}
             onToggleEdit={() => setEditMode(v => !v)}
             onOpenMenu={onOpenMenu}
+            lightMode={lightMode}
+            onToggleLight={() => setSetting && setSetting('dashboardLight', !lightMode)}
           />
         )}
         <div style={{flex: 1, minWidth: 0}}>
@@ -278,10 +301,13 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
             hass={hass} user={user}
             accent={accent} fg={fg} fg2={fg2} fg3={fg3} border={border}
             surface={surface} surface2={surface2} fonts={fonts}
+            pageBg={pageBg}
             narrow={true}
             editMode={editMode}
             onToggleEdit={() => setEditMode(v => !v)}
             onOpenMenu={onOpenMenu}
+            lightMode={lightMode}
+            onToggleLight={() => setSetting && setSetting('dashboardLight', !lightMode)}
           />
         )}
       </div>
@@ -479,7 +505,7 @@ const TileFrame = ({
         <div style={{
           position: 'absolute', top: -10, right: 8, zIndex: 5,
           display: 'flex', gap: 4, padding: 4,
-          background: '#0d0b09e8', backdropFilter: 'blur(8px)',
+          background: theme.pillStop || '#0d0b09e8', backdropFilter: 'blur(8px)',
           borderRadius: 8, border: `.5px solid ${border}`,
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
         }}>
@@ -509,7 +535,7 @@ const TileFrame = ({
         <div style={{
           position: 'absolute', top: -10, left: 8, zIndex: 5,
           padding: '5px 8px',
-          background: '#0d0b09e8', backdropFilter: 'blur(8px)',
+          background: theme.pillStop || '#0d0b09e8', backdropFilter: 'blur(8px)',
           borderRadius: 8, border: `.5px solid ${border}`,
           color: fg3, cursor: 'grab',
           fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase',
@@ -725,8 +751,9 @@ const PresencePip = ({ icon, title, fg2 }) => (
 
 const PresenceAvatar = ({
   hass, user,
-  accent, fg, fg2, fg3, border, surface, surface2, fonts,
+  accent, fg, fg2, fg3, border, surface, surface2, fonts, pageBg,
   narrow, editMode, onToggleEdit, onOpenMenu,
+  lightMode, onToggleLight,
 }) => {
   const [open, setOpen] = React.useState(false);     // dropdown (narrow) / sticky-expanded (wide)
   const [hovering, setHovering] = React.useState(false);
@@ -824,7 +851,7 @@ const PresenceAvatar = ({
         position: 'absolute', bottom: 0, right: 0,
         width: 12, height: 12, borderRadius: '50%',
         background: presenceColor,
-        border: '2px solid #0d0b09',
+        border: `2px solid ${pageBg || '#0d0b09'}`,
         boxSizing: 'border-box',
       }}/>
     </div>
@@ -862,6 +889,26 @@ const PresenceAvatar = ({
               <StatusRow icon={focusIcon} label="Focus" value={focusLabel}
                 fg={fg} fg2={fg2} fg3={fg3} border={border}/>
             )}
+            {onToggleLight && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleLight();
+                }}
+                style={{
+                  marginTop: 12, width: '100%', height: 36,
+                  borderRadius: 8,
+                  background: 'transparent',
+                  border: `.5px solid ${border}`,
+                  color: fg,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 12, fontWeight: 500,
+                  letterSpacing: '.04em', textTransform: 'uppercase',
+                }}
+              >
+                {lightMode ? '🌙 Dark mode' : '☀ Light mode'}
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -869,7 +916,7 @@ const PresenceAvatar = ({
                 setOpen(false);
               }}
               style={{
-                marginTop: 12, width: '100%', height: 36,
+                marginTop: 8, width: '100%', height: 36,
                 borderRadius: 8,
                 background: editMode ? accent : 'transparent',
                 border: `.5px solid ${editMode ? accent : border}`,
@@ -940,6 +987,11 @@ const PresenceAvatar = ({
         {focusIcon && <PresencePip icon={focusIcon} title={focusLabel || ''} fg2={fg2}/>}
         <div style={{flex: 1}}/>
         <div onClick={(e) => e.stopPropagation()} style={{display: 'flex', gap: 6, flex: 'none'}}>
+          {onToggleLight && iconBtn(
+            lightMode ? 'Switch to dark mode' : 'Switch to light mode',
+            <span style={{color: fg, fontSize: 12, lineHeight: 1}}>{lightMode ? '🌙' : '☀'}</span>,
+            onToggleLight,
+          )}
           {iconBtn(
             editMode ? 'Done editing' : 'Edit layout',
             <span style={{color: editMode ? accent : fg}}>{editMode ? '✓' : '✎'}</span>,
