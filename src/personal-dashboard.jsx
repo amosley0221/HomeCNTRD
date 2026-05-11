@@ -828,6 +828,44 @@ const PresenceAvatar = ({
   const focusIcon = focusGlyph(focus?.state);
   const focusLabel = focusIcon ? focus.state : null;
 
+  // iOS Companion exposes a `sensor.<phone>_steps` for the day's step
+  // count when the user has enabled the Pedometer / Steps sensor in
+  // the Companion app. Same prefix-anchored lookup as battery / focus.
+  const steps = phoneSensor(hass, phoneId, [['sensor', '_steps']]);
+  const stepsNum = steps && !isNaN(parseFloat(steps.state)) ? Math.round(parseFloat(steps.state)) : null;
+  const stepsLabel = stepsNum != null ? `${stepsNum.toLocaleString()} steps` : null;
+
+  // Geocoded current location from the Companion's CLPlacemark sensor.
+  // Prefer the structured `Locality / Administrative Area` attributes
+  // (split fields) over parsing the multi-line state. Falls back to
+  // hass.config.location_name only if the user has changed it from
+  // the default "Home" — otherwise the row is hidden entirely.
+  const locationLabel = (() => {
+    if (!hass) return null;
+    let geo = null;
+    if (hass.states) {
+      for (const id in hass.states) {
+        if (id.startsWith('sensor.') && id.endsWith('_geocoded_location')) {
+          geo = hass.states[id];
+          break;
+        }
+      }
+    }
+    if (geo) {
+      const a = geo.attributes || {};
+      const city = a.Locality || a.locality || a.City || a.city;
+      const region = a['Administrative Area'] || a.administrative_area || a.State || a.state || a.region;
+      if (city && region) return `${city}, ${region}`;
+      if (geo.state) {
+        const m = String(geo.state).match(/([A-Z][a-zA-Z\s.'-]+),\s*([A-Z]{2})\b/);
+        if (m) return `${m[1].trim()}, ${m[2]}`;
+      }
+    }
+    const cfg = hass.config?.location_name;
+    if (cfg && cfg.trim() && cfg.trim().toLowerCase() !== 'home') return cfg.trim();
+    return null;
+  })();
+
   // The avatar circle. Used as the left endcap of both the narrow chip
   // and the wide pill. Presence dot stays inside the 42×42 box so it
   // doesn't get clipped by the pill's `overflow: hidden` during the
@@ -861,7 +899,16 @@ const PresenceAvatar = ({
     return (
       <div ref={wrapRef} style={{position: 'relative', flex: 'none'}}>
         <button
-          onClick={() => setOpen(v => !v)}
+          onClick={(e) => {
+            // Stop the click from bubbling to the document-level
+            // tap-outside listener — without this, the same click that
+            // opens the dropdown can fire the close handler microseconds
+            // later (browser-dependent race) and the dropdown looks like
+            // it never opened. Same reason the wide pill's inner buttons
+            // already call stopPropagation.
+            e.stopPropagation();
+            setOpen(v => !v);
+          }}
           aria-label="Profile and presence"
           aria-expanded={open}
           style={{
@@ -881,10 +928,18 @@ const PresenceAvatar = ({
           }}>
             <StatusRow icon="🏠" label="Presence" value={presenceLabel}
               fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            {locationLabel && (
+              <StatusRow icon="📍" label="Location" value={locationLabel}
+                fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            )}
             <StatusRow icon={battIcon} label="Battery" value={battValue}
               fg={fg} fg2={fg2} fg3={fg3} border={border}/>
             <StatusRow icon={actIcon} label="Activity" value={actLabel}
               fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            {stepsLabel && (
+              <StatusRow icon="👟" label="Steps" value={stepsLabel}
+                fg={fg} fg2={fg2} fg3={fg3} border={border}/>
+            )}
             {focusIcon && (
               <StatusRow icon={focusIcon} label="Focus" value={focusLabel}
                 fg={fg} fg2={fg2} fg3={fg3} border={border}/>
@@ -982,8 +1037,10 @@ const PresenceAvatar = ({
         transition: 'opacity 160ms ease 60ms',
       }}>
         <PresencePip icon={presencePipIcon} title={presenceLabel} fg2={fg2}/>
+        {locationLabel && <PresencePip icon="📍" title={locationLabel} fg2={fg2}/>}
         {battIcon && <PresencePip icon={battIcon} title={battValue || ''} fg2={fg2}/>}
         {actIcon && <PresencePip icon={actIcon} title={actLabel || ''} fg2={fg2}/>}
+        {stepsLabel && <PresencePip icon="👟" title={stepsLabel} fg2={fg2}/>}
         {focusIcon && <PresencePip icon={focusIcon} title={focusLabel || ''} fg2={fg2}/>}
         <div style={{flex: 1}}/>
         <div onClick={(e) => e.stopPropagation()} style={{display: 'flex', gap: 6, flex: 'none'}}>
