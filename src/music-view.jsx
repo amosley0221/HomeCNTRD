@@ -1066,6 +1066,48 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
   const showingSearch = mode === 'search' && path.length === 0;
   const isBrowseRoot = mode === 'browse' && path.length === 0;
 
+  // Music Assistant's browse_media response is capped server-side at a
+  // few hundred children — anything past that gets truncated, so big
+  // libraries (artists, albums, tracks) never show A-Z fully via plain
+  // browse. The MA search API doesn't have the same cap, so we fan out
+  // a search per letter / digit, dedupe by media_content_id, and merge
+  // back into the displayed items.
+  const [loadingAll, setLoadingAll] = React.useState(false);
+  const loadAll = async () => {
+    if (!conn || !speakerId || !items) return;
+    setLoadingAll(true);
+    const accumulated = new Map();
+    for (const item of items) {
+      if (item.media_content_id) accumulated.set(item.media_content_id, item);
+    }
+    // Filter merged-in search hits to the type of thing the user was
+    // browsing (artist / album / track / playlist / …) so 'a' doesn't
+    // pull in albums when they're looking at artists.
+    const expectedClass = (items[0]?.media_class || '').toLowerCase();
+    const queries = 'abcdefghijklmnopqrstuvwxyz0123456789'.split('');
+    for (const q of queries) {
+      try {
+        const resp = await conn.sendMessagePromise({
+          type: 'media_player/search_media', entity_id: speakerId, search_query: q,
+        });
+        const results = (resp?.result || resp?.results || []).filter(isMusicItem);
+        for (const r of results) {
+          if (expectedClass && (r.media_class || '').toLowerCase() !== expectedClass) continue;
+          if (r.media_content_id && !accumulated.has(r.media_content_id)) {
+            accumulated.set(r.media_content_id, r);
+          }
+        }
+      } catch (e) {
+        pushDiag(`music: loadAll q="${q}" failed — ${e?.message || e}`);
+      }
+    }
+    setItems(Array.from(accumulated.values()));
+    setLoadingAll(false);
+    pushDiag(`music: loadAll done — ${accumulated.size} items (was ${items.length})`);
+  };
+  const showLoadAll = !isBrowseRoot && !showingSearch && !isArtist && !isAlbum
+    && Array.isArray(items) && items.length >= 50;
+
   const [manageMode, setManageMode] = React.useState(false);
   const [hiddenIds, setHiddenIds] = React.useState(() => {
     try {
@@ -1193,6 +1235,19 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
             </React.Fragment>
           ))}
           <div style={{flex: 1}}/>
+          {showLoadAll && (
+            <button onClick={loadAll} disabled={loadingAll}
+              title="Music Assistant caps browse at a few hundred items. This fans out searches A-Z + 0-9 to grab the rest."
+              style={{padding: '6px 12px', borderRadius: 7,
+                background: 'transparent',
+                border: `.5px solid ${loadingAll ? p.border : p.accent}`,
+                color: loadingAll ? p.fg3 : p.accent,
+                cursor: loadingAll ? 'default' : 'pointer',
+                fontFamily: 'inherit', fontSize: 12,
+                opacity: loadingAll ? 0.7 : 1}}>
+              {loadingAll ? 'Loading…' : 'Load all'}
+            </button>
+          )}
           {isBrowseRoot && (
             <button onClick={() => setManageMode(m => !m)}
               style={{padding: '6px 12px', borderRadius: 7,
