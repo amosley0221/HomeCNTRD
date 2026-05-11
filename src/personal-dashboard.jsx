@@ -738,15 +738,18 @@ const StatusRow = ({ icon, label, value, fg, fg2, fg3, border }) => (
   </div>
 );
 
-const PresencePip = ({ icon, title, fg2 }) => (
+const PresencePip = ({ icon, title, label, fg2 }) => (
   <span
-    title={title || ''}
+    title={title || label || ''}
     style={{
-      fontSize: 14, lineHeight: 1, color: fg2,
-      display: 'inline-flex', alignItems: 'center',
-      flex: 'none',
+      fontSize: 12, lineHeight: 1, color: fg2,
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      flex: 'none', whiteSpace: 'nowrap',
     }}
-  >{icon}</span>
+  >
+    <span style={{fontSize: 14, lineHeight: 1}}>{icon}</span>
+    {label && <span>{label}</span>}
+  </span>
 );
 
 const PresenceAvatar = ({
@@ -793,6 +796,13 @@ const PresenceAvatar = ({
     : (personState === 'not_home' || personState === 'away') ? '✈️'
     : (personState && personState !== 'unknown' && personState !== 'unavailable') ? '📍'
     : '·';
+  // Inline label used by the wide pill (icon already provides the
+  // glyph, so strip the leading emoji from the full status sentence).
+  const presencePipLabel =
+    personState === 'home' ? 'Home'
+    : (personState === 'not_home' || personState === 'away') ? 'Away'
+    : (personState && personState !== 'unknown' && personState !== 'unavailable') ? person.state
+    : 'Unknown';
 
   // Anchor every Companion sensor lookup to the phone HA Companion is
   // tracking — derived from `person.<x>.attributes.source`. Without this,
@@ -1017,7 +1027,12 @@ const PresenceAvatar = ({
       }}
       style={{
         height: 42,
-        width: expanded ? 340 : 42,
+        // 340 was fine when each pip was just an emoji glyph. Now the
+        // pips render the value inline ("Home" / "55%" / "528" / etc.)
+        // so the pill needs more room. 620 fits the common case (4-5
+        // pips + 3 icon buttons) without pushing the greeting block
+        // off-screen on standard iPad wide layouts.
+        width: expanded ? 620 : 42,
         borderRadius: 21,
         background: surface,
         border: `.5px solid ${border}`,
@@ -1036,12 +1051,12 @@ const PresenceAvatar = ({
         opacity: expanded ? 1 : 0,
         transition: 'opacity 160ms ease 60ms',
       }}>
-        <PresencePip icon={presencePipIcon} title={presenceLabel} fg2={fg2}/>
-        {locationLabel && <PresencePip icon="📍" title={locationLabel} fg2={fg2}/>}
-        {battIcon && <PresencePip icon={battIcon} title={battValue || ''} fg2={fg2}/>}
-        {actIcon && <PresencePip icon={actIcon} title={actLabel || ''} fg2={fg2}/>}
-        {stepsLabel && <PresencePip icon="👟" title={stepsLabel} fg2={fg2}/>}
-        {focusIcon && <PresencePip icon={focusIcon} title={focusLabel || ''} fg2={fg2}/>}
+        <PresencePip icon={presencePipIcon} label={presencePipLabel} fg2={fg2}/>
+        {locationLabel && <PresencePip icon="📍" label={locationLabel} fg2={fg2}/>}
+        {battIcon && <PresencePip icon={battIcon} label={battNum != null ? `${battNum}%` : ''} title={battValue || ''} fg2={fg2}/>}
+        {actIcon && actLabel && <PresencePip icon={actIcon} label={actLabel} fg2={fg2}/>}
+        {stepsNum != null && <PresencePip icon="👟" label={stepsNum.toLocaleString()} title={`${stepsNum.toLocaleString()} steps`} fg2={fg2}/>}
+        {focusIcon && <PresencePip icon={focusIcon} label={focus?.state} fg2={fg2}/>}
         <div style={{flex: 1}}/>
         <div onClick={(e) => e.stopPropagation()} style={{display: 'flex', gap: 6, flex: 'none'}}>
           {onToggleLight && iconBtn(
