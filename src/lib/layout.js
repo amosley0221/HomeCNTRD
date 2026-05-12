@@ -12,6 +12,7 @@
 export const TILE_REGISTRY = {
   weather: { name: 'Weather', defaultColSpan: 2 },
   car:     { name: 'Car',     defaultColSpan: 2 },
+  pinned:  { name: 'Pinned',  defaultColSpan: 2 },
   sports:  { name: 'Sports',  defaultColSpan: 1 },
   news:    { name: 'News',    defaultColSpan: 1 },
   todo:    { name: 'To-do',   defaultColSpan: 2 },
@@ -21,6 +22,7 @@ export const TILE_REGISTRY = {
 export const DEFAULT_LAYOUT = [
   { id: 'weather', colSpan: 2, hidden: false },
   { id: 'car',     colSpan: 2, hidden: false },
+  { id: 'pinned',  colSpan: 2, hidden: false },
   { id: 'sports',  colSpan: 1, hidden: false },
   { id: 'news',    colSpan: 1, hidden: false },
   { id: 'todo',    colSpan: 2, hidden: false },

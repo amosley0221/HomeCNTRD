@@ -33,7 +33,7 @@ const dashboardPalette = (light) => light ? {
 };
 
 const PersonalDashboard = ({ ctx, onOpenMenu }) => {
-  const { p, fonts, state, user, narrow, setPage, settings, setSetting } = ctx;
+  const { p, fonts, state, user, narrow, setPage, settings, setSetting, patchUser } = ctx;
   const hass = React.useContext(HassContext);
   const lightMode = settings?.dashboardLight === true;
   const theme = dashboardPalette(lightMode);
@@ -248,6 +248,11 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
       case 'news':    return <NewsCard news={state.news} {...tileTheme}/>;
       case 'todo':    return <TodoCard todos={state.todos} hass={hass} {...tileTheme}/>;
       case 'notes':   return <NotesCard hass={hass} {...tileTheme}/>;
+      case 'pinned':  return <PinnedCard hass={hass}
+        pins={user?.pinnedMedia} patchUser={patchUser}
+        defaultSpeakerId={settings?.defaultMusicSpeaker}
+        speakers={state.speakers} setPage={setPage}
+        {...tileTheme}/>;
       default: return null;
     }
   };
@@ -1890,6 +1895,145 @@ const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
     </Card>
   );
 };
+
+// ── Pinned media ────────────────────────────────────────────────────────
+//
+// Up to 6 album / playlist tiles. Tap → play on the user's saved default
+// speaker (settings.defaultMusicSpeaker) from the beginning. Edit-mode
+// (the dashboard's existing layout-edit toggle) reveals a × on each tile
+// for quick removal. Pinning happens from the music browse overlay's
+// per-item pin button; this tile only renders + plays.
+const PinnedCard = ({ hass, pins, patchUser, defaultSpeakerId, speakers, setPage, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow }) => {
+  const list = Array.isArray(pins) ? pins : [];
+
+  const playPin = (pin) => {
+    if (!hass?.callService) return;
+    // Speaker priority: explicit saved default > first sonos-ish in
+    // state.speakers > nothing. Without a target we just do nothing
+    // rather than guess wrong.
+    const target = (defaultSpeakerId && (speakers || []).find(s => s.id === defaultSpeakerId)?.id)
+      || (speakers || [])[0]?.id
+      || null;
+    if (!target) return;
+    // Try Music Assistant first (handles play_media against MA URIs
+    // including library:// references cleanly), then plain
+    // media_player.play_media as a fallback for non-MA setups.
+    const fallback = () => hass.callService('media_player', 'play_media', {
+      entity_id: target,
+      media_content_id: pin.contentId,
+      media_content_type: pin.contentType || 'album',
+    }).catch(() => {});
+    hass.callService('music_assistant', 'play_media', {
+      entity_id: target,
+      media_id: pin.contentId,
+      enqueue: 'play',
+    }).catch(fallback);
+  };
+
+  const unpin = (id) => {
+    if (typeof patchUser !== 'function') return;
+    patchUser(u => ({
+      ...u,
+      pinnedMedia: ((u?.pinnedMedia) || []).filter(x => x.id !== id),
+    }));
+  };
+
+  // Fill out to 6 cells so the grid layout stays stable even with
+  // fewer pins. Empty cells are rendered as a hint to add more.
+  const cells = [];
+  for (let i = 0; i < 6; i++) cells.push(list[i] || null);
+
+  if (list.length === 0) {
+    return (
+      <Card surface={surface} border={border}>
+        <CardHeader title="Pinned" right={<span style={{fontSize: 11, color: fg3}}>0 / 6</span>} fonts={fonts} fg={fg} fg3={fg3} accent={accent}/>
+        <div style={{padding: '12px 0 4px', textAlign: 'center'}}>
+          <div style={{fontSize: 12.5, color: fg2, lineHeight: 1.5, marginBottom: 12}}>
+            Pin albums or playlists for one-tap playback on your default speaker.
+          </div>
+          <button onClick={() => setPage && setPage('music')} style={{
+            padding: '8px 16px', borderRadius: 999, border: 0,
+            background: accent, color: '#fff', fontSize: 12, fontWeight: 500,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>Open Music</button>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card surface={surface} border={border}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 14, gap: 8}}>
+        <div style={{display:'flex', alignItems:'center', gap: 10}}>
+          <div style={{fontFamily: fonts.display, fontSize: 15, color: fg, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase'}}>Pinned</div>
+          <span style={{
+            padding: '2px 8px', borderRadius: 999, fontSize: 10,
+            background: `${accent}22`, color: accent,
+            fontWeight: 500, fontFamily: 'inherit',
+          }}>{list.length} / 6</span>
+        </div>
+        <button onClick={() => setPage && setPage('music')} style={{
+          padding: '6px 12px', borderRadius: 999, border: `.5px solid ${border}`,
+          background: 'transparent', color: fg, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+        }}>Browse music</button>
+      </div>
+      <div style={{display: 'grid', gridTemplateColumns: `repeat(${narrow ? 3 : 3}, 1fr)`, gap: 10}}>
+        {cells.map((pin, i) => pin ? (
+          <PinnedTile key={pin.id} pin={pin}
+            onPlay={() => playPin(pin)} onRemove={() => unpin(pin.id)}
+            surface2={surface2} fg={fg} fg3={fg3} border={border} fonts={fonts} accent={accent}/>
+        ) : (
+          <PinnedSlotEmpty key={`empty-${i}`} onClick={() => setPage && setPage('music')}
+            fg3={fg3} border={border}/>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
+const PinnedTile = ({ pin, onPlay, onRemove, surface2, fg, fg3, border, fonts, accent }) => {
+  return (
+    <div style={{position: 'relative'}}>
+      <button onClick={onPlay} style={{
+        width: '100%', aspectRatio: '1', borderRadius: 10,
+        background: pin.art ? `center/cover no-repeat url(${pin.art})` : surface2,
+        border: `.5px solid ${border}`, color: fg,
+        cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+        padding: 0, overflow: 'hidden', position: 'relative',
+        display: 'block',
+      }}>
+        {/* Title overlay at the bottom edge so the art remains the hero */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          padding: '18px 10px 8px',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.78), transparent)',
+          color: '#fff', fontSize: 11.5, fontWeight: 500, lineHeight: 1.25,
+          overflow: 'hidden', textOverflow: 'ellipsis',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+        }}>{pin.name || 'Untitled'}</div>
+      </button>
+      <button onClick={onRemove}
+        aria-label="Remove pin"
+        title="Remove pin"
+        style={{
+          position: 'absolute', top: 6, right: 6,
+          width: 22, height: 22, borderRadius: '50%',
+          background: 'rgba(0,0,0,0.55)', border: 0, color: '#fff',
+          fontSize: 13, lineHeight: 1, cursor: 'pointer',
+          display: 'grid', placeItems: 'center',
+        }}>×</button>
+    </div>
+  );
+};
+
+const PinnedSlotEmpty = ({ onClick, fg3, border }) => (
+  <button onClick={onClick} style={{
+    aspectRatio: '1', borderRadius: 10,
+    background: 'transparent', border: `1px dashed ${border}`,
+    color: fg3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 18,
+    display: 'grid', placeItems: 'center',
+  }}>+</button>
+);
 
 // ── Section: Notes (text + handwritten) ───────────────────────────────────
 // ── Notes ────────────────────────────────────────────────────────────────
