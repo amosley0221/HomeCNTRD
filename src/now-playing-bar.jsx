@@ -54,6 +54,32 @@ const NowPlayingBar = ({ ctx }) => {
     return () => clearInterval(i);
   }, [isPlaying, primary?.id, dur]);
 
+  // Filter the group-with list to real Sonos rooms, deduped by name.
+  // Memoised; the inputs change rarely so the cost is small but the
+  // dedupe walk runs every render without this. MUST live above the
+  // early-return block — moving it below would change the hook count
+  // between renders when navigating to /music or pausing playback and
+  // trip React error #300.
+  const sonosSpeakers = React.useMemo(() => {
+    const isSonos = (s) => {
+      const platform = hass?.entities?.[s.id]?.platform;
+      return platform === 'sonos' || s.isSonosAttr;
+    };
+    const all = (state.speakers || []).filter(isSonos);
+    const seen = new Map();
+    for (const s of all) {
+      const key = (s.name || s.id).toLowerCase().trim();
+      if (!seen.has(key)) seen.set(key, s);
+      else {
+        // Prefer the native Sonos entity over MA mirror — join services
+        // need to target the real Sonos device, not its MA queue proxy.
+        const existing = seen.get(key);
+        if (existing.isMAAttr && !s.isMAAttr) seen.set(key, s);
+      }
+    }
+    return Array.from(seen.values());
+  }, [state.speakers, hass?.entities]);
+
   // Hidden on the music page (full controls live there) and when no
   // speaker is actively playing. These run AFTER every hook above.
   if (page === 'music') return null;
@@ -72,35 +98,6 @@ const NowPlayingBar = ({ ctx }) => {
   // Group membership for the primary speaker. HA exposes the active
   // group via the `group_members` attribute on the master.
   const groupAttr = hass?.states?.[primary.id]?.attributes?.group_members || [];
-
-  // Filter the group-with list to real Sonos rooms, deduped by name.
-  // Without this we'd surface every media_player HA knows about —
-  // MacBook Air AirPlay sinks, Music Assistant queue mirrors that
-  // duplicate the native Sonos rooms, Cast displays that can't group,
-  // etc. Same Sonos-detection pattern SpeakersSection uses (platform
-  // first, sonos_group attribute fallback). Prefer the native Sonos
-  // entity over an MA mirror so the join/unjoin services hit the
-  // right device.
-  const isSonos = (s) => {
-    const platform = hass?.entities?.[s.id]?.platform;
-    return platform === 'sonos' || s.isSonosAttr;
-  };
-  const sonosSpeakers = React.useMemo(() => {
-    const all = (state.speakers || []).filter(isSonos);
-    const seen = new Map();
-    for (const s of all) {
-      const key = (s.name || s.id).toLowerCase().trim();
-      if (!seen.has(key)) seen.set(key, s);
-      else {
-        // Keep the native Sonos entity (no MA attribute) over the MA
-        // mirror; sonos.join + media_player.join target it cleanly.
-        const existing = seen.get(key);
-        if (existing.isMAAttr && !s.isMAAttr) seen.set(key, s);
-      }
-    }
-    return Array.from(seen.values());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.speakers, hass?.entities]);
 
   // The primary may be the MA mirror; map its name to the native Sonos
   // entity so we can use it as the master for sonos.join.
