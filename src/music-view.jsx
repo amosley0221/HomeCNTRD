@@ -1649,7 +1649,37 @@ const SortableGrid = ({ ctx, items, onItemClick }) => {
 
 // Small reusable tile for grid views inside the overlay.
 const ItemTileSmall = ({ item, onClick, ctx }) => {
-  const { p } = ctx;
+  const { p, user, patchUser } = ctx;
+  const cls = (item.media_class || '').toLowerCase();
+  const pinnable = cls === 'album' || cls === 'playlist';
+  const pins = Array.isArray(user?.pinnedMedia) ? user.pinnedMedia : [];
+  const pinId = item.media_content_id;
+  const isPinned = pinnable && pins.some(x => x.id === pinId);
+  const atCap = pins.length >= 6 && !isPinned;
+
+  const togglePin = (e) => {
+    e.stopPropagation();
+    if (typeof patchUser !== 'function') return;
+    if (isPinned) {
+      patchUser(u => ({ ...u, pinnedMedia: (u?.pinnedMedia || []).filter(x => x.id !== pinId) }));
+      return;
+    }
+    if (atCap) return; // cap at 6; user must remove one first from the dashboard
+    const fresh = {
+      id: pinId,
+      name: item.title || 'Untitled',
+      art: item.thumbnail || '',
+      contentId: item.media_content_id,
+      contentType: item.media_content_type || cls || 'album',
+      class: cls,
+    };
+    patchUser(u => {
+      const current = (u?.pinnedMedia || []).filter(x => x.id !== pinId);
+      // Most-recent first; cap at 6 in case state has drifted somehow.
+      return { ...u, pinnedMedia: [fresh, ...current].slice(0, 6) };
+    });
+  };
+
   return (
     <button onClick={onClick} style={{
       padding: 0, border: 0, background: 'transparent',
@@ -1658,7 +1688,7 @@ const ItemTileSmall = ({ item, onClick, ctx }) => {
     }}>
       <div style={{aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
         background: `linear-gradient(135deg, ${p.surface2}, ${p.surface})`, position: 'relative',
-        ...((item.media_class || '').toLowerCase() === 'artist' ? { borderRadius: '50%' } : {}),
+        ...(cls === 'artist' ? { borderRadius: '50%' } : {}),
       }}>
         {item.thumbnail && (
           <img src={item.thumbnail} alt=""
@@ -1668,6 +1698,26 @@ const ItemTileSmall = ({ item, onClick, ctx }) => {
         {!item.can_expand && item.can_play && (
           <div style={{position: 'absolute', bottom: 6, right: 6, width: 24, height: 24, borderRadius: '50%',
             background: 'rgba(0,0,0,0.65)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11}}>▶</div>
+        )}
+        {pinnable && (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={togglePin}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') togglePin(e); }}
+            aria-label={isPinned ? 'Unpin from home' : (atCap ? 'Pin limit reached' : 'Pin to home')}
+            title={isPinned ? 'Unpin from home' : (atCap ? 'Pinned limit (6) reached — remove one to add another' : 'Pin to home')}
+            style={{
+              position: 'absolute', top: 6, left: 6,
+              width: 26, height: 26, borderRadius: '50%',
+              background: isPinned ? p.accent : 'rgba(0,0,0,0.55)',
+              color: '#fff', fontSize: 13, lineHeight: 1,
+              display: 'grid', placeItems: 'center',
+              cursor: atCap ? 'not-allowed' : 'pointer',
+              opacity: atCap ? 0.45 : 1,
+              userSelect: 'none',
+            }}
+          >📌</span>
         )}
       </div>
       <div style={{fontSize: 12, color: p.fg, fontWeight: 500, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
