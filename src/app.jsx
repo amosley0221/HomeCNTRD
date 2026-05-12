@@ -25,7 +25,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "showAlarms": true,
   "showTv": true,
   "ttsAgent": true,
-  "dashboardLight": false
+  "dashboardLight": false,
+  "defaultMusicSpeaker": ""
 }/*EDITMODE-END*/;
 
 class ErrorBoundary extends React.Component {

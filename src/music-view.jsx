@@ -141,6 +141,8 @@ const MusicView = ({ ctx }) => {
   }, [state.speakers, platforms, platformsLoaded, hidden]);
 
   // ── Active speaker, infinity, manage panel ─────────────────────────
+  const { settings, setSetting } = ctx;
+  const savedDefaultId = settings?.defaultMusicSpeaker;
   const [activeId, setActiveId] = React.useState(null);
   // Track when the user explicitly tapped to switch speakers, so the
   // auto-track-playing logic below doesn't yank them off an idle
@@ -149,14 +151,21 @@ const MusicView = ({ ctx }) => {
   const userSwitchSpeaker = React.useCallback((id) => {
     lastUserSwitchRef.current = Date.now();
     setActiveId(id);
-  }, []);
+    // Persist as the default so next visit lands on this speaker
+    // again unless something else is already playing.
+    if (typeof setSetting === 'function') setSetting('defaultMusicSpeaker', id);
+  }, [setSetting]);
   React.useEffect(() => {
     if (!speakers.length) return;
     const current = speakers.find(s => s.id === activeId);
-    // No active or stale — pick a playing speaker if one exists, else first.
+    // No active or stale — pick a playing speaker if one exists, else
+    // the user's saved default, else the first in the list.
     if (!current) {
       const firstPlaying = speakers.find(s => s.playing);
-      setActiveId((firstPlaying || speakers[0]).id);
+      const savedDefault = savedDefaultId
+        ? speakers.find(s => s.id === savedDefaultId)
+        : null;
+      setActiveId((firstPlaying || savedDefault || speakers[0]).id);
       return;
     }
     // Active is idle and someone else is playing — follow the music
@@ -167,7 +176,7 @@ const MusicView = ({ ctx }) => {
       const firstPlaying = speakers.find(s => s.playing);
       if (firstPlaying && firstPlaying.id !== activeId) setActiveId(firstPlaying.id);
     }
-  }, [speakers, activeId]);
+  }, [speakers, activeId, savedDefaultId]);
   const [infinity, setInfinityRaw] = React.useState(() => {
     try { return localStorage.getItem(INFINITY_KEY) === '1'; } catch { return false; }
   });
