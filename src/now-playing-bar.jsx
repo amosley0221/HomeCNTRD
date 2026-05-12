@@ -69,6 +69,31 @@ const NowPlayingBar = ({ ctx }) => {
     try { hass.callService('media_player', service, { entity_id: id, ...data }); } catch {}
   };
 
+  // Group membership for the primary speaker. HA exposes the active
+  // group via the `group_members` attribute on the master. Filter the
+  // primary itself out so it doesn't show up as a togglable member of
+  // its own group.
+  const groupAttr = hass?.states?.[primary.id]?.attributes?.group_members || [];
+  const groupMembers = Array.isArray(groupAttr)
+    ? groupAttr.filter(id => id !== primary.id)
+    : [];
+  const isMember = (id) => groupMembers.includes(id);
+
+  const joinSpeaker = (id) => {
+    if (typeof hass?.callService !== 'function') return;
+    // `media_player.join` is universal — Sonos, Music Assistant, and
+    // any integration that implements the GROUPING feature support it.
+    hass.callService('media_player', 'join', {
+      entity_id: primary.id,
+      group_members: [...groupMembers, id],
+    }).catch(() => {});
+  };
+  const leaveSpeaker = (id) => {
+    if (typeof hass?.callService !== 'function') return;
+    hass.callService('media_player', 'unjoin', { entity_id: id }).catch(() => {});
+  };
+  const groupableSpeakers = (state.speakers || []).filter(s => s.id !== primary.id);
+
   const fmtTime = (s) => {
     if (!s || s < 0) return '0:00';
     const m = Math.floor(s / 60); const ss = Math.floor(s % 60);
@@ -146,6 +171,37 @@ const NowPlayingBar = ({ ctx }) => {
                   }}>{sp.name}</button>
                 );
               })}
+            </div>
+          )}
+
+          {groupableSpeakers.length > 0 && (
+            <div style={{padding:'10px 14px 14px', borderTop:`.5px solid ${p.border}`}}>
+              <div style={{fontSize:10, letterSpacing:'.08em', textTransform:'uppercase', color:p.fg3, marginBottom:8}}>
+                Group with {primary.name}
+              </div>
+              <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+                {groupableSpeakers.map(sp => {
+                  const joined = isMember(sp.id);
+                  return (
+                    <button key={sp.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (joined) leaveSpeaker(sp.id); else joinSpeaker(sp.id);
+                      }}
+                      style={{
+                        padding:'6px 12px', borderRadius:999,
+                        border:`.5px solid ${joined ? p.accent : p.border2}`,
+                        background: joined ? p.accentSoft : 'transparent',
+                        color: joined ? p.accent : p.fg2,
+                        fontSize:11.5, cursor:'pointer', fontFamily:fonts.body,
+                        display:'inline-flex', alignItems:'center', gap:6,
+                      }}>
+                      <span style={{fontSize:13, lineHeight:1}}>{joined ? '✓' : '+'}</span>
+                      <span>{sp.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
