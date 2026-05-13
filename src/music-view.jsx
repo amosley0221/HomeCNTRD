@@ -184,6 +184,19 @@ const MusicView = ({ ctx }) => {
     setInfinityRaw(v);
     try { localStorage.setItem(INFINITY_KEY, v ? '1' : '0'); } catch {}
   };
+
+  // The album / playlist context for the most-recent `play` call. We
+  // use this to render the album's tracklist in Up Next (since MA's
+  // HA integration doesn't expose the live queue items) and as a
+  // potential radio seed when Infinity is on and the queue ends.
+  const [albumCtx, setAlbumCtx] = React.useState(null); // { contentId, contentType, title, thumbnail } | null
+
+  // Most-recent seen track URI on the active speaker — kept in a ref
+  // so the Infinity end-of-queue watcher can fire a radio play_media
+  // seeded by what was actually playing when the queue stopped, not
+  // by whatever the album-pick was. Updated by an effect below.
+  const lastSeedRef = React.useRef(null);
+  const radioFiredFor = React.useRef(null);
   const [manageOpen, setManageOpen] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [browseOpen, setBrowseOpen] = React.useState(false);
@@ -222,16 +235,37 @@ const MusicView = ({ ctx }) => {
   const playingCount = speakers.filter(s => s.playing).length;
   const isMA = MA_PLATFORMS.has(platforms[active?.id]) || active?.isMAAttr;
 
-  // Shared play helper — used by playlists, search, browse.
+  // Shared play helper — used by playlists, search, browse. The
+  // Infinity flag is no longer threaded into radio_mode here: it now
+  // fires only when the explicit queue ends (see the Infinity watcher
+  // below) so a chosen album / playlist plays through cleanly first.
   const playMedia = async (item, enqueue = 'play') => {
     const hass = hassRef.current;
     if (!hass?.callService || !active) return false;
+    if (enqueue === 'play') {
+      // Remember album context for Up Next: when the user picks an
+      // album, QueueCard browses it and shows the full tracklist (MA
+      // doesn't expose the live queue items, so the album view is
+      // the next-best signal of "what's playing next").
+      const kind = (item.media_class || item.media_content_type || '').toLowerCase();
+      if (kind === 'album' || kind === 'playlist') {
+        setAlbumCtx({
+          contentId: item.media_content_id,
+          contentType: item.media_content_type,
+          title: item.title,
+          thumbnail: item.thumbnail,
+          kind,
+        });
+      } else {
+        setAlbumCtx(null);
+      }
+    }
     if (isMA) {
       try {
         await hass.callService('music_assistant', 'play_media', {
           entity_id: active.id,
           media_id: item.media_content_id,
-          enqueue, radio_mode: !!infinity,
+          enqueue,
         });
         return true;
       } catch {}
@@ -258,6 +292,53 @@ const MusicView = ({ ctx }) => {
       await playMedia(items[i], 'add');
     }
   };
+
+  // Track the current track URI on the active speaker. Used as a seed
+  // for radio_mode when Infinity is on and the queue ends — we want
+  // the radio to be based on what was actually just playing, not on
+  // the user's last play_media pick (which could be from minutes ago).
+  React.useEffect(() => {
+    if (!active?.id) return;
+    const hass = hassRef.current;
+    const att = hass?.states?.[active.id]?.attributes;
+    const mci = att?.media_content_id;
+    if (mci && active.haMediaTitle) {
+      lastSeedRef.current = { id: mci, type: att.media_content_type, title: active.haMediaTitle };
+    }
+  }, [active?.id, active?.haMediaTitle, active?.playing]);
+
+  // Infinity end-of-queue watcher. When the speaker's media title
+  // transitions from non-empty to empty (queue truly ended — pause
+  // alone preserves the title), fire a fresh play_media with
+  // radio_mode: true seeded by the last track. Tracked per-seed so
+  // we never double-fire for the same seed.
+  const prevTitleRef = React.useRef(null);
+  React.useEffect(() => {
+    const prevTitle = prevTitleRef.current;
+    const currTitle = active?.haMediaTitle || null;
+    prevTitleRef.current = currTitle;
+
+    if (currTitle) {
+      // Something's playing again — reset so a future end-of-queue
+      // can fire a new radio.
+      radioFiredFor.current = null;
+      return;
+    }
+    if (!prevTitle || !infinity || !lastSeedRef.current || !active?.id) return;
+    const seed = lastSeedRef.current;
+    if (radioFiredFor.current === seed.id) return;
+    radioFiredFor.current = seed.id;
+
+    pushDiag(`music: Infinity — queue ended, firing radio seed=${seed.title}`);
+    const hass = hassRef.current;
+    hass?.callService('music_assistant', 'play_media', {
+      entity_id: active.id,
+      media_id: seed.id,
+      enqueue: 'play',
+      radio_mode: true,
+    })?.catch?.((err) => pushDiag(`music: radio play_media failed — ${err?.message || err}`));
+    setAlbumCtx(null);
+  }, [active?.haMediaTitle, infinity, active?.id]);
 
   return (
     <>
@@ -290,7 +371,8 @@ const MusicView = ({ ctx }) => {
         {/* Center column */}
         <div style={{display:'flex', flexDirection:'column', gap:dens.gap, minWidth: 0}}>
           <NowPlayingHero ctx={ctx} hassRef={hassRef} speaker={active}/>
-          <QueueCard ctx={ctx} conn={conn} hassRef={hassRef} speaker={active}/>
+          <QueueCard ctx={ctx} conn={conn} hassRef={hassRef} speaker={active}
+            albumCtx={albumCtx} playFromList={playFromList}/>
         </div>
 
         {/* Right column */}
@@ -562,11 +644,53 @@ const HeroBtn = ({ onClick, icon, size, primary, active }) => (
 // exposes music_assistant.get_queue with a richer schema; Sonos's
 // underlying integration uses sonos.get_queue. Try MA first since the
 // active speaker is usually the MA mirror; fall back to Sonos.
-const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
+const QueueCard = ({ ctx, conn, hassRef, speaker, albumCtx, playFromList }) => {
   const { p, fonts } = ctx;
   const [queue, setQueue] = React.useState(null);
   const titleKey = speaker?.haMediaTitle || '';
   const speakerId = speaker?.id;
+
+  // Album tracklist override: when the user started an album (and
+  // it's still the one playing), browse it and render its tracks as
+  // Up Next. MA doesn't expose the live queue items, so the album
+  // tracklist is a reliable stand-in. When the playing track leaves
+  // the album (radio_mode kicks in, queue ends, etc.) we fall back
+  // to the single next_item.
+  const [albumTracks, setAlbumTracks] = React.useState(null);
+  const albumMatchesNowPlaying = !!(
+    albumCtx?.title && speaker?.haMediaAlbum &&
+    speaker.haMediaAlbum.toLowerCase().trim() === albumCtx.title.toLowerCase().trim()
+  );
+  // Playlists don't reliably set media_album_name on the entity, so
+  // fall back to "we picked it most recently and the speaker's still
+  // playing something" for that case.
+  const playlistActive = !!(albumCtx?.kind === 'playlist' && speaker?.playing);
+  const useAlbumTracklist = albumMatchesNowPlaying || playlistActive;
+
+  React.useEffect(() => {
+    if (!useAlbumTracklist || !conn || !speakerId || !albumCtx?.contentId) {
+      setAlbumTracks(null);
+      return;
+    }
+    let alive = true;
+    conn.sendMessagePromise({
+      type: 'media_player/browse_media',
+      entity_id: speakerId,
+      media_content_id: albumCtx.contentId,
+      media_content_type: albumCtx.contentType,
+    }).then((resp) => {
+      if (!alive) return;
+      const tracks = (resp?.children || []).filter(c => c.can_play);
+      setAlbumTracks(tracks);
+      pushDiag(`music: ${albumCtx.kind} tracklist — ${tracks.length} for "${albumCtx.title}"`);
+    }).catch((e) => {
+      if (alive) {
+        setAlbumTracks(null);
+        pushDiag(`music: ${albumCtx.kind} browse failed — ${e?.message || e}`);
+      }
+    });
+    return () => { alive = false; };
+  }, [conn, speakerId, useAlbumTracklist, albumCtx?.contentId, albumCtx?.contentType]);
 
   React.useEffect(() => {
     if (!conn || !speakerId) { setQueue(null); return; }
@@ -691,12 +815,70 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
     }
   };
 
+  // Album / playlist view takes precedence when we have its tracklist.
+  if (useAlbumTracklist && albumTracks && albumTracks.length) {
+    const currentTitleLc = (speaker.haMediaTitle || '').toLowerCase().trim();
+    const currentTrackIdx = albumTracks.findIndex(
+      (t) => (t.title || '').toLowerCase().trim() === currentTitleLc
+    );
+    return (
+      <window.Card p={p} style={{padding: 0}}>
+        <div style={{padding: '14px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>
+          <div style={{fontFamily: fonts.display, fontSize: 15, color: p.fg, fontWeight: 500}}>
+            Up next · {albumCtx.title}
+          </div>
+          <div style={{fontSize: 11, color: p.fg3}}>{albumTracks.length} track{albumTracks.length === 1 ? '' : 's'}</div>
+        </div>
+        <div>
+          {albumTracks.map((tr, i) => {
+            const isCurrent = i === currentTrackIdx;
+            return (
+              <button key={tr.media_content_id || i}
+                disabled={isCurrent}
+                onClick={() => !isCurrent && playFromList && playFromList(albumTracks, i)}
+                style={{display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px',
+                  width: '100%', textAlign: 'left',
+                  background: isCurrent ? p.surface2 : 'transparent', border: 0,
+                  borderBottom: i < albumTracks.length - 1 ? `.5px solid ${p.border}` : 'none',
+                  cursor: isCurrent ? 'default' : 'pointer',
+                  color: 'inherit', fontFamily: 'inherit', minWidth: 0}}>
+                <div style={{width: 24, fontSize: 11, color: p.fg3, flex: 'none', textAlign: 'right'}}>
+                  {isCurrent ? '▶' : i + 1}
+                </div>
+                <div style={{flex: 1, minWidth: 0}}>
+                  <div style={{fontSize: 13, color: isCurrent ? p.accent : p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                    {tr.title || 'Untitled'}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </window.Card>
+    );
+  }
+
   const items = queue?.items || [];
   const totalCount = queue?.totalCount;
   if (!items.length) return null;
-  const currentTitle = (speaker.haMediaTitle || '').toLowerCase();
-  const currentIdx = items.findIndex(q => (q.title || '').toLowerCase() === currentTitle);
-  const upcoming = (currentIdx >= 0 ? items.slice(currentIdx + 1) : items).slice(0, 12);
+  // Drop the currently-playing track if MA echoed it as next_item.
+  // Match by title; fall back to artist match when titles are
+  // suffixed differently ("Obvious" vs "Obvious (Bonus Track)" etc.).
+  const norm2 = (s) => (s || '').toLowerCase().trim();
+  const currentTitle = norm2(speaker.haMediaTitle);
+  const currentArtist = norm2(speaker.haMediaArtist);
+  const isCurrent = (q) => {
+    const t = norm2(q.title);
+    if (t && t === currentTitle) return true;
+    if (t && currentTitle && (t.startsWith(currentTitle) || currentTitle.startsWith(t))) {
+      // Title prefix match — require artist match too to avoid
+      // dropping a legit different track that starts the same.
+      return norm2(q.artist) === currentArtist;
+    }
+    return false;
+  };
+  const filtered = items.filter(q => !isCurrent(q));
+  const upcoming = filtered.slice(0, 12);
   if (!upcoming.length) return null;
   // Prefer MA's reported total-queue size for the counter so the user
   // sees the full queue length (e.g. "204 in queue") even when we can
