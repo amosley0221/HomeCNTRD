@@ -777,9 +777,50 @@ function useHomeStateHA() {
   const hass = useHass();
   const states = hass?.states || null;
 
+  // HA's frontend pushes hass updates through panel_custom by calling our
+  // element's `set hass(value)` setter. When the underlying hass identity
+  // doesn't change (or when React Context propagation gets coalesced by
+  // concurrent rendering during a burst), the `states` reference we read
+  // here can lag the real `hass.states` — most visibly during Sonos
+  // auto-advance, where the next-track state_changed event would leave
+  // the mini player and music view stuck on the previous track until
+  // the panel remounts (sidebar nav away + back). Subscribe directly to
+  // HA's state_changed event stream and bump a tick that forces the
+  // translate() memo to re-run against the freshest hass.states. The
+  // CarCard tile (personal-dashboard.jsx:1261) already does an analogous
+  // 5 s polling workaround for this same root cause.
+  //
+  // Coalesce bursts through requestAnimationFrame so a flurry of sensor
+  // updates triggers at most one re-translation per frame.
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const conn = hass?.connection;
+    if (!conn?.subscribeEvents) return;
+    let cancelled = false;
+    let unsub = null;
+    let pending = false;
+    const bump = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        if (!cancelled) setTick(t => (t + 1) | 0);
+      });
+    };
+    conn.subscribeEvents(bump, 'state_changed').then(u => {
+      unsub = u;
+      if (cancelled) { try { u?.(); } catch {} }
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+      try { unsub?.(); } catch {}
+    };
+  }, [hass]);
+
   // Memoise the translation so views only re-render when an entity that
-  // matters to us actually changes.
-  const baseState = React.useMemo(() => translate(states), [states]);
+  // matters to us actually changes. `tick` is in the deps so we re-run
+  // even when hass.states reference is reused (see comment above).
+  const baseState = React.useMemo(() => translate(hass?.states || null), [hass, tick]);
 
   // Once-per-mount entity inventory dropped into diagnostics so the user
   // can see at a glance what HA actually exposes (and which integrations
