@@ -35517,7 +35517,7 @@ const PL = ({ ctx: n }) => {
         title: ee.title,
         thumbnail: ee.thumbnail,
         kind: (ee.contentClass || ee.kind || "album").toLowerCase()
-      }), await X(Y[le], "play");
+      }), await X(Y[le], "replace");
       for (let ae = le + 1; ae < Y.length; ae++)
         await X(Y[ae], "add");
     }
