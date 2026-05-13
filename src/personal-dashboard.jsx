@@ -397,7 +397,18 @@ const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme, injectAft
     e.preventDefault();
     const sourceId = dragId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
     if (sourceId && sourceId !== targetId) {
-      updateLayout(moveTile(layout, sourceId, targetId));
+      // Drop into the upper half of the target = land BEFORE it; lower
+      // half = land AFTER. Without this every drop landed in the same
+      // slot as the target (pushing target down), which made dropping
+      // a tile 'below' another impossible — exactly the case the user
+      // hit trying to put To-Do under Notes.
+      let where = 'before';
+      try {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const yFraction = (e.clientY - rect.top) / Math.max(1, rect.height);
+        if (yFraction > 0.5) where = 'after';
+      } catch {}
+      updateLayout(moveTile(layout, sourceId, targetId, where));
     }
     setDragId(null);
   };

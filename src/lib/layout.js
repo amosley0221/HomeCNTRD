@@ -72,16 +72,23 @@ export function resetLayout() {
   return clone(DEFAULT_LAYOUT);
 }
 
-export function moveTile(layout, sourceId, targetId) {
+// `where` controls drop position relative to the target tile:
+//   'before' — drop above / to the left of target.
+//   'after'  — drop below / to the right of target.
+// Defaults to 'before' for back-compat with existing call sites.
+export function moveTile(layout, sourceId, targetId, where = 'before') {
   if (sourceId === targetId) return layout;
   const next = clone(layout);
   const fromIdx = next.findIndex(t => t.id === sourceId);
-  const toIdx = next.findIndex(t => t.id === targetId);
+  let toIdx = next.findIndex(t => t.id === targetId);
   if (fromIdx === -1 || toIdx === -1) return layout;
   const [moved] = next.splice(fromIdx, 1);
-  // Insert at the target's index. If we removed something earlier in the
-  // list, the toIdx is still correct because splice shifts everything.
-  next.splice(toIdx, 0, moved);
+  // If the source sat before the target, removing it shifts target's
+  // index down by one — compensate so 'after' / 'before' still mean
+  // what they say relative to the target's visible position.
+  if (fromIdx < toIdx) toIdx -= 1;
+  const insertAt = where === 'after' ? toIdx + 1 : toIdx;
+  next.splice(insertAt, 0, moved);
   return next;
 }
 
