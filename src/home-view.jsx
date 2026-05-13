@@ -72,6 +72,23 @@ function startCameraStream(entityId, hassRef, video, setError) {
           return;
         }
         if (result) {
+          // Streaming-method success only means SDP / playlist negotiation
+          // completed — not that we actually got pixels. The Google Nest
+          // Hub Max (exposed as a camera by HA's Nest integration) is
+          // the canonical offender: WebRTC reaches "connected" but
+          // Google's device-access API never delivers video frames for
+          // idle Hub-class devices, leaving the user staring at a black
+          // frame under a red LIVE pill. Watchdog the first frame so we
+          // can fall through to the next method (or surface an honest
+          // error) instead of silently sitting on nothing.
+          try {
+            await waitForFirstFrame(video, 5000);
+          } catch (frameErr) {
+            try { result.cleanup?.(); } catch {}
+            errors.push(`${method.label || method.name}: ${frameErr.message}`);
+            camDiag(entityId, `${method.label || method.name} connected but no frames`);
+            continue;
+          }
           camDiag(entityId, `streaming via ${result.kind}`);
           cleanup = result.cleanup;
           return;
@@ -286,6 +303,35 @@ function teardown(pc, video) {
     try { video.srcObject.getTracks().forEach(t => t.stop()); } catch {}
     video.srcObject = null;
   }
+}
+
+// Resolve once the <video> element actually has a frame to paint. Reject
+// if nothing arrives in `ms`. WebRTC and HLS can both "succeed" at the
+// transport layer while never producing pixels (Nest Hub Max via the
+// Nest device-access API is the canonical case), so the caller uses
+// this to fall through to the next method rather than ship a black
+// frame.
+function waitForFirstFrame(video, ms) {
+  return new Promise((resolve, reject) => {
+    if (!video) return reject(new Error('no video element'));
+    if (video.videoWidth > 0 && video.videoHeight > 0) return resolve();
+    let done = false;
+    const finish = (err) => {
+      if (done) return; done = true;
+      video.removeEventListener('loadeddata', onTick);
+      video.removeEventListener('playing', onTick);
+      video.removeEventListener('canplay', onTick);
+      clearTimeout(timer);
+      err ? reject(err) : resolve();
+    };
+    const onTick = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) finish();
+    };
+    video.addEventListener('loadeddata', onTick);
+    video.addEventListener('playing', onTick);
+    video.addEventListener('canplay', onTick);
+    const timer = setTimeout(() => finish(new Error('connected but no video signal')), ms);
+  });
 }
 
 const SECTIONS = [
