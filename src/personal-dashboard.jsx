@@ -1187,8 +1187,20 @@ const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2,
   // Different integrations sometimes lead with tomorrow already — detect by
   // comparing to today's local date.
   const todayKey = ymd(new Date());
-  const upcoming = daily
-    .map(f => ({ ...f, _date: new Date(f.datetime || f.date || Date.now()) }))
+  const datedDaily = daily.map(f => ({ ...f, _date: new Date(f.datetime || f.date || Date.now()) }));
+  // Today's high/low for the headline. The bridge's `weather.high/low`
+  // reads the deprecated inline `forecast[0]` attribute (gone from most
+  // integrations since HA 2024.1) so it falls through to a hard-coded
+  // 71/52 default. Prefer the today entry from the get_forecasts
+  // service call we already make for the 3-day strip.
+  const todayForecast = datedDaily.find(f => ymd(f._date) === todayKey);
+  const headlineHigh = todayForecast
+    ? Math.round(todayForecast.temperature ?? todayForecast.temp ?? weather.high)
+    : weather.high;
+  const headlineLow = todayForecast
+    ? Math.round(todayForecast.templow ?? todayForecast.temp_low ?? todayForecast.temp_min ?? weather.low)
+    : weather.low;
+  const upcoming = datedDaily
     .filter(f => ymd(f._date) !== todayKey)
     .slice(0, 3);
 
@@ -1213,7 +1225,7 @@ const WeatherCard = ({ weather, hass, accent, fonts, surface, surface2, fg, fg2,
             <div style={{fontSize: narrow ? 32 : 40, lineHeight: 1}}>{conditionIcon(weather.condition)}</div>
             <div style={{fontSize: 12, color: fg2, marginTop: 4}}>{conditionLabel(weather.condition)}</div>
             <div style={{fontSize: 11, color: fg3, fontVariantNumeric: 'tabular-nums'}}>
-              H {weather.high}° · L {weather.low}°
+              H {headlineHigh}° · L {headlineLow}°
             </div>
           </div>
         </div>
