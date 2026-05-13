@@ -17,6 +17,13 @@ const NowPlayingBar = ({ ctx }) => {
   const hass = React.useContext(HassContext);
   const [expanded, setExpanded] = React.useState(false);
   const [focused, setFocused] = React.useState(null);
+  // Optimistic volume per speaker + a 150 ms trailing debounce on the
+  // volume_set service call. Sonos rate-limits and each call waits on
+  // a UPnP round-trip; without this, dragging a slider feels sluggish
+  // (especially with a grouped queue, where every member gets a call)
+  // and HA's stale state snaps the thumb backwards mid-drag.
+  const [volOverrides, setVolOverrides] = React.useState({});
+  const volTimersRef = React.useRef({});
 
   const playing = (state.speakers || []).filter(s => s.playing);
   const primary = focused
@@ -105,6 +112,22 @@ const NowPlayingBar = ({ ctx }) => {
   const primarySonos = sonosSpeakers.find(s => (s.name || '').toLowerCase().trim() === primaryKey) || primary;
   const groupableSpeakers = sonosSpeakers.filter(s => (s.name || '').toLowerCase().trim() !== primaryKey);
 
+  // Resolve the true Sonos group coordinator. HA's Sonos integration
+  // orders `group_members` with the coordinator first, so `groupAttr[0]`
+  // is the leader. The mini player's `primary` drifts to whichever
+  // entity wins `playing[0]` (or the user-focused tab), which can be a
+  // slave — passing a slave as `master` to `sonos.join` triggers
+  // UPnP Error 1001 and can drop the whole group's playback. Always
+  // address join/unjoin calls at the leader.
+  const resolveSonos = (id) => {
+    if (!id) return null;
+    const raw = (state.speakers || []).find(s => s.id === id);
+    if (!raw) return null;
+    const k = (raw.name || '').toLowerCase().trim();
+    return sonosSpeakers.find(s => (s.name || '').toLowerCase().trim() === k) || raw;
+  };
+  const leaderSonos = (groupAttr.length ? resolveSonos(groupAttr[0]) : null) || primarySonos;
+
   // Dedupe the playing list by name so the MA mirror of an actively-
   // playing Sonos doesn't show up as '+1 more' room or render a
   // duplicate focus tab. Prefer the native entity so picking a focus
@@ -139,15 +162,15 @@ const NowPlayingBar = ({ ctx }) => {
     // services registered).
     const sonosAvailable = !!hass?.services?.sonos?.join;
     const fallback = () => hass.callService('media_player', 'join', {
-      entity_id: primarySonos.id,
+      entity_id: leaderSonos.id,
       group_members: [
-        ...groupAttr.filter(id => id !== primarySonos.id),
+        ...groupAttr.filter(id => id !== leaderSonos.id),
         speaker.id,
       ],
     }).catch(() => {});
     if (sonosAvailable) {
       hass.callService('sonos', 'join', {
-        master: primarySonos.id,
+        master: leaderSonos.id,
         entity_id: speaker.id,
       }).catch(fallback);
     } else {
@@ -165,24 +188,32 @@ const NowPlayingBar = ({ ctx }) => {
     }
   };
 
-  // Group members for the volume section (speakers actually playing
-  // in sync with the primary). Resolves IDs from group_members to the
-  // deduped native-Sonos entities so volume_set hits the right device.
+  // Group members for the volume section, ordered with the true Sonos
+  // coordinator first (so the HOST badge points at the actual leader,
+  // not whichever entity won `playing[0]`).
   const inGroupSpeakers = (() => {
     if (!groupAttr.length) return [primarySonos];
-    const out = [primarySonos];
+    const out = [];
     for (const memberId of groupAttr) {
-      if (memberId === primarySonos.id) continue;
-      // Match by name against the Sonos pool so MA-mirror IDs in
-      // group_members still resolve to the right speaker entity.
       const memberRaw = (state.speakers || []).find(s => s.id === memberId);
       if (!memberRaw) continue;
       const memberName = (memberRaw.name || '').toLowerCase().trim();
       const speaker = sonosSpeakers.find(s => (s.name || '').toLowerCase().trim() === memberName);
       if (speaker && !out.some(o => o.id === speaker.id)) out.push(speaker);
     }
-    return out;
+    return out.length ? out : [primarySonos];
   })();
+
+  const setVolume = (id, pct) => {
+    setVolOverrides(prev => ({ ...prev, [id]: pct }));
+    clearTimeout(volTimersRef.current[id]);
+    volTimersRef.current[id] = setTimeout(() => {
+      call(id, 'volume_set', { volume_level: pct / 100 });
+      setTimeout(() => {
+        setVolOverrides(prev => { const n = { ...prev }; delete n[id]; return n; });
+      }, 1000);
+    }, 150);
+  };
 
   const fmtTime = (s) => {
     if (!s || s < 0) return '0:00';
@@ -242,8 +273,9 @@ const NowPlayingBar = ({ ctx }) => {
               <div style={{flex:1}}/>
               <div style={{display:'flex', alignItems:'center', gap:8, color:p.fg3}}>
                 <window.Icon name="speaker" size={12}/>
-                <input type="range" min="0" max="100" value={primary.vol}
-                  onChange={(e) => call(primary.id, 'volume_set', { volume_level: (+e.target.value) / 100 })}
+                <input type="range" min="0" max="100"
+                  value={volOverrides[primary.id] ?? Math.round(primary.vol || 0)}
+                  onChange={(e) => setVolume(primary.id, +e.target.value)}
                   style={{width:88, accentColor:p.accent, height:3}}/>
               </div>
             </div>
@@ -271,16 +303,16 @@ const NowPlayingBar = ({ ctx }) => {
               </div>
               <div style={{display:'flex', flexDirection:'column', gap:10}}>
                 {inGroupSpeakers.map(sp => {
-                  const vol = Math.round(sp.vol || 0);
-                  const isPrimary = sp.id === primarySonos.id;
+                  const vol = volOverrides[sp.id] ?? Math.round(sp.vol || 0);
+                  const isLeader = sp.id === leaderSonos.id;
                   return (
                     <div key={sp.id} style={{display:'flex', alignItems:'center', gap:10}}>
                       <span style={{
-                        flex:'0 0 96px', fontSize:11.5, color:p.fg, fontWeight: isPrimary ? 500 : 400,
+                        flex:'0 0 96px', fontSize:11.5, color:p.fg, fontWeight: isLeader ? 500 : 400,
                         overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                      }}>{sp.name}{isPrimary && <span style={{color:p.accent, marginLeft:4, fontSize:9}}>HOST</span>}</span>
+                      }}>{sp.name}{isLeader && <span style={{color:p.accent, marginLeft:4, fontSize:9}}>HOST</span>}</span>
                       <input type="range" min="0" max="100" value={vol}
-                        onChange={(e) => call(sp.id, 'volume_set', { volume_level: (+e.target.value)/100 })}
+                        onChange={(e) => setVolume(sp.id, +e.target.value)}
                         onClick={(e) => e.stopPropagation()}
                         style={{flex:1, accentColor:p.accent, height:3}}/>
                       <span style={{flex:'0 0 32px', fontSize:10, color:p.fg3, textAlign:'right', fontVariantNumeric:'tabular-nums'}}>{vol}%</span>
@@ -294,7 +326,7 @@ const NowPlayingBar = ({ ctx }) => {
           {groupableSpeakers.length > 0 && (
             <div style={{padding:'10px 14px 14px', borderTop:`.5px solid ${p.border}`}}>
               <div style={{fontSize:10, letterSpacing:'.08em', textTransform:'uppercase', color:p.fg3, marginBottom:8}}>
-                Group with {primary.name}
+                Group with {leaderSonos.name || primary.name}
               </div>
               <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
                 {groupableSpeakers.map(sp => {
