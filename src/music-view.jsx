@@ -623,14 +623,15 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
           return;
         }
 
-        // Look for queue rows on the entity attributes. We dump the
-        // attribute keys (only first time, when items are missing) so
-        // future Claude can see whether MA exposes the queue there.
+        // Look for queue rows on the entity attributes. Probed during
+        // PR #52 (diag dumped the attr key set on this install: it
+        // includes `active_queue` (queue id) and `mass_player_type`
+        // but NO items array). Kept the check for forwards-compat in
+        // case MA adds it, but don't spam diag if attrs don't carry it.
         try {
           const hass = hassRef?.current;
           const att = hass?.states?.[speakerId]?.attributes;
           if (att) {
-            // Probe a generous set of plausible attribute names.
             const attrCandidates = [
               att.queue_items, att.queue, att.media_queue, att.upcoming,
               att.media_player_queue, att.tracks,
@@ -642,14 +643,15 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
               setQueue({ items: upcoming.map(norm), totalCount });
               return;
             }
-            pushDiag(`music: media_player attrs · keys=${Object.keys(att).join(',')}`);
           }
         } catch {}
 
-        // Fall back to next_item alone — get_queue's documented shape
-        // doesn't include the rest of the queue, only the single next
-        // item. items_count tells the user the real queue size in
-        // the Up Next header even if we can only render one row.
+        // Final fallback: render just the single `next_item` from
+        // get_queue's metadata. MA's HA integration on this install
+        // doesn't expose the full items array via any service, WS
+        // command, or entity attribute — confirmed across PRs #50–52.
+        // The Up Next header still shows the real queue size via
+        // items_count so the user sees the total.
         if (cand?.next_item) {
           setQueue({ items: [norm(cand.next_item)], totalCount });
           return;
