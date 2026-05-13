@@ -412,6 +412,11 @@ const MusicView = ({ ctx }) => {
   // browse it and render the full tracklist in Up Next. The tracks
   // passed in are individual tracks (not the album item itself), so
   // playMedia alone wouldn't know it's an album play.
+  //
+  // First track uses enqueue:'replace' rather than 'play' — MA's
+  // 'play' mode plays immediately but does NOT clear the existing
+  // queue, so the old tracks would still come up after this album.
+  // 'replace' wipes the queue first.
   const playFromList = async (items, idx, album = null) => {
     if (!items?.length || idx < 0 || idx >= items.length) return;
     if (album?.contentId) {
@@ -423,7 +428,7 @@ const MusicView = ({ ctx }) => {
         kind: (album.contentClass || album.kind || 'album').toLowerCase(),
       });
     }
-    await playMedia(items[idx], 'play');
+    await playMedia(items[idx], 'replace');
     for (let i = idx + 1; i < items.length; i++) {
       await playMedia(items[i], 'add');
     }
