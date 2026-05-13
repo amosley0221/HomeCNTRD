@@ -116,31 +116,59 @@ const NowPlayingBar = ({ ctx }) => {
 
   const joinSpeaker = (speaker) => {
     if (typeof hass?.callService !== 'function') return;
-    // Prefer sonos.join — handles Line-In sources, satellite-speaker
-    // edge cases, and existing-group reorganisation more reliably than
-    // the universal media_player.join. Falls back to media_player.join
-    // for non-Sonos integrations or HA installs that don't expose
-    // the sonos.* services.
-    hass.callService('sonos', 'join', {
-      master: primarySonos.id,
-      entity_id: speaker.id,
-    }).catch(() => {
-      hass.callService('media_player', 'join', {
-        entity_id: primarySonos.id,
-        group_members: [
-          ...groupAttr.filter(id => id !== primarySonos.id),
-          speaker.id,
-        ],
-      }).catch(() => {});
-    });
+    // Prefer sonos.join when available — handles Line-In sources,
+    // satellite-speaker edge cases, and existing-group reorganisation
+    // more reliably than the universal media_player.join. Probe
+    // hass.services first so we don't fire a call HA will reject with
+    // a visible 'Action sonos.join not found' toast on installs that
+    // expose Sonos via Music Assistant only (no native sonos.*
+    // services registered).
+    const sonosAvailable = !!hass?.services?.sonos?.join;
+    const fallback = () => hass.callService('media_player', 'join', {
+      entity_id: primarySonos.id,
+      group_members: [
+        ...groupAttr.filter(id => id !== primarySonos.id),
+        speaker.id,
+      ],
+    }).catch(() => {});
+    if (sonosAvailable) {
+      hass.callService('sonos', 'join', {
+        master: primarySonos.id,
+        entity_id: speaker.id,
+      }).catch(fallback);
+    } else {
+      fallback();
+    }
   };
   const leaveSpeaker = (speaker) => {
     if (typeof hass?.callService !== 'function') return;
-    hass.callService('sonos', 'unjoin', { entity_id: speaker.id })
-      .catch(() => {
-        hass.callService('media_player', 'unjoin', { entity_id: speaker.id }).catch(() => {});
-      });
+    const sonosAvailable = !!hass?.services?.sonos?.unjoin;
+    const fallback = () => hass.callService('media_player', 'unjoin', { entity_id: speaker.id }).catch(() => {});
+    if (sonosAvailable) {
+      hass.callService('sonos', 'unjoin', { entity_id: speaker.id }).catch(fallback);
+    } else {
+      fallback();
+    }
   };
+
+  // Group members for the volume section (speakers actually playing
+  // in sync with the primary). Resolves IDs from group_members to the
+  // deduped native-Sonos entities so volume_set hits the right device.
+  const inGroupSpeakers = (() => {
+    if (!groupAttr.length) return [primarySonos];
+    const out = [primarySonos];
+    for (const memberId of groupAttr) {
+      if (memberId === primarySonos.id) continue;
+      // Match by name against the Sonos pool so MA-mirror IDs in
+      // group_members still resolve to the right speaker entity.
+      const memberRaw = (state.speakers || []).find(s => s.id === memberId);
+      if (!memberRaw) continue;
+      const memberName = (memberRaw.name || '').toLowerCase().trim();
+      const speaker = sonosSpeakers.find(s => (s.name || '').toLowerCase().trim() === memberName);
+      if (speaker && !out.some(o => o.id === speaker.id)) out.push(speaker);
+    }
+    return out;
+  })();
 
   const fmtTime = (s) => {
     if (!s || s < 0) return '0:00';
@@ -219,6 +247,33 @@ const NowPlayingBar = ({ ctx }) => {
                   }}>{sp.name}</button>
                 );
               })}
+            </div>
+          )}
+
+          {inGroupSpeakers.length > 1 && (
+            <div style={{padding:'10px 14px 12px', borderTop:`.5px solid ${p.border}`}}>
+              <div style={{fontSize:10, letterSpacing:'.08em', textTransform:'uppercase', color:p.fg3, marginBottom:10}}>
+                In group ({inGroupSpeakers.length})
+              </div>
+              <div style={{display:'flex', flexDirection:'column', gap:10}}>
+                {inGroupSpeakers.map(sp => {
+                  const vol = Math.round(sp.vol || 0);
+                  const isPrimary = sp.id === primarySonos.id;
+                  return (
+                    <div key={sp.id} style={{display:'flex', alignItems:'center', gap:10}}>
+                      <span style={{
+                        flex:'0 0 96px', fontSize:11.5, color:p.fg, fontWeight: isPrimary ? 500 : 400,
+                        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                      }}>{sp.name}{isPrimary && <span style={{color:p.accent, marginLeft:4, fontSize:9}}>HOST</span>}</span>
+                      <input type="range" min="0" max="100" value={vol}
+                        onChange={(e) => call(sp.id, 'volume_set', { volume_level: (+e.target.value)/100 })}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{flex:1, accentColor:p.accent, height:3}}/>
+                      <span style={{flex:'0 0 32px', fontSize:10, color:p.fg3, textAlign:'right', fontVariantNumeric:'tabular-nums'}}>{vol}%</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
