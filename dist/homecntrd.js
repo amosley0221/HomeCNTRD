@@ -9371,7 +9371,7 @@ const tE = ({ dark: n, density: e, accent: t, agentTone: i, fontPair: r, bgImage
     /* @__PURE__ */ d.jsxs("div", { style: {
       position: "relative",
       display: "grid",
-      gridTemplateColumns: h || v === "home" ? "1fr" : "232px 1fr",
+      gridTemplateColumns: h || v === "home" ? "minmax(0, 1fr)" : "232px minmax(0, 1fr)",
       gridTemplateRows: h ? "1fr 64px" : "1fr",
       height: "100%"
     }, children: [
@@ -10342,7 +10342,7 @@ const CE = (n) => n ? {
     ] }),
     /* @__PURE__ */ d.jsxs("div", { style: {
       display: "grid",
-      gridTemplateColumns: o ? "1fr" : "minmax(0,1fr) minmax(280px, 360px)",
+      gridTemplateColumns: o ? "minmax(0, 1fr)" : "minmax(0,1fr) minmax(280px, 360px)",
       gap: o ? 14 : 22
     }, children: [
       /* @__PURE__ */ d.jsxs("div", { children: [
@@ -10444,7 +10444,7 @@ const CE = (n) => n ? {
   return /* @__PURE__ */ d.jsxs("div", { children: [
     /* @__PURE__ */ d.jsx("div", { style: {
       display: "grid",
-      gridTemplateColumns: o ? "1fr" : "repeat(2, minmax(0, 1fr))",
+      gridTemplateColumns: o ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))",
       gap: o ? 14 : 18,
       alignItems: "start"
     }, children: g.map((E, I) => /* @__PURE__ */ d.jsxs(React.Fragment, { children: [
@@ -11794,7 +11794,7 @@ const qE = (n, e) => {
     color: "inherit",
     cursor: "pointer"
   }, children: [
-    /* @__PURE__ */ d.jsx("div", { style: { fontSize: 13, color: r, lineHeight: 1.4, marginBottom: 4 }, children: l.title }),
+    /* @__PURE__ */ d.jsx("div", { style: { fontSize: 13, color: r, lineHeight: 1.4, marginBottom: 4, overflowWrap: "anywhere" }, children: l.title }),
     /* @__PURE__ */ d.jsxs("div", { style: { fontSize: 10.5, color: o, letterSpacing: ".04em", textTransform: "uppercase" }, children: [
       l.source,
       " · ",
@@ -12395,7 +12395,7 @@ const qE = (n, e) => {
         /* @__PURE__ */ d.jsx("button", { onClick: A, "aria-label": "Today", style: { ...Gc(c, u), padding: "0 10px", width: "auto", fontSize: 11 }, children: "Today" }),
         /* @__PURE__ */ d.jsx("button", { onClick: I, "aria-label": "Next month", style: Gc(c, u), children: "›" })
       ] }),
-      /* @__PURE__ */ d.jsxs("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, fontFamily: s.body, fontSize: 11 }, children: [
+      /* @__PURE__ */ d.jsxs("div", { style: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 2, fontFamily: s.body, fontSize: 11 }, children: [
         ["S", "M", "T", "W", "T", "F", "S"].map((_, L) => /* @__PURE__ */ d.jsx("div", { style: { textAlign: "center", padding: 4, color: f, fontWeight: 500 }, children: _ }, L)),
         T.map((_, L) => {
           if (!_) return /* @__PURE__ */ d.jsx("div", {}, L);

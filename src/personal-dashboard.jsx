@@ -320,7 +320,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: narrow ? '1fr' : 'minmax(0,1fr) minmax(280px, 360px)',
+        gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : 'minmax(0,1fr) minmax(280px, 360px)',
         gap: narrow ? 14 : 22,
       }}>
         {/* Left column — layout-driven tile grid. On narrow viewports we
@@ -430,7 +430,7 @@ const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme, injectAft
     <div>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: narrow ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+        gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
         gap: narrow ? 14 : 18,
         alignItems: 'start',
       }}>
@@ -1936,7 +1936,7 @@ const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
             padding: '8px 0', borderBottom: `.5px solid ${border}`,
             textDecoration: 'none', color: 'inherit', cursor: 'pointer',
           }}>
-            <div style={{fontSize: 13, color: fg, lineHeight: 1.4, marginBottom: 4}}>{n.title}</div>
+            <div style={{fontSize: 13, color: fg, lineHeight: 1.4, marginBottom: 4, overflowWrap: 'anywhere'}}>{n.title}</div>
             <div style={{fontSize: 10.5, color: fg3, letterSpacing: '.04em', textTransform: 'uppercase'}}>{n.source} · {n.timeAgo}</div>
           </a>
         ))}
@@ -2563,7 +2563,7 @@ const CalendarColumn = ({ calendar, events, viewMonth, setViewMonth, accent, fon
           <button onClick={goToday} aria-label="Today" style={{...navBtn(fg2, border), padding: '0 10px', width: 'auto', fontSize: 11}}>Today</button>
           <button onClick={goNext} aria-label="Next month" style={navBtn(fg2, border)}>›</button>
         </div>
-        <div style={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, fontFamily: fonts.body, fontSize: 11}}>
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 2, fontFamily: fonts.body, fontSize: 11}}>
           {['S','M','T','W','T','F','S'].map((d, i) => (
             <div key={i} style={{textAlign:'center', padding: 4, color: fg3, fontWeight: 500}}>{d}</div>
           ))}
