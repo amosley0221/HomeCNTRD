@@ -240,7 +240,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
   const doReset = () => { const next = resetLayout(); setLayout(next); };
 
   const tileTheme = { accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow, pillStop: theme.pillStop };
-  const renderTile = (id) => {
+  const renderTile = (id, colSpan = 2) => {
     switch (id) {
       case 'weather': return <WeatherCard weather={state.weather} hass={hass} {...tileTheme}/>;
       case 'car':     return <CarCard hass={hass} {...tileTheme}/>;
@@ -252,6 +252,7 @@ const PersonalDashboard = ({ ctx, onOpenMenu }) => {
         pins={user?.pinnedMedia} patchUser={patchUser}
         defaultSpeakerId={settings?.defaultMusicSpeaker}
         speakers={state.speakers} setPage={setPage}
+        colSpan={colSpan}
         {...tileTheme}/>;
       default: return null;
     }
@@ -430,7 +431,7 @@ const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme, injectAft
               onResize={(span) => updateLayout(setTileSpan(layout, t.id, span))}
               onHide={() => updateLayout(setTileHidden(layout, t.id, true))}
             >
-              {renderTile(t.id)}
+              {renderTile(t.id, t.colSpan)}
             </TileFrame>
             {/* Slot for injected content (e.g. calendar on narrow). The
                 wrapper spans the full grid row so it doesn't get sucked
@@ -1903,7 +1904,7 @@ const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
 // (the dashboard's existing layout-edit toggle) reveals a × on each tile
 // for quick removal. Pinning happens from the music browse overlay's
 // per-item pin button; this tile only renders + plays.
-const PinnedCard = ({ hass, pins, patchUser, defaultSpeakerId, speakers, setPage, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow }) => {
+const PinnedCard = ({ hass, pins, patchUser, defaultSpeakerId, speakers, setPage, colSpan, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow }) => {
   const list = Array.isArray(pins) ? pins : [];
 
   const playPin = async (pin) => {
@@ -1993,7 +1994,19 @@ const PinnedCard = ({ hass, pins, patchUser, defaultSpeakerId, speakers, setPage
           background: 'transparent', color: fg, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
         }}>Browse music</button>
       </div>
-      <div style={{display: 'grid', gridTemplateColumns: `repeat(${narrow ? 3 : 3}, 1fr)`, gap: 10}}>
+      {/* Layout adapts to the tile's colSpan in the dashboard grid:
+          - Wide (colSpan=2, the default): 3 columns × 2 rows. Best when
+            the tile spans both dashboard columns.
+          - Compact (colSpan=1, narrow viewport, or 'vertical' mode):
+            2 columns × 3 rows. Fits in a single dashboard column without
+            the art tiles shrinking past readability.
+          On narrow viewports we always use the compact layout regardless
+          of colSpan since the dashboard collapses to one column anyway. */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${(colSpan === 1 || narrow) ? 2 : 3}, 1fr)`,
+        gap: 10,
+      }}>
         {cells.map((pin, i) => pin ? (
           <PinnedTile key={pin.id} pin={pin}
             onPlay={() => playPin(pin)} onRemove={() => unpin(pin.id)}
