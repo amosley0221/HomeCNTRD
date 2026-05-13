@@ -363,6 +363,103 @@ pass through naturally since their `startTime` is in the past or
 now. If a future change moves filtering / sorting around, keep the
 7-day cap as the first step.
 
+## Music — Music Assistant integration
+
+The Music page (`src/music-view.jsx`) drives speakers via MA when
+the active speaker is MA-managed (platform check + `mass_player_id`
+attribute), and falls back to plain `media_player.*` services
+otherwise. A few non-obvious things this user's MA install has
+taught us:
+
+### MA queue items are not fetchable
+
+`music_assistant.get_queue` returns ONLY metadata:
+`{ queue_id, items: <int COUNT — not array>, current_index,
+   current_item, next_item, shuffle_enabled, repeat_mode, ... }`.
+
+We tried fetching the full items array seven different ways across
+PRs #50–52; every WS command name returned `unknown_command`:
+- `music_assistant/queue/items`, `/get_items`
+- `music_assistant/queue_items`
+- `music_assistant/players/queue/items`
+- `music_assistant/player_queues/items`
+- `music_assistant/get_player_queue_items`
+- `music_assistant/queue/get_items`
+
+The `media_player` entity attributes (PR #52 dumped the key list)
+expose `active_queue` (queue id) and `mass_player_type` but no
+items array. Don't waste cycles probing these again. The path
+forward if a future user wants the live queue list is subscribing
+to MA's event bus (`music_assistant_event` etc.).
+
+### Up Next: album-tracklist proxy instead
+
+Because the queue items aren't fetchable, QueueCard shows the
+**album tracklist** as a stand-in. Flow:
+
+1. `albumCtx` state in MusicView (`{ contentId, contentType, title,
+   thumbnail, kind }`). Set when the user picks an album / playlist
+   via `playMedia` or `playFromList`.
+2. Auto-resolved when albumCtx is null but the speaker reports
+   `media_album_name` + `media_artist`: search via
+   `media_player/search_media` and pick the best album-class match.
+3. QueueCard browses albumCtx.contentId via `media_player/browse_media`
+   and renders the resulting tracks with click-to-play. Falls back
+   to MA's `next_item` (one row) when no album context.
+
+**MA's search results title format gotcha:** MA returns album titles
+as `"Artist — Album"` (em-dash, artist prefix) rather than the bare
+album name. An exact match against `speaker.haMediaAlbum` always
+fails. Use contains/exact + best-effort fallback, and **always
+store the bare album name in `albumCtx.title`** (PR #57) so the
+QueueCard match against `speaker.haMediaAlbum` succeeds.
+
+### Click-to-play uses enqueue:'replace', not 'play'
+
+MA's `enqueue: 'play'` plays the item immediately but **does not
+clear the existing queue** — old tracks resume afterwards. For an
+explicit user pick (Up Next click, AlbumDetail's "Play album"),
+`playFromList` uses `enqueue: 'replace'` for the first track so
+the queue is wiped, then `'add'` for subsequent items (PR #58).
+
+### Infinity → end-of-queue radio with debounce
+
+Infinity ON no longer forces `radio_mode: true` on the initial
+play (that turned albums into radio queues immediately). Instead a
+title-transition watcher fires a fresh `music_assistant.play_media`
+with `radio_mode: true` seeded by the last-played track when the
+speaker title goes non-empty → empty (paused tracks preserve the
+title; only a true queue end clears it).
+
+**Critical debounce (PR #59):** when the user picks a new track
+(search, browse, album-tracklist click), MA briefly transitions
+title `old → null → new` during the track change. Without a debounce
+the watcher fires radio during the null window and stomps the
+user's fresh selection a second later. We defer the fire by 6 s
+and cancel if a new title arrives in that window.
+
+`radioFiredFor` ref prevents re-firing for the same seed within a
+single end-of-queue event.
+
+### Pinned tile (dashboard) plays through sendMessagePromise
+
+`playPin` in `personal-dashboard.jsx` doesn't use
+`hass.callService(...)` — it calls
+`hass.connection.sendMessagePromise({ type: 'call_service', ... })`
+directly so MA's "playback failed to start" rejections don't
+surface as global HA toasts. It also doesn't route through
+MusicView's `playMedia`, so albumCtx is NOT set when a pin starts
+playback. The auto-resolver handles that case once the user
+navigates to the Music page.
+
+### Shuffle / repeat
+
+`media_player.shuffle_set` (bool) and `media_player.repeat_set`
+(`'off' | 'all' | 'one'`). The bridge surfaces `shuffle` and
+`repeat` attributes on each speaker. NowPlayingHero shows
+optimistic overlays (`pendingShuffle`, `pendingRepeat`) like
+play/pause — HA's state push lags taps.
+
 ## Open / deferred work
 
 ### Wake word stuck on iPad HA Companion
