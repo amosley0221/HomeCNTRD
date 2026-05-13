@@ -223,6 +223,61 @@ const MusicView = ({ ctx }) => {
   }, [hidden, state.speakers, hass]);
 
   // ── Loading / empty states ─────────────────────────────────────────
+  // `active` / `playingCount` / `isMA` are computed before the early
+  // returns so the hooks below can depend on them without violating
+  // hook order on the first few renders (speakers loading, no
+  // platforms yet, etc.).
+  const active = speakers.find(s => s.id === activeId) || speakers[0];
+  const playingCount = speakers.filter(s => s.playing).length;
+  const isMA = MA_PLATFORMS.has(platforms[active?.id]) || active?.isMAAttr;
+
+  // Track the current track URI on the active speaker. Used as a seed
+  // for radio_mode when Infinity is on and the queue ends — we want
+  // the radio to be based on what was actually just playing, not on
+  // the user's last play_media pick (which could be from minutes ago).
+  React.useEffect(() => {
+    if (!active?.id) return;
+    const hass = hassRef.current;
+    const att = hass?.states?.[active.id]?.attributes;
+    const mci = att?.media_content_id;
+    if (mci && active.haMediaTitle) {
+      lastSeedRef.current = { id: mci, type: att.media_content_type, title: active.haMediaTitle };
+    }
+  }, [active?.id, active?.haMediaTitle, active?.playing]);
+
+  // Infinity end-of-queue watcher. When the speaker's media title
+  // transitions from non-empty to empty (queue truly ended — pause
+  // alone preserves the title), fire a fresh play_media with
+  // radio_mode: true seeded by the last track. Tracked per-seed so
+  // we never double-fire for the same seed.
+  const prevTitleRef = React.useRef(null);
+  React.useEffect(() => {
+    const prevTitle = prevTitleRef.current;
+    const currTitle = active?.haMediaTitle || null;
+    prevTitleRef.current = currTitle;
+
+    if (currTitle) {
+      // Something's playing again — reset so a future end-of-queue
+      // can fire a new radio.
+      radioFiredFor.current = null;
+      return;
+    }
+    if (!prevTitle || !infinity || !lastSeedRef.current || !active?.id) return;
+    const seed = lastSeedRef.current;
+    if (radioFiredFor.current === seed.id) return;
+    radioFiredFor.current = seed.id;
+
+    pushDiag(`music: Infinity — queue ended, firing radio seed=${seed.title}`);
+    const hass = hassRef.current;
+    hass?.callService('music_assistant', 'play_media', {
+      entity_id: active.id,
+      media_id: seed.id,
+      enqueue: 'play',
+      radio_mode: true,
+    })?.catch?.((err) => pushDiag(`music: radio play_media failed — ${err?.message || err}`));
+    setAlbumCtx(null);
+  }, [active?.haMediaTitle, infinity, active?.id]);
+
   if (!platformsLoaded) {
     return <window.PageHead ctx={ctx} eyebrow="Music" title="Loading…" sub="Reading speaker registry"/>;
   }
@@ -231,14 +286,10 @@ const MusicView = ({ ctx }) => {
       sub="Add Sonos to HA — Music Assistant will mirror them automatically."/>;
   }
 
-  const active = speakers.find(s => s.id === activeId) || speakers[0];
-  const playingCount = speakers.filter(s => s.playing).length;
-  const isMA = MA_PLATFORMS.has(platforms[active?.id]) || active?.isMAAttr;
-
   // Shared play helper — used by playlists, search, browse. The
   // Infinity flag is no longer threaded into radio_mode here: it now
   // fires only when the explicit queue ends (see the Infinity watcher
-  // below) so a chosen album / playlist plays through cleanly first.
+  // above) so a chosen album / playlist plays through cleanly first.
   const playMedia = async (item, enqueue = 'play') => {
     const hass = hassRef.current;
     if (!hass?.callService || !active) return false;
@@ -292,53 +343,6 @@ const MusicView = ({ ctx }) => {
       await playMedia(items[i], 'add');
     }
   };
-
-  // Track the current track URI on the active speaker. Used as a seed
-  // for radio_mode when Infinity is on and the queue ends — we want
-  // the radio to be based on what was actually just playing, not on
-  // the user's last play_media pick (which could be from minutes ago).
-  React.useEffect(() => {
-    if (!active?.id) return;
-    const hass = hassRef.current;
-    const att = hass?.states?.[active.id]?.attributes;
-    const mci = att?.media_content_id;
-    if (mci && active.haMediaTitle) {
-      lastSeedRef.current = { id: mci, type: att.media_content_type, title: active.haMediaTitle };
-    }
-  }, [active?.id, active?.haMediaTitle, active?.playing]);
-
-  // Infinity end-of-queue watcher. When the speaker's media title
-  // transitions from non-empty to empty (queue truly ended — pause
-  // alone preserves the title), fire a fresh play_media with
-  // radio_mode: true seeded by the last track. Tracked per-seed so
-  // we never double-fire for the same seed.
-  const prevTitleRef = React.useRef(null);
-  React.useEffect(() => {
-    const prevTitle = prevTitleRef.current;
-    const currTitle = active?.haMediaTitle || null;
-    prevTitleRef.current = currTitle;
-
-    if (currTitle) {
-      // Something's playing again — reset so a future end-of-queue
-      // can fire a new radio.
-      radioFiredFor.current = null;
-      return;
-    }
-    if (!prevTitle || !infinity || !lastSeedRef.current || !active?.id) return;
-    const seed = lastSeedRef.current;
-    if (radioFiredFor.current === seed.id) return;
-    radioFiredFor.current = seed.id;
-
-    pushDiag(`music: Infinity — queue ended, firing radio seed=${seed.title}`);
-    const hass = hassRef.current;
-    hass?.callService('music_assistant', 'play_media', {
-      entity_id: active.id,
-      media_id: seed.id,
-      enqueue: 'play',
-      radio_mode: true,
-    })?.catch?.((err) => pushDiag(`music: radio play_media failed — ${err?.message || err}`));
-    setAlbumCtx(null);
-  }, [active?.haMediaTitle, infinity, active?.id]);
 
   return (
     <>
