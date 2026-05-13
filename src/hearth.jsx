@@ -145,7 +145,7 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
       {state.dnd.active && <DndBanner ctx={ctx} />}
       <div style={{
         position:'relative', display:'grid',
-        gridTemplateColumns: (narrow || page === 'home') ? '1fr' : '232px 1fr',
+        gridTemplateColumns: (narrow || page === 'home') ? 'minmax(0, 1fr)' : '232px minmax(0, 1fr)',
         gridTemplateRows: narrow ? '1fr 64px' : '1fr',
         height:'100%',
       }}>
