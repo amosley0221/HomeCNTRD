@@ -347,6 +347,12 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
   // click; HA's actual state takes over once it matches.
   const [pendingPlay, setPendingPlay] = React.useState(null); // bool | null
   const pendingTimerRef = React.useRef(null);
+  // Same idea for shuffle / repeat — the user tap should change the
+  // icon immediately, then HA's confirmed state takes over.
+  const [pendingShuffle, setPendingShuffle] = React.useState(null); // bool | null
+  const [pendingRepeat, setPendingRepeat] = React.useState(null);   // 'off'|'all'|'one'|null
+  const pendingShuffleTimer = React.useRef(null);
+  const pendingRepeatTimer = React.useRef(null);
 
   const title = speaker?.haMediaTitle;
   const artist = speaker?.haMediaArtist;
@@ -354,8 +360,12 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
   const art = speaker?.haEntityPicture;
   const dur = speaker?.duration || 0;
   const realPlaying = !!speaker?.playing;
+  const realShuffle = !!speaker?.shuffle;
+  const realRepeat = speaker?.repeat || 'off';
   // Effective playing state — UI uses this for icon + progress ticker.
   const isPlaying = pendingPlay !== null ? pendingPlay : realPlaying;
+  const shuffleOn = pendingShuffle !== null ? pendingShuffle : realShuffle;
+  const repeatMode = pendingRepeat !== null ? pendingRepeat : realRepeat;
   const isIdle = !title;
 
   // Once HA's reported state matches the pending intent, drop the
@@ -365,6 +375,16 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
       setPendingPlay(null);
     }
   }, [realPlaying, pendingPlay]);
+  React.useEffect(() => {
+    if (pendingShuffle !== null && pendingShuffle === realShuffle) {
+      setPendingShuffle(null);
+    }
+  }, [realShuffle, pendingShuffle]);
+  React.useEffect(() => {
+    if (pendingRepeat !== null && pendingRepeat === realRepeat) {
+      setPendingRepeat(null);
+    }
+  }, [realRepeat, pendingRepeat]);
 
   React.useEffect(() => {
     if (!speaker) return;
@@ -392,9 +412,22 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
 
   if (!speaker) return null;
 
-  const call = (service, data) => {
+  const call = (service, data, optimistic) => {
     const hass = hassRef.current;
     if (!hass?.callService) return;
+    // Optimistic overlays for shuffle / repeat: flip the icon now,
+    // then let HA's confirmed state take over via the effects above.
+    // Auto-clear after 6 s so a silently-failed call doesn't strand
+    // the UI in the wrong state.
+    if (optimistic === 'shuffle' && data && typeof data.shuffle === 'boolean') {
+      setPendingShuffle(data.shuffle);
+      clearTimeout(pendingShuffleTimer.current);
+      pendingShuffleTimer.current = setTimeout(() => setPendingShuffle(null), 6000);
+    } else if (optimistic === 'repeat' && data && data.repeat) {
+      setPendingRepeat(data.repeat);
+      clearTimeout(pendingRepeatTimer.current);
+      pendingRepeatTimer.current = setTimeout(() => setPendingRepeat(null), 6000);
+    }
     try { hass.callService('media_player', service, { entity_id: speaker.id, ...data }); } catch {}
   };
   const fmtTime = (s) => {
@@ -479,6 +512,10 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
 
         {/* Controls */}
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 14}}>
+          {/* Shuffle: media_player.shuffle_set toggles the boolean. The
+              button glows when shuffle is on. */}
+          <HeroBtn onClick={() => call('shuffle_set', { shuffle: !shuffleOn }, 'shuffle')}
+            icon="⇄" size={44} active={shuffleOn}/>
           <HeroBtn onClick={() => call('media_previous_track')} icon="‹‹" size={44}/>
           {/* Explicit media_play / media_pause based on current state.
               media_play_pause is a toggle service that some integrations
@@ -495,18 +532,25 @@ const NowPlayingHero = ({ ctx, hassRef, speaker }) => {
           }}
             icon={isPlaying ? '❚❚' : '▶'} size={64} primary/>
           <HeroBtn onClick={() => call('media_next_track')} icon="››" size={44}/>
+          {/* Repeat: cycles off → all → one → off. Glow when not off;
+              a small "1" badge marks single-track repeat. */}
+          <HeroBtn onClick={() => {
+            const next = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off';
+            call('repeat_set', { repeat: next }, 'repeat');
+          }}
+            icon={repeatMode === 'one' ? '↻¹' : '↻'} size={44} active={repeatMode !== 'off'}/>
         </div>
       </div>
     </div>
   );
 };
 
-const HeroBtn = ({ onClick, icon, size, primary }) => (
+const HeroBtn = ({ onClick, icon, size, primary, active }) => (
   <button onClick={onClick} style={{
     width: size, height: size, borderRadius: '50%',
-    background: primary ? '#fff' : 'rgba(255,255,255,0.1)',
+    background: primary ? '#fff' : active ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.1)',
     color: primary ? '#000' : '#fff',
-    border: primary ? '0' : '.5px solid rgba(255,255,255,0.18)',
+    border: primary ? '0' : `.5px solid ${active ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.18)'}`,
     cursor: 'pointer', fontSize: size > 50 ? 22 : 16, fontWeight: 600,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit',
   }}>{icon}</button>
@@ -537,13 +581,26 @@ const QueueCard = ({ ctx, conn, speaker }) => {
         return { ok: true, response: resp?.response };
       } catch (e) { return { ok: false, error: e?.message || String(e) }; }
     };
+    const trySendWs = async (msg) => {
+      try {
+        const resp = await conn.sendMessagePromise(msg);
+        return { ok: true, response: resp };
+      } catch (e) { return { ok: false, error: e?.message || String(e) }; }
+    };
+    const norm = (it) => ({
+      title: it.title || it.name || '',
+      artist: (it.artists?.[0]?.name) || it.artist || '',
+      album: (it.album?.name) || it.album || '',
+      thumbnail: it.image || it.thumbnail || it.media_image_url || it.image_url || null,
+    });
     (async () => {
       // MA's queue payload looks like { items: [{ name, artists, album,
       // image, ... }, ...] }; Sonos's is a bare array of { title,
       // artist, album, thumbnail }. Normalise to the latter shape.
       const ma = await tryService('music_assistant', 'get_queue');
+      let cand = null;
       if (alive && ma.ok) {
-        const cand = ma.response?.[speakerId] ?? ma.response;
+        cand = ma.response?.[speakerId] ?? ma.response;
         // items can be: array, object dict, null/undefined, or missing.
         let arr = null;
         const i = cand?.items;
@@ -551,13 +608,6 @@ const QueueCard = ({ ctx, conn, speaker }) => {
         else if (i && typeof i === 'object') arr = Object.values(i);
         else if (Array.isArray(cand?.queue_items)) arr = cand.queue_items;
         else if (Array.isArray(cand?.tracks)) arr = cand.tracks;
-
-        const norm = (it) => ({
-          title: it.title || it.name || '',
-          artist: (it.artists?.[0]?.name) || it.artist || '',
-          album: (it.album?.name) || it.album || '',
-          thumbnail: it.image || it.thumbnail || it.media_image_url || it.image_url || null,
-        });
 
         if (Array.isArray(arr) && arr.length) {
           // If the queue includes the currently-playing track, slice
@@ -567,6 +617,35 @@ const QueueCard = ({ ctx, conn, speaker }) => {
           pushDiag(`music: MA queue — ${arr.length} items, current_index=${ci}, ${upcoming.length} upcoming`);
           setQueue(upcoming.map(norm));
           return;
+        }
+
+        // Some MA versions only expose the queue items via WS commands
+        // (the service returns metadata only). Probe a few known WS
+        // command names — first one that returns an array wins.
+        const queueId = cand?.queue_id || cand?.id || speakerId;
+        const wsCandidates = [
+          { type: 'music_assistant/players/queue/items', queue_id: queueId },
+          { type: 'music_assistant/queue/items', queue_id: queueId },
+          { type: 'music_assistant/queue_items', queue_id: queueId },
+        ];
+        for (const msg of wsCandidates) {
+          if (!alive) return;
+          const r = await trySendWs(msg);
+          if (r.ok) {
+            const items = Array.isArray(r.response) ? r.response
+              : Array.isArray(r.response?.items) ? r.response.items
+              : null;
+            if (Array.isArray(items) && items.length) {
+              const ci = typeof cand?.current_index === 'number' ? cand.current_index : -1;
+              const upcoming = ci >= 0 ? items.slice(ci + 1) : items;
+              pushDiag(`music: MA WS ${msg.type} — ${items.length} items, ${upcoming.length} upcoming`);
+              setQueue(upcoming.map(norm));
+              return;
+            }
+            pushDiag(`music: MA WS ${msg.type} returned 0 items`);
+          } else {
+            pushDiag(`music: MA WS ${msg.type} failed — ${r.error}`);
+          }
         }
 
         // Fall back to next_item alone — common when MA is streaming
@@ -592,7 +671,7 @@ const QueueCard = ({ ctx, conn, speaker }) => {
   if (!queue || queue.length === 0) return null;
   const currentTitle = (speaker.haMediaTitle || '').toLowerCase();
   const currentIdx = queue.findIndex(q => (q.title || '').toLowerCase() === currentTitle);
-  const upcoming = (currentIdx >= 0 ? queue.slice(currentIdx + 1) : queue).slice(0, 6);
+  const upcoming = (currentIdx >= 0 ? queue.slice(currentIdx + 1) : queue).slice(0, 12);
   if (!upcoming.length) return null;
 
   return (

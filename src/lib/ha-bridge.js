@@ -173,6 +173,10 @@ function translate(states) {
             haMediaArtist: e.attributes?.media_artist || null,
             haMediaAlbum: e.attributes?.media_album_name || null,
             haEntityPicture: e.attributes?.entity_picture || null,
+            // Surfaced so the NowPlaying controls can reflect the live
+            // shuffle/repeat state and toggle them via media_player.
+            shuffle: !!e.attributes?.shuffle,
+            repeat: e.attributes?.repeat || 'off', // 'off' | 'all' | 'one'
           });
         }
         break;
