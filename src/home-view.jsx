@@ -373,7 +373,7 @@ const HomeView = ({ ctx }) => {
       <window.PageHead ctx={ctx}
         eyebrow="Currently in"
         title={`The ${roomMeta?.name || 'house'}`}
-        sub={`${visibleLights.filter(l => l.on).length} lamps softly lit · ${state.thermostat.temp}° · the cat is asleep on the rug`}
+        sub={`${visibleLights.filter(l => l.on).length} lamps softly lit · ${state.thermostat.temp}°`}
         right={
           <button onClick={() => setPicking(v => !v)} style={{
             padding:'8px 14px', borderRadius:9, border:`.5px solid ${picking ? p.accent : p.border2}`,

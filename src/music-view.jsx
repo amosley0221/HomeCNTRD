@@ -137,7 +137,40 @@ const MusicView = ({ ctx }) => {
       return group[0];
     };
     const auto = Array.from(groups.values()).map(pickBest);
-    return { autoVisible: auto, visible: auto.filter(s => !hidden.has(s.id)) };
+    // When pickBest picks an MA entity, its live display state
+    // (media_title, playing, position, etc.) can lag the underlying
+    // native Sonos sibling by several seconds — long enough that
+    // auto-advancing to the next track leaves NowPlayingHero stuck on
+    // the previous title while the mini player and dashboard (both of
+    // which read from native Sonos) already show the new song. Blend
+    // the freshest display attributes from the Sonos sibling into the
+    // MA entity, but keep MA's id + MA-specific attributes so
+    // music_assistant.* service calls and browse_media still route
+    // correctly. Volume / grouping intentionally stay on the MA entity
+    // — those go through MA actions and consume MA's group_members.
+    const sonosByName = new Map();
+    for (const s of (state.speakers || [])) {
+      if (!s.isSonosAttr || s.isMAAttr) continue;
+      const k = (s.name || '').toLowerCase().trim();
+      if (!sonosByName.has(k)) sonosByName.set(k, s);
+    }
+    const blend = (sp) => {
+      const sib = sonosByName.get((sp.name || '').toLowerCase().trim());
+      if (!sib || sib.id === sp.id) return sp;
+      return {
+        ...sp,
+        haMediaTitle: sib.haMediaTitle ?? sp.haMediaTitle,
+        haMediaArtist: sib.haMediaArtist ?? sp.haMediaArtist,
+        haMediaAlbum: sib.haMediaAlbum ?? sp.haMediaAlbum,
+        haEntityPicture: sib.haEntityPicture ?? sp.haEntityPicture,
+        playing: sib.playing,
+        progress: sib.progress,
+        progressUpdatedAt: sib.progressUpdatedAt,
+        duration: sib.duration || sp.duration,
+      };
+    };
+    const blended = auto.map(blend);
+    return { autoVisible: blended, visible: blended.filter(s => !hidden.has(s.id)) };
   }, [state.speakers, platforms, platformsLoaded, hidden]);
 
   // ── Active speaker, infinity, manage panel ─────────────────────────
