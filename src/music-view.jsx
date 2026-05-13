@@ -320,32 +320,52 @@ const MusicView = ({ ctx }) => {
   // alone preserves the title), fire a fresh play_media with
   // radio_mode: true seeded by the last track. Tracked per-seed so
   // we never double-fire for the same seed.
+  //
+  // Debounce 6 s: when the title clears during a track change (the
+  // user picked a new song, MA briefly transitions through null),
+  // the radio would otherwise fire and stomp the new selection.
+  // If a new title arrives before the timer expires, we abort.
   const prevTitleRef = React.useRef(null);
+  const infinityTimerRef = React.useRef(null);
   React.useEffect(() => {
     const prevTitle = prevTitleRef.current;
     const currTitle = active?.haMediaTitle || null;
     prevTitleRef.current = currTitle;
 
     if (currTitle) {
-      // Something's playing again — reset so a future end-of-queue
-      // can fire a new radio.
+      // Something's playing again — reset for the next end-of-queue,
+      // and cancel any pending radio fire from a brief title-null
+      // window during track change.
       radioFiredFor.current = null;
+      if (infinityTimerRef.current) {
+        clearTimeout(infinityTimerRef.current);
+        infinityTimerRef.current = null;
+      }
       return;
     }
     if (!prevTitle || !infinity || !lastSeedRef.current || !active?.id) return;
     const seed = lastSeedRef.current;
     if (radioFiredFor.current === seed.id) return;
-    radioFiredFor.current = seed.id;
 
-    pushDiag(`music: Infinity — queue ended, firing radio seed=${seed.title}`);
-    const hass = hassRef.current;
-    hass?.callService('music_assistant', 'play_media', {
-      entity_id: active.id,
-      media_id: seed.id,
-      enqueue: 'play',
-      radio_mode: true,
-    })?.catch?.((err) => pushDiag(`music: radio play_media failed — ${err?.message || err}`));
-    setAlbumCtx(null);
+    // Defer the fire — if a fresh title shows up in the next 6 s
+    // (track change in progress), the effect re-runs with currTitle
+    // truthy and clears this timer above.
+    if (infinityTimerRef.current) clearTimeout(infinityTimerRef.current);
+    infinityTimerRef.current = setTimeout(() => {
+      infinityTimerRef.current = null;
+      // Double-check that the title is still empty before firing.
+      if (prevTitleRef.current) return;
+      radioFiredFor.current = seed.id;
+      pushDiag(`music: Infinity — queue ended, firing radio seed=${seed.title}`);
+      const hass = hassRef.current;
+      hass?.callService('music_assistant', 'play_media', {
+        entity_id: active.id,
+        media_id: seed.id,
+        enqueue: 'play',
+        radio_mode: true,
+      })?.catch?.((err) => pushDiag(`music: radio play_media failed — ${err?.message || err}`));
+      setAlbumCtx(null);
+    }, 6000);
   }, [active?.haMediaTitle, infinity, active?.id]);
 
   if (!platformsLoaded) {
