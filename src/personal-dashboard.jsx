@@ -386,33 +386,45 @@ const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme, injectAft
   // Mobile native DnD is unreliable, so we also expose ↑/↓ buttons in the
   // edit toolbar for touch reordering.
   const [dragId, setDragId] = React.useState(null);
+  // Live drop target as the cursor moves over candidate tiles. Drives a
+  // visible orange bar on the target's edge so the user can see exactly
+  // where the dragged tile will land before they release.
+  const [dropTarget, setDropTarget] = React.useState(null); // { id, where: 'before'|'after' }
 
   const onDragStart = (id, e) => {
     setDragId(id);
     try { e.dataTransfer.effectAllowed = 'move'; } catch {}
     try { e.dataTransfer.setData('text/plain', id); } catch {}
   };
-  const onDragOver = (e) => { e.preventDefault(); };
+  const onDragOver = (e, targetId) => {
+    e.preventDefault();
+    if (!targetId || targetId === dragId) return;
+    try {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const yFraction = (e.clientY - rect.top) / Math.max(1, rect.height);
+      const where = yFraction > 0.5 ? 'after' : 'before';
+      if (!dropTarget || dropTarget.id !== targetId || dropTarget.where !== where) {
+        setDropTarget({ id: targetId, where });
+      }
+    } catch {}
+  };
   const onDrop = (targetId, e) => {
     e.preventDefault();
     const sourceId = dragId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
     if (sourceId && sourceId !== targetId) {
-      // Drop into the upper half of the target = land BEFORE it; lower
-      // half = land AFTER. Without this every drop landed in the same
-      // slot as the target (pushing target down), which made dropping
-      // a tile 'below' another impossible — exactly the case the user
-      // hit trying to put To-Do under Notes.
-      let where = 'before';
+      let where = dropTarget?.id === targetId ? dropTarget.where : 'before';
+      // Recompute in case dragOver didn't fire (rare browser quirk).
       try {
         const rect = e.currentTarget.getBoundingClientRect();
         const yFraction = (e.clientY - rect.top) / Math.max(1, rect.height);
-        if (yFraction > 0.5) where = 'after';
+        where = yFraction > 0.5 ? 'after' : 'before';
       } catch {}
       updateLayout(moveTile(layout, sourceId, targetId, where));
     }
     setDragId(null);
+    setDropTarget(null);
   };
-  const onDragEnd = () => setDragId(null);
+  const onDragEnd = () => { setDragId(null); setDropTarget(null); };
 
   return (
     <div>
@@ -431,6 +443,7 @@ const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme, injectAft
               isLast={i === visible.length - 1}
               editMode={editMode}
               isDragging={dragId === t.id}
+              dropTarget={dropTarget?.id === t.id ? dropTarget.where : null}
               narrow={narrow}
               theme={theme}
               onDragStart={onDragStart}
@@ -489,7 +502,7 @@ const TileGrid = ({ layout, updateLayout, editMode, renderTile, theme, injectAft
 };
 
 const TileFrame = ({
-  tile, isFirst, isLast, editMode, isDragging, narrow, theme,
+  tile, isFirst, isLast, editMode, isDragging, dropTarget, narrow, theme,
   onDragStart, onDragOver, onDrop, onDragEnd,
   onMoveUp, onMoveDown, onResize, onHide,
   children,
@@ -498,12 +511,14 @@ const TileFrame = ({
   // On narrow viewports everything is single-column anyway, so colSpan is
   // irrelevant — the tile fills the row regardless.
   const span = narrow ? 1 : tile.colSpan;
+  const dropAbove = dropTarget === 'before';
+  const dropBelow = dropTarget === 'after';
 
   return (
     <div
       draggable={editMode}
       onDragStart={(e) => editMode && onDragStart(tile.id, e)}
-      onDragOver={editMode ? onDragOver : undefined}
+      onDragOver={editMode ? (e) => onDragOver(e, tile.id) : undefined}
       onDrop={(e) => editMode && onDrop(tile.id, e)}
       onDragEnd={editMode ? onDragEnd : undefined}
       style={{
@@ -518,6 +533,16 @@ const TileFrame = ({
         borderRadius: 16,
       }}
     >
+      {(dropAbove || dropBelow) && (
+        <div style={{
+          position: 'absolute', left: -2, right: -2,
+          [dropAbove ? 'top' : 'bottom']: -6,
+          height: 4, borderRadius: 2,
+          background: accent,
+          boxShadow: `0 0 12px ${accent}88`,
+          zIndex: 6, pointerEvents: 'none',
+        }}/>
+      )}
       {editMode && (
         <div style={{
           position: 'absolute', top: -10, right: 8, zIndex: 5,
@@ -1966,11 +1991,6 @@ const PinnedCard = ({ hass, pins, patchUser, defaultSpeakerId, speakers, setPage
     }));
   };
 
-  // Fill out to 6 cells so the grid layout stays stable even with
-  // fewer pins. Empty cells are rendered as a hint to add more.
-  const cells = [];
-  for (let i = 0; i < 6; i++) cells.push(list[i] || null);
-
   if (list.length === 0) {
     return (
       <Card surface={surface} border={border}>
@@ -2005,26 +2025,20 @@ const PinnedCard = ({ hass, pins, patchUser, defaultSpeakerId, speakers, setPage
           background: 'transparent', color: fg, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
         }}>Browse music</button>
       </div>
-      {/* Layout adapts to the tile's colSpan in the dashboard grid:
-          - Wide (colSpan=2, the default): 3 columns × 2 rows. Best when
-            the tile spans both dashboard columns.
-          - Compact (colSpan=1, narrow viewport, or 'vertical' mode):
-            2 columns × 3 rows. Fits in a single dashboard column without
-            the art tiles shrinking past readability.
-          On narrow viewports we always use the compact layout regardless
-          of colSpan since the dashboard collapses to one column anyway. */}
+      {/* Auto-fill grid keeps art tiles small (~110px) and lets them
+          flow naturally — no empty "+ slot" placeholders, since the
+          Browse music button in the header already drives that intent.
+          Tighter min in compact (colSpan === 1) mode for an even more
+          vertical look. */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: `repeat(${(colSpan === 1 || narrow) ? 2 : 3}, 1fr)`,
+        gridTemplateColumns: `repeat(auto-fill, minmax(${(colSpan === 1 || narrow) ? 96 : 110}px, 1fr))`,
         gap: 10,
       }}>
-        {cells.map((pin, i) => pin ? (
+        {list.map((pin) => (
           <PinnedTile key={pin.id} pin={pin}
             onPlay={() => playPin(pin)} onRemove={() => unpin(pin.id)}
             surface2={surface2} fg={fg} fg3={fg3} border={border} fonts={fonts} accent={accent}/>
-        ) : (
-          <PinnedSlotEmpty key={`empty-${i}`} onClick={() => setPage && setPage('music')}
-            fg3={fg3} border={border}/>
         ))}
       </div>
     </Card>
@@ -2065,15 +2079,6 @@ const PinnedTile = ({ pin, onPlay, onRemove, surface2, fg, fg3, border, fonts, a
     </div>
   );
 };
-
-const PinnedSlotEmpty = ({ onClick, fg3, border }) => (
-  <button onClick={onClick} style={{
-    aspectRatio: '1', borderRadius: 10,
-    background: 'transparent', border: `1px dashed ${border}`,
-    color: fg3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 18,
-    display: 'grid', placeItems: 'center',
-  }}>+</button>
-);
 
 // ── Section: Notes (text + handwritten) ───────────────────────────────────
 // ── Notes ────────────────────────────────────────────────────────────────
