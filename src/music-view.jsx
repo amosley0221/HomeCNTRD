@@ -290,7 +290,7 @@ const MusicView = ({ ctx }) => {
         {/* Center column */}
         <div style={{display:'flex', flexDirection:'column', gap:dens.gap, minWidth: 0}}>
           <NowPlayingHero ctx={ctx} hassRef={hassRef} speaker={active}/>
-          <QueueCard ctx={ctx} conn={conn} speaker={active}/>
+          <QueueCard ctx={ctx} conn={conn} hassRef={hassRef} speaker={active}/>
         </div>
 
         {/* Right column */}
@@ -562,7 +562,7 @@ const HeroBtn = ({ onClick, icon, size, primary, active }) => (
 // exposes music_assistant.get_queue with a richer schema; Sonos's
 // underlying integration uses sonos.get_queue. Try MA first since the
 // active speaker is usually the MA mirror; fall back to Sonos.
-const QueueCard = ({ ctx, conn, speaker }) => {
+const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
   const { p, fonts } = ctx;
   const [queue, setQueue] = React.useState(null);
   const titleKey = speaker?.haMediaTitle || '';
@@ -581,37 +581,37 @@ const QueueCard = ({ ctx, conn, speaker }) => {
         return { ok: true, response: resp?.response };
       } catch (e) { return { ok: false, error: e?.message || String(e) }; }
     };
-    const trySendWs = async (msg) => {
-      try {
-        const resp = await conn.sendMessagePromise(msg);
-        return { ok: true, response: resp };
-      } catch (e) { return { ok: false, error: e?.message || String(e) }; }
-    };
     const norm = (it) => ({
       title: it.title || it.name || '',
       artist: (it.artists?.[0]?.name) || it.artist || '',
       album: (it.album?.name) || it.album || '',
       thumbnail: it.image || it.thumbnail || it.media_image_url || it.image_url || null,
+      // Preserve identifiers for click-to-play. MA's get_queue returns
+      // queue items with `queue_item_id` (for queue/play_index) and a
+      // `media_item` containing the canonical URI / content_id.
+      queueItemId: it.queue_item_id || it.item_id || null,
+      mediaId: it.media_item?.uri || it.uri || it.media_content_id || null,
+      mediaType: it.media_item?.media_type || it.media_content_type || null,
     });
     (async () => {
-      // MA's queue payload looks like { items: [{ name, artists, album,
-      // image, ... }, ...] }; Sonos's is a bare array of { title,
-      // artist, album, thumbnail }. Normalise to the latter shape.
+      // MA's get_queue returns a metadata object: { queue_id, items:
+      // <COUNT — not an array!>, current_index, current_item,
+      // next_item, ... }. Earlier code mistakenly treated `items` as
+      // an array; in practice we only ever get the single `next_item`.
       const ma = await tryService('music_assistant', 'get_queue');
       let cand = null;
       if (alive && ma.ok) {
         cand = ma.response?.[speakerId] ?? ma.response;
-        // items can be: array, object dict, null/undefined, or missing.
+        // Some integrations / versions DO put an array somewhere; keep
+        // checking the alternate keys for forwards-compat.
         let arr = null;
         const i = cand?.items;
         if (Array.isArray(i)) arr = i;
-        else if (i && typeof i === 'object') arr = Object.values(i);
         else if (Array.isArray(cand?.queue_items)) arr = cand.queue_items;
         else if (Array.isArray(cand?.tracks)) arr = cand.tracks;
+        else if (Array.isArray(cand?.queue?.items)) arr = cand.queue.items;
 
         if (Array.isArray(arr) && arr.length) {
-          // If the queue includes the currently-playing track, slice
-          // past it via current_index so Up Next is what comes after.
           const ci = typeof cand?.current_index === 'number' ? cand.current_index : -1;
           const upcoming = ci >= 0 ? arr.slice(ci + 1) : arr;
           pushDiag(`music: MA queue — ${arr.length} items, current_index=${ci}, ${upcoming.length} upcoming`);
@@ -619,54 +619,51 @@ const QueueCard = ({ ctx, conn, speaker }) => {
           return;
         }
 
-        // Some MA versions only expose the queue items via WS commands
-        // (the service returns metadata only). Probe a few known WS
-        // command names — first one that returns an array wins.
-        const queueId = cand?.queue_id || cand?.id || speakerId;
-        const wsCandidates = [
-          { type: 'music_assistant/players/queue/items', queue_id: queueId },
-          { type: 'music_assistant/queue/items', queue_id: queueId },
-          { type: 'music_assistant/queue_items', queue_id: queueId },
-        ];
-        for (const msg of wsCandidates) {
-          if (!alive) return;
-          const r = await trySendWs(msg);
-          if (r.ok) {
-            const items = Array.isArray(r.response) ? r.response
-              : Array.isArray(r.response?.items) ? r.response.items
-              : null;
-            if (Array.isArray(items) && items.length) {
-              const ci = typeof cand?.current_index === 'number' ? cand.current_index : -1;
-              const upcoming = ci >= 0 ? items.slice(ci + 1) : items;
-              pushDiag(`music: MA WS ${msg.type} — ${items.length} items, ${upcoming.length} upcoming`);
-              setQueue(upcoming.map(norm));
-              return;
-            }
-            pushDiag(`music: MA WS ${msg.type} returned 0 items`);
-          } else {
-            pushDiag(`music: MA WS ${msg.type} failed — ${r.error}`);
-          }
-        }
-
-        // Fall back to next_item alone — common when MA is streaming
-        // a single track or radio without a populated upcoming queue.
+        // Fall back to next_item alone — get_queue's documented shape
+        // doesn't include the rest of the queue, only the single next
+        // item. Dump cand's shape on the way so future diag tells us
+        // whether a new field appears.
+        const keys = cand ? Object.keys(cand).join(',') : 'null';
         if (cand?.next_item) {
-          pushDiag(`music: MA queue — using next_item only`);
+          pushDiag(`music: MA queue — next_item only · keys=${keys} · items_count=${cand?.items}`);
           setQueue([norm(cand.next_item)]);
           return;
         }
-        pushDiag(`music: MA queue — empty (keys=${cand ? Object.keys(cand).join(',') : 'null'})`);
+        pushDiag(`music: MA queue — empty · keys=${keys}`);
       } else if (alive && ma) {
         pushDiag(`music: MA get_queue failed — ${ma.error}`);
       }
-      // Skip the Sonos fallback when the active speaker is MA-managed —
-      // sonos.get_queue would error out with "did not match any
-      // entities" because MA mirrors live in the music_assistant domain
-      // for service routing purposes.
       if (alive) setQueue([]);
     })();
     return () => { alive = false; };
   }, [conn, speakerId, titleKey]);
+
+  // Tap a track in Up Next to play it. MA exposes
+  // `music_assistant.queue_command` with `command: play_index` +
+  // `queue_item_id` — that jumps within the queue. If we only have
+  // a media URI (no queue_item_id, e.g. a Sonos fallback), fall back
+  // to `music_assistant.play_media` which enqueues+plays.
+  const playFromQueue = (tr) => {
+    const hass = hassRef?.current;
+    if (!hass?.callService || !speakerId) return;
+    if (tr.queueItemId) {
+      try {
+        hass.callService('music_assistant', 'queue_command', {
+          entity_id: speakerId, command: 'play_index',
+          queue_item_id: tr.queueItemId,
+        });
+        return;
+      } catch {}
+    }
+    if (tr.mediaId) {
+      try {
+        hass.callService('music_assistant', 'play_media', {
+          entity_id: speakerId, media_id: tr.mediaId,
+          enqueue: 'play',
+        });
+      } catch {}
+    }
+  };
 
   if (!queue || queue.length === 0) return null;
   const currentTitle = (speaker.haMediaTitle || '').toLowerCase();
@@ -681,19 +678,32 @@ const QueueCard = ({ ctx, conn, speaker }) => {
         <div style={{fontSize: 11, color: p.fg3}}>{upcoming.length} track{upcoming.length === 1 ? '' : 's'}</div>
       </div>
       <div>
-        {upcoming.map((tr, i) => (
-          <div key={i} style={{display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px',
-            borderBottom: i < upcoming.length - 1 ? `.5px solid ${p.border}` : 'none', minWidth: 0}}>
-            <div style={{width: 38, height: 38, borderRadius: 5, flex: 'none',
-              background: tr.thumbnail ? `center / cover no-repeat url("${tr.thumbnail}"), oklch(20% 0.05 25)` : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
-            <div style={{flex: 1, minWidth: 0}}>
-              <div style={{fontSize: 13, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{tr.title || 'Untitled'}</div>
-              <div style={{fontSize: 11, color: p.fg3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                {[tr.artist, tr.album].filter(Boolean).join(' · ')}
+        {upcoming.map((tr, i) => {
+          const clickable = !!(tr.queueItemId || tr.mediaId);
+          return (
+            <button key={i}
+              disabled={!clickable}
+              onClick={() => clickable && playFromQueue(tr)}
+              style={{display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px',
+                width: '100%', textAlign: 'left',
+                background: 'transparent', border: 0,
+                borderBottom: i < upcoming.length - 1 ? `.5px solid ${p.border}` : 'none',
+                cursor: clickable ? 'pointer' : 'default',
+                color: 'inherit', fontFamily: 'inherit', minWidth: 0}}>
+              <div style={{width: 38, height: 38, borderRadius: 5, flex: 'none',
+                background: tr.thumbnail ? `center / cover no-repeat url("${tr.thumbnail}"), oklch(20% 0.05 25)` : `linear-gradient(135deg, ${p.surface2}, ${p.surface})`}}/>
+              <div style={{flex: 1, minWidth: 0}}>
+                <div style={{fontSize: 13, color: p.fg, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{tr.title || 'Untitled'}</div>
+                <div style={{fontSize: 11, color: p.fg3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                  {[tr.artist, tr.album].filter(Boolean).join(' · ')}
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+              {clickable && (
+                <div style={{fontSize: 13, color: p.fg3, flex: 'none', paddingLeft: 8}}>▶</div>
+              )}
+            </button>
+          );
+        })}
       </div>
     </window.Card>
   );
