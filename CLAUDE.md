@@ -240,12 +240,38 @@ verbatim into `dist/`) over inlined base64.
    `voice.js`'s `isVoiceSupported()` + `listenOnce()`.
 4. **Adding `console.log` for debugging.** The user is debugging on
    an iPad without easy access to the console. Surface diagnostics
-   in the UI (status rows, error text) instead.
+   in the UI (status rows, error text) instead — use `pushDiag()`
+   from `src/music-view.jsx` / `src/personal-dashboard.jsx`. They
+   show up in Settings → Diagnostics.
 5. **Suggesting Picovoice / Porcupine.** It's been tried; the signup
    blocks personal email. Don't suggest it again.
 6. **Recommending TodoWrite for trivial tasks.** The user doesn't
    need progress tracking on routine edits — only on multi-stage
    work where they'd genuinely benefit from seeing structure.
+7. **Adding hooks below an early `return`.** React #300 / #310 —
+   every render must call the same hooks in the same order.
+   `MusicView` has `if (!platformsLoaded) return ...` near the top;
+   all `useEffect` / `useState` / `useRef` calls must sit ABOVE that
+   return, even when they read variables that aren't valid yet on
+   the loading render (use `active?.id` etc. so the deps are stable).
+   Burned by this twice already (PR #25 black-screen, PR #55 hotfix).
+8. **Big PRs.** After PR #25 dropped the whole dashboard to a black
+   screen, the user asked for smaller, isolated PRs. Ship one
+   feature at a time. A pre-existing crash that lands inside a
+   100-line PR is much harder to triage than the same crash inside
+   a 10-line PR.
+9. **Wrapping URLs / values in `<...>` in instructions.** The user
+   copy-pastes commands from a markdown viewer that auto-bracketed
+   `<URL>` placeholders. Write commands without the angle-brackets
+   or with concrete substituted values (e.g. `wget -O homecntrd.js
+   https://raw.githubusercontent.com/...` not `wget -O homecntrd.js
+   <RAW_URL>`).
+10. **Calling `hass.callService()` for try/then/fallback flows.**
+    The HA frontend's wrapper auto-surfaces every rejection as a
+    global toast. When you need to attempt a call and recover from
+    failure silently, use `hass.connection.sendMessagePromise({
+    type: 'call_service', ... })` directly. `playPin` in
+    `personal-dashboard.jsx` and several music helpers do this.
 
 ## Useful environment facts
 
@@ -362,6 +388,74 @@ favorites / expand logic runs. Live and recently-finished games
 pass through naturally since their `startTime` is in the past or
 now. If a future change moves filtering / sorting around, keep the
 7-day cap as the first step.
+
+## Dashboard tile layout
+
+The Personal Dashboard's main column is built from a list of tiles
+the user can reorder, resize between 1-col and 2-col, and hide.
+Layout lives in `localStorage` under `homecntrd_layout_v1` and is
+managed by `src/lib/layout.js`.
+
+- **Registry vs. layout split.** `TILE_REGISTRY` is the static set
+  of known tile ids (`weather`, `car`, `pinned`, `sports`, `news`,
+  `todo`, `notes`). `DEFAULT_LAYOUT` is the initial ordering /
+  size. The user's saved layout is reconciled against the registry
+  on load: unknown ids are dropped (a tile was removed in code),
+  newly-introduced default tiles are appended (so adding a tile in
+  code shows up after upgrade without breaking the existing layout).
+- **`moveTile(layout, sourceId, targetId, where)`** — `where` is
+  `'before' | 'after'`. The drop position relative to the target
+  comes from the cursor's Y fraction inside the target tile's
+  bounding rect (>0.5 → 'after'). Default is `'before'` for
+  back-compat with older call sites.
+- **Drop indicator.** `TileGrid` tracks a `dropTarget` state
+  (`{ id, where }`) updated by `onDragOver`. `TileFrame` renders an
+  accent-colored bar on the top or bottom edge of the target tile
+  so the user can see exactly where the dragged tile will land.
+  HTML5 native DnD; works on macOS/desktop, the user reports it
+  doesn't on iPad (DnD support in iPad Safari is limited). The
+  edit toolbar also exposes ↑/↓ buttons as a touch-friendly fallback.
+
+## Diagnostics system
+
+`pushDiag(line)` appends to `window.__hcDiag` (a capped ring of 50
+entries). Settings → Diagnostics renders the array, refreshes every
+second. It's the user's primary debug channel — they run HomeCNTRD
+on an iPad with no JS console, so anything you'd `console.log` for
+debug should `pushDiag` instead. Common diag prefixes already in
+use: `music:`, `cam`, `↑`, `HA entity inventory:`.
+
+Whenever you wire a new failure mode that the user might hit but
+can't see from the UI alone (e.g. a service call rejected, a fetch
+returned 0 items, a fallback path engaged), push one short line
+that names the path + outcome. Don't spam — emit once per state
+transition, not once per render.
+
+## User-state cross-device sync
+
+User-controlled state that should follow the user across devices
+(per-room section toggles, device blacklists, notes, pinned media,
+default music speaker, etc.) lives in TWO places:
+
+1. **`localStorage` mirror** for instant cold-load (`homecntrd:*`
+   key prefix). iOS Companion is documented to drop site data
+   between deploys, so localStorage alone isn't durable enough.
+2. **HA's `frontend/{get,set}_user_data` WS API** for durable
+   cross-device sync. Keys use `homecntrd_*` (underscore, since
+   HA doesn't love colons here). On mount, `app.jsx` fetches the
+   HA value and overlays the localStorage mirror if present.
+   Patches debounce (~600 ms) before writing to HA so a flurry of
+   toggles doesn't fire one set_user_data per click.
+
+`patchUser` in `app.jsx` strips the read-only HA-derived fields
+(`firstName`, `email`, `plan`, `location`, `createdAt`) before
+persisting so a stale snapshot doesn't shadow live HA updates on
+the next mount.
+
+When adding a new piece of user state, mirror this pattern unless
+the state genuinely belongs to a single device (e.g. wake-word
+audio context — that's device-local). Notes use it; Pinned media
+uses it; default music speaker uses it.
 
 ## Music — Music Assistant integration
 
