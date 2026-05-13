@@ -593,28 +593,22 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
       mediaId: it.media_item?.uri || it.uri || it.media_content_id || null,
       mediaType: it.media_item?.media_type || it.media_content_type || null,
     });
-    const trySendWs = async (msg) => {
-      try {
-        const resp = await conn.sendMessagePromise(msg);
-        return { ok: true, response: resp };
-      } catch (e) { return { ok: false, error: e?.message || String(e) }; }
-    };
     (async () => {
-      // MA's get_queue returns a metadata object: { queue_id, items:
-      // <COUNT — not an array!>, current_index, current_item,
-      // next_item, ... }. To fetch the actual items array we need a
-      // separate WS command that mirrors MA server's `player_queues/items`.
+      // MA's `get_queue` service returns metadata + current_item +
+      // next_item (no items array — `items` is a count int). The HA
+      // integration on this install does NOT expose queue items via
+      // WS either (every probed command name returned unknown_command,
+      // see PR #51). To work around that, also peek at the entity's
+      // attributes — some MA setups put queue rows on the media_player
+      // entity directly.
       const ma = await tryService('music_assistant', 'get_queue');
       let cand = null;
       let totalCount = null;
       if (alive && ma.ok) {
         cand = ma.response?.[speakerId] ?? ma.response;
         totalCount = typeof cand?.items === 'number' ? cand.items : null;
-        const queueId = cand?.queue_id || speakerId;
         const ci = typeof cand?.current_index === 'number' ? cand.current_index : -1;
 
-        // Some integrations / versions DO put an array somewhere; keep
-        // checking the alternate keys for forwards-compat.
         let arr = null;
         const i = cand?.items;
         if (Array.isArray(i)) arr = i;
@@ -629,46 +623,37 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
           return;
         }
 
-        // Probe MA WS commands. The MA server's command is exactly
-        // `player_queues/items` per the MA frontend; the HA integration
-        // proxies that namespace. Try the most-likely names in order.
-        const wsCandidates = [
-          { type: 'music_assistant/player_queues/items', queue_id: queueId, limit: 50, offset: 0 },
-          { type: 'music_assistant/player_queues/items', queue_id: queueId },
-          { type: 'music_assistant/get_player_queue_items', queue_id: queueId },
-          { type: 'music_assistant/queue/get_items', queue_id: queueId },
-        ];
-        for (const msg of wsCandidates) {
-          if (!alive) return;
-          const r = await trySendWs(msg);
-          if (r.ok) {
-            const items = Array.isArray(r.response) ? r.response
-              : Array.isArray(r.response?.items) ? r.response.items
-              : Array.isArray(r.response?.queue_items) ? r.response.queue_items
-              : null;
-            if (Array.isArray(items) && items.length) {
-              const upcoming = ci >= 0 ? items.slice(ci + 1) : items;
-              pushDiag(`music: MA WS ${msg.type} — ${items.length} items, ${upcoming.length} upcoming`);
+        // Look for queue rows on the entity attributes. We dump the
+        // attribute keys (only first time, when items are missing) so
+        // future Claude can see whether MA exposes the queue there.
+        try {
+          const hass = hassRef?.current;
+          const att = hass?.states?.[speakerId]?.attributes;
+          if (att) {
+            // Probe a generous set of plausible attribute names.
+            const attrCandidates = [
+              att.queue_items, att.queue, att.media_queue, att.upcoming,
+              att.media_player_queue, att.tracks,
+            ];
+            const attrArr = attrCandidates.find(v => Array.isArray(v) && v.length);
+            if (attrArr) {
+              const upcoming = ci >= 0 ? attrArr.slice(ci + 1) : attrArr;
+              pushDiag(`music: MA queue — ${attrArr.length} items from entity.attributes, ${upcoming.length} upcoming`);
               setQueue({ items: upcoming.map(norm), totalCount });
               return;
             }
-            pushDiag(`music: MA WS ${msg.type} returned 0 items`);
-          } else if (!/unknown_command/i.test(r.error || '')) {
-            pushDiag(`music: MA WS ${msg.type} failed — ${r.error}`);
+            pushDiag(`music: media_player attrs · keys=${Object.keys(att).join(',')}`);
           }
-        }
+        } catch {}
 
         // Fall back to next_item alone — get_queue's documented shape
         // doesn't include the rest of the queue, only the single next
-        // item. Dump cand's shape on the way so future diag tells us
-        // whether a new field appears.
-        const keys = cand ? Object.keys(cand).join(',') : 'null';
+        // item. items_count tells the user the real queue size in
+        // the Up Next header even if we can only render one row.
         if (cand?.next_item) {
-          pushDiag(`music: MA queue — next_item only · keys=${keys} · items_count=${totalCount}`);
           setQueue({ items: [norm(cand.next_item)], totalCount });
           return;
         }
-        pushDiag(`music: MA queue — empty · keys=${keys}`);
       } else if (alive && ma) {
         pushDiag(`music: MA get_queue failed — ${ma.error}`);
       }
