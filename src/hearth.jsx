@@ -177,7 +177,6 @@ const HearthApp = ({ dark, density, accent, agentTone, fontPair, bgImage, visibl
           }}/>
           <div style={{
             position:'fixed', left:0, top:0, bottom:0, width:232, zIndex:61,
-            boxShadow:'8px 0 32px rgba(0,0,0,.4)',
           }}>
             <Sidebar ctx={{ ...ctx, setPage: (id) => { setPage(id); setSidebarOpen(false); } }} />
           </div>
@@ -282,8 +281,6 @@ const Sidebar = ({ ctx }) => {
             const rl = state.lights.filter(l => l.room === r.id && l.on).length;
             return <Item key={r.id} active={room === r.id} onClick={() => setRoom(r.id)} icon={r.icon} label={r.name} count={rl > 0 ? rl : ''} />;
           })}
-          <Section>Quick scenes</Section>
-          {state.scenes.slice(0,4).map(sc => <Item key={sc.id} icon={sc.icon} label={sc.name} active={sc.active} />)}
         </>}
       </div>
       <div style={{borderTop:`.5px solid ${p.border}`, padding:8}}>

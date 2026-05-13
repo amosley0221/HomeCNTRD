@@ -9396,8 +9396,7 @@ const eE = ({ dark: n, density: e, accent: t, agentTone: i, fontPair: r, bgImage
         top: 0,
         bottom: 0,
         width: 232,
-        zIndex: 61,
-        boxShadow: "8px 0 32px rgba(0,0,0,.4)"
+        zIndex: 61
       }, children: /* @__PURE__ */ c.jsx(cg, { ctx: { ...Q, setPage: (Z) => {
         v(Z), R(!1);
       } } }) })
@@ -9528,9 +9527,7 @@ const hu = {
         window.ROOMS.map((g) => {
           const m = a.lights.filter((y) => y.room === g.id && y.on).length;
           return /* @__PURE__ */ c.jsx(f, { active: s === g.id, onClick: () => o(g.id), icon: g.icon, label: g.name, count: m > 0 ? m : "" }, g.id);
-        }),
-        /* @__PURE__ */ c.jsx(d, { children: "Quick scenes" }),
-        a.scenes.slice(0, 4).map((g) => /* @__PURE__ */ c.jsx(f, { icon: g.icon, label: g.name, active: g.active }, g.id))
+        })
       ] })
     ] }),
     /* @__PURE__ */ c.jsxs("div", { style: { borderTop: `.5px solid ${e.border}`, padding: 8 }, children: [
