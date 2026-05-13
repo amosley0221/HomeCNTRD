@@ -10033,12 +10033,15 @@ function kE() {
   }
   return or(Jf);
 }
-function AE(n, e, t) {
+function AE(n, e, t, i = "before") {
   if (e === t) return n;
-  const i = or(n), r = i.findIndex((a) => a.id === e), s = i.findIndex((a) => a.id === t);
-  if (r === -1 || s === -1) return n;
-  const [o] = i.splice(r, 1);
-  return i.splice(s, 0, o), i;
+  const r = or(n), s = r.findIndex((d) => d.id === e);
+  let o = r.findIndex((d) => d.id === t);
+  if (s === -1 || o === -1) return n;
+  const [a] = r.splice(s, 1);
+  s < o && (o -= 1);
+  const l = i === "after" ? o + 1 : o;
+  return r.splice(l, 0, a), r;
 }
 function RE(n, e) {
   const t = n.findIndex((r) => r.id === e);
@@ -10384,7 +10387,16 @@ const _E = (n) => n ? {
   }, b = (k, E) => {
     E.preventDefault();
     const A = y || E.dataTransfer && E.dataTransfer.getData("text/plain");
-    A && A !== k && e(AE(n, A, k)), x(null);
+    if (A && A !== k) {
+      let I = "before";
+      try {
+        const R = E.currentTarget.getBoundingClientRect();
+        (E.clientY - R.top) / Math.max(1, R.height) > 0.5 && (I = "after");
+      } catch {
+      }
+      e(AE(n, A, k, I));
+    }
+    x(null);
   }, T = () => x(null);
   return /* @__PURE__ */ c.jsxs("div", { children: [
     /* @__PURE__ */ c.jsx("div", { style: {
