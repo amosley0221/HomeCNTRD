@@ -245,6 +245,65 @@ const MusicView = ({ ctx }) => {
     }
   }, [active?.id, active?.haMediaTitle, active?.playing]);
 
+  // Auto-resolve album context from the currently-playing track.
+  // The user often starts playback from outside MusicView (Pinned
+  // tile on the dashboard, voice command, Sonos app), so albumCtx
+  // is null even when an album is actually playing. When the
+  // speaker reports media_album_name + media_artist, search MA for
+  // the album and populate albumCtx so QueueCard can render the
+  // tracklist. Skipped when albumCtx already matches the playing
+  // album (user picked it explicitly).
+  const albumLookupCacheRef = React.useRef(new Map());
+  React.useEffect(() => {
+    const albumName = active?.haMediaAlbum;
+    const artist = active?.haMediaArtist;
+    if (!conn || !active?.id || !albumName) return;
+    // Already matches? Nothing to do.
+    if (albumCtx?.title && albumCtx.title.toLowerCase().trim() === albumName.toLowerCase().trim()) return;
+    const cacheKey = `${artist || ''}|${albumName}`.toLowerCase();
+    if (albumLookupCacheRef.current.get(cacheKey) === 'pending') return;
+    const cached = albumLookupCacheRef.current.get(cacheKey);
+    if (cached && typeof cached === 'object') {
+      setAlbumCtx(cached);
+      return;
+    }
+    albumLookupCacheRef.current.set(cacheKey, 'pending');
+    let alive = true;
+    (async () => {
+      try {
+        const query = [artist, albumName].filter(Boolean).join(' ');
+        const resp = await conn.sendMessagePromise({
+          type: 'media_player/search_media', entity_id: active.id, search_query: query,
+        });
+        const list = resp?.result || resp?.results || [];
+        // Prefer an album-class match that title-matches the album.
+        const target = list.find((it) => {
+          const cls = (it.media_class || it.media_content_type || '').toLowerCase();
+          return (cls === 'album') && (it.title || '').toLowerCase().trim() === albumName.toLowerCase().trim();
+        }) || list.find((it) => (it.media_class || it.media_content_type || '').toLowerCase() === 'album');
+        if (!target) {
+          albumLookupCacheRef.current.set(cacheKey, 'miss');
+          pushDiag(`music: album auto-resolve miss — "${query}"`);
+          return;
+        }
+        const found = {
+          contentId: target.media_content_id,
+          contentType: target.media_content_type,
+          title: target.title,
+          thumbnail: target.thumbnail,
+          kind: 'album',
+        };
+        albumLookupCacheRef.current.set(cacheKey, found);
+        if (alive) setAlbumCtx(found);
+        pushDiag(`music: album auto-resolve hit — "${target.title}"`);
+      } catch (e) {
+        albumLookupCacheRef.current.set(cacheKey, 'error');
+        pushDiag(`music: album auto-resolve failed — ${e?.message || e}`);
+      }
+    })();
+    return () => { alive = false; };
+  }, [conn, active?.id, active?.haMediaAlbum, active?.haMediaArtist, albumCtx?.title]);
+
   // Infinity end-of-queue watcher. When the speaker's media title
   // transitions from non-empty to empty (queue truly ended — pause
   // alone preserves the title), fire a fresh play_media with
@@ -336,8 +395,23 @@ const MusicView = ({ ctx }) => {
   // remainder in order. Used by AlbumDetailView so that picking track
   // 4 plays it immediately and enqueues 5..N as Up Next, instead of
   // playing only the one track.
-  const playFromList = async (items, idx) => {
+  //
+  // `album` (optional) carries the parent album / playlist metadata
+  // (contentId, contentType, title, thumbnail) so QueueCard can later
+  // browse it and render the full tracklist in Up Next. The tracks
+  // passed in are individual tracks (not the album item itself), so
+  // playMedia alone wouldn't know it's an album play.
+  const playFromList = async (items, idx, album = null) => {
     if (!items?.length || idx < 0 || idx >= items.length) return;
+    if (album?.contentId) {
+      setAlbumCtx({
+        contentId: album.contentId,
+        contentType: album.contentType,
+        title: album.title,
+        thumbnail: album.thumbnail,
+        kind: (album.contentClass || album.kind || 'album').toLowerCase(),
+      });
+    }
     await playMedia(items[idx], 'play');
     for (let i = idx + 1; i < items.length; i++) {
       await playMedia(items[i], 'add');
@@ -1594,7 +1668,7 @@ const MediaOverlay = ({ ctx, conn, speakerId, playMedia, playFromList, mode, onC
         )}
         {!showingSearch && isAlbum && (
           <AlbumDetail ctx={ctx} album={head} items={items} error={error}
-            onPlayFromIdx={(idx) => { playFromList(items.filter(i => i.can_play), idx); onClose(); }}/>
+            onPlayFromIdx={(idx) => { playFromList(items.filter(i => i.can_play), idx, head); onClose(); }}/>
         )}
         {!showingSearch && !isArtist && !isAlbum && (
           isBrowseRoot
