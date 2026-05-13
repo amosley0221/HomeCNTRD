@@ -276,11 +276,19 @@ const MusicView = ({ ctx }) => {
           type: 'media_player/search_media', entity_id: active.id, search_query: query,
         });
         const list = resp?.result || resp?.results || [];
-        // Prefer an album-class match that title-matches the album.
-        const target = list.find((it) => {
-          const cls = (it.media_class || it.media_content_type || '').toLowerCase();
-          return (cls === 'album') && (it.title || '').toLowerCase().trim() === albumName.toLowerCase().trim();
-        }) || list.find((it) => (it.media_class || it.media_content_type || '').toLowerCase() === 'album');
+        // MA's search results often format titles as
+        // "Artist — Album" rather than just the album name, so an
+        // exact title match would miss the right album. Score each
+        // album result by how well its title contains/ends-with the
+        // queried album name (case+trim insensitive) and pick the
+        // best one.
+        const albumLc = albumName.toLowerCase().trim();
+        const albumOnly = list.filter((it) =>
+          (it.media_class || it.media_content_type || '').toLowerCase() === 'album'
+        );
+        const target = albumOnly.find((it) => (it.title || '').toLowerCase().trim() === albumLc)
+          || albumOnly.find((it) => (it.title || '').toLowerCase().includes(albumLc))
+          || albumOnly[0];
         if (!target) {
           albumLookupCacheRef.current.set(cacheKey, 'miss');
           pushDiag(`music: album auto-resolve miss — "${query}"`);
@@ -289,13 +297,16 @@ const MusicView = ({ ctx }) => {
         const found = {
           contentId: target.media_content_id,
           contentType: target.media_content_type,
-          title: target.title,
+          // Store the plain album name (not MA's combined "Artist — Album"
+          // string) so QueueCard's match against speaker.haMediaAlbum
+          // succeeds.
+          title: albumName,
           thumbnail: target.thumbnail,
           kind: 'album',
         };
         albumLookupCacheRef.current.set(cacheKey, found);
         if (alive) setAlbumCtx(found);
-        pushDiag(`music: album auto-resolve hit — "${target.title}"`);
+        pushDiag(`music: album auto-resolve hit — "${albumName}" (matched "${target.title}")`);
       } catch (e) {
         albumLookupCacheRef.current.set(cacheKey, 'error');
         pushDiag(`music: album auto-resolve failed — ${e?.message || e}`);
