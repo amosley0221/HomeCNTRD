@@ -807,10 +807,20 @@ function useHomeStateHA() {
         if (!cancelled) setTick(t => (t + 1) | 0);
       });
     };
-    conn.subscribeEvents(bump, 'state_changed').then(u => {
-      unsub = u;
-      if (cancelled) { try { u?.(); } catch {} }
-    }).catch(() => {});
+    const unsubs = [];
+    const subscribe = (evt) => {
+      conn.subscribeEvents(bump, evt).then(u => {
+        if (cancelled) { try { u?.(); } catch {} } else unsubs.push(u);
+      }).catch(() => {});
+    };
+    // state_changed covers every entity-state push. entity_registry_updated
+    // fires when the user renames / hides / reassigns an entity from
+    // anywhere (HA UI, our Devices page, automations) — the friendly name
+    // baked into state.attributes can lag the registry, so the registry
+    // event needs to drive a tick of its own.
+    subscribe('state_changed');
+    subscribe('entity_registry_updated');
+    unsub = () => { for (const u of unsubs) { try { u?.(); } catch {} } };
     return () => {
       cancelled = true;
       try { unsub?.(); } catch {}
