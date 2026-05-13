@@ -593,15 +593,26 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
       mediaId: it.media_item?.uri || it.uri || it.media_content_id || null,
       mediaType: it.media_item?.media_type || it.media_content_type || null,
     });
+    const trySendWs = async (msg) => {
+      try {
+        const resp = await conn.sendMessagePromise(msg);
+        return { ok: true, response: resp };
+      } catch (e) { return { ok: false, error: e?.message || String(e) }; }
+    };
     (async () => {
       // MA's get_queue returns a metadata object: { queue_id, items:
       // <COUNT — not an array!>, current_index, current_item,
-      // next_item, ... }. Earlier code mistakenly treated `items` as
-      // an array; in practice we only ever get the single `next_item`.
+      // next_item, ... }. To fetch the actual items array we need a
+      // separate WS command that mirrors MA server's `player_queues/items`.
       const ma = await tryService('music_assistant', 'get_queue');
       let cand = null;
+      let totalCount = null;
       if (alive && ma.ok) {
         cand = ma.response?.[speakerId] ?? ma.response;
+        totalCount = typeof cand?.items === 'number' ? cand.items : null;
+        const queueId = cand?.queue_id || speakerId;
+        const ci = typeof cand?.current_index === 'number' ? cand.current_index : -1;
+
         // Some integrations / versions DO put an array somewhere; keep
         // checking the alternate keys for forwards-compat.
         let arr = null;
@@ -612,11 +623,39 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
         else if (Array.isArray(cand?.queue?.items)) arr = cand.queue.items;
 
         if (Array.isArray(arr) && arr.length) {
-          const ci = typeof cand?.current_index === 'number' ? cand.current_index : -1;
           const upcoming = ci >= 0 ? arr.slice(ci + 1) : arr;
-          pushDiag(`music: MA queue — ${arr.length} items, current_index=${ci}, ${upcoming.length} upcoming`);
-          setQueue(upcoming.map(norm));
+          pushDiag(`music: MA queue — ${arr.length} items inline, ${upcoming.length} upcoming`);
+          setQueue({ items: upcoming.map(norm), totalCount });
           return;
+        }
+
+        // Probe MA WS commands. The MA server's command is exactly
+        // `player_queues/items` per the MA frontend; the HA integration
+        // proxies that namespace. Try the most-likely names in order.
+        const wsCandidates = [
+          { type: 'music_assistant/player_queues/items', queue_id: queueId, limit: 50, offset: 0 },
+          { type: 'music_assistant/player_queues/items', queue_id: queueId },
+          { type: 'music_assistant/get_player_queue_items', queue_id: queueId },
+          { type: 'music_assistant/queue/get_items', queue_id: queueId },
+        ];
+        for (const msg of wsCandidates) {
+          if (!alive) return;
+          const r = await trySendWs(msg);
+          if (r.ok) {
+            const items = Array.isArray(r.response) ? r.response
+              : Array.isArray(r.response?.items) ? r.response.items
+              : Array.isArray(r.response?.queue_items) ? r.response.queue_items
+              : null;
+            if (Array.isArray(items) && items.length) {
+              const upcoming = ci >= 0 ? items.slice(ci + 1) : items;
+              pushDiag(`music: MA WS ${msg.type} — ${items.length} items, ${upcoming.length} upcoming`);
+              setQueue({ items: upcoming.map(norm), totalCount });
+              return;
+            }
+            pushDiag(`music: MA WS ${msg.type} returned 0 items`);
+          } else if (!/unknown_command/i.test(r.error || '')) {
+            pushDiag(`music: MA WS ${msg.type} failed — ${r.error}`);
+          }
         }
 
         // Fall back to next_item alone — get_queue's documented shape
@@ -625,15 +664,15 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
         // whether a new field appears.
         const keys = cand ? Object.keys(cand).join(',') : 'null';
         if (cand?.next_item) {
-          pushDiag(`music: MA queue — next_item only · keys=${keys} · items_count=${cand?.items}`);
-          setQueue([norm(cand.next_item)]);
+          pushDiag(`music: MA queue — next_item only · keys=${keys} · items_count=${totalCount}`);
+          setQueue({ items: [norm(cand.next_item)], totalCount });
           return;
         }
         pushDiag(`music: MA queue — empty · keys=${keys}`);
       } else if (alive && ma) {
         pushDiag(`music: MA get_queue failed — ${ma.error}`);
       }
-      if (alive) setQueue([]);
+      if (alive) setQueue({ items: [], totalCount });
     })();
     return () => { alive = false; };
   }, [conn, speakerId, titleKey]);
@@ -665,17 +704,25 @@ const QueueCard = ({ ctx, conn, hassRef, speaker }) => {
     }
   };
 
-  if (!queue || queue.length === 0) return null;
+  const items = queue?.items || [];
+  const totalCount = queue?.totalCount;
+  if (!items.length) return null;
   const currentTitle = (speaker.haMediaTitle || '').toLowerCase();
-  const currentIdx = queue.findIndex(q => (q.title || '').toLowerCase() === currentTitle);
-  const upcoming = (currentIdx >= 0 ? queue.slice(currentIdx + 1) : queue).slice(0, 12);
+  const currentIdx = items.findIndex(q => (q.title || '').toLowerCase() === currentTitle);
+  const upcoming = (currentIdx >= 0 ? items.slice(currentIdx + 1) : items).slice(0, 12);
   if (!upcoming.length) return null;
+  // Prefer MA's reported total-queue size for the counter so the user
+  // sees the full queue length (e.g. "204 in queue") even when we can
+  // only render the immediate-next track.
+  const countLabel = (typeof totalCount === 'number' && totalCount > upcoming.length)
+    ? `${upcoming.length} of ${totalCount}`
+    : `${upcoming.length} track${upcoming.length === 1 ? '' : 's'}`;
 
   return (
     <window.Card p={p} style={{padding: 0}}>
       <div style={{padding: '14px 18px', borderBottom: `.5px solid ${p.border}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>
         <div style={{fontFamily: fonts.display, fontSize: 15, color: p.fg, fontWeight: 500}}>Up next</div>
-        <div style={{fontSize: 11, color: p.fg3}}>{upcoming.length} track{upcoming.length === 1 ? '' : 's'}</div>
+        <div style={{fontSize: 11, color: p.fg3}}>{countLabel}</div>
       </div>
       <div>
         {upcoming.map((tr, i) => {
