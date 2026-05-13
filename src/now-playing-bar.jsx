@@ -105,6 +105,20 @@ const NowPlayingBar = ({ ctx }) => {
   const primarySonos = sonosSpeakers.find(s => (s.name || '').toLowerCase().trim() === primaryKey) || primary;
   const groupableSpeakers = sonosSpeakers.filter(s => (s.name || '').toLowerCase().trim() !== primaryKey);
 
+  // Dedupe the playing list by name so the MA mirror of an actively-
+  // playing Sonos doesn't show up as '+1 more' room or render a
+  // duplicate focus tab. Prefer the native entity so picking a focus
+  // tab lands on the same speaker the rest of the code resolves.
+  const playingDeduped = (() => {
+    const seen = new Map();
+    for (const s of playing) {
+      const key = (s.name || s.id).toLowerCase().trim();
+      const existing = seen.get(key);
+      if (!existing || (existing.isMAAttr && !s.isMAAttr)) seen.set(key, s);
+    }
+    return Array.from(seen.values());
+  })();
+
   // Membership keyed by name so MA mirror IDs in group_members still
   // match against the deduped Sonos pool.
   const groupNames = new Set();
@@ -201,7 +215,7 @@ const NowPlayingBar = ({ ctx }) => {
             }}/>
             <div style={{flex:1, minWidth:0, paddingBottom:2}}>
               <div style={{fontSize:10, letterSpacing:'.12em', textTransform:'uppercase', opacity:.85}}>
-                Playing in {primary.name}{playing.length > 1 && <span style={{opacity:.7}}> · +{playing.length-1} more</span>}
+                Playing in {primary.name}{playingDeduped.length > 1 && <span style={{opacity:.7}}> · +{playingDeduped.length-1} more</span>}
               </div>
               <div style={{fontFamily:fonts.display, fontSize:22, fontWeight:500, marginTop:4, lineHeight:1.15, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{title}</div>
               <div style={{fontSize:13, opacity:.85, marginTop:2, fontStyle:'italic', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>{[artist, album].filter(Boolean).join(' · ')}</div>
@@ -235,9 +249,9 @@ const NowPlayingBar = ({ ctx }) => {
             </div>
           </div>
 
-          {playing.length > 1 && (
+          {playingDeduped.length > 1 && (
             <div style={{padding:'10px 14px', borderTop:`.5px solid ${p.border}`, display:'flex', gap:6, overflowX:'auto'}}>
-              {playing.map(sp => {
+              {playingDeduped.map(sp => {
                 const active = sp.id === primary.id;
                 return (
                   <button key={sp.id} onClick={() => setFocused(sp.id)} style={{
@@ -347,7 +361,7 @@ const NowPlayingBar = ({ ctx }) => {
           {artist && <span style={{color:p.fg2}}>{artist}</span>}
           {artist && ' · '}
           <span>{primary.name}</span>
-          {playing.length > 1 && <span> +{playing.length-1}</span>}
+          {playingDeduped.length > 1 && <span> +{playingDeduped.length-1}</span>}
         </div>
         {dur > 0 && (
           <div style={{height:2, background:p.border, borderRadius:1, marginTop:3, overflow:'hidden'}}>
