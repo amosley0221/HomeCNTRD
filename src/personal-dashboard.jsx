@@ -1906,28 +1906,44 @@ const NewsCard = ({ news, accent, fonts, surface, fg, fg2, fg3, border }) => {
 const PinnedCard = ({ hass, pins, patchUser, defaultSpeakerId, speakers, setPage, accent, fonts, surface, surface2, fg, fg2, fg3, border, narrow }) => {
   const list = Array.isArray(pins) ? pins : [];
 
-  const playPin = (pin) => {
-    if (!hass?.callService) return;
-    // Speaker priority: explicit saved default > first sonos-ish in
-    // state.speakers > nothing. Without a target we just do nothing
-    // rather than guess wrong.
+  const playPin = async (pin) => {
+    if (!hass?.connection?.sendMessagePromise) return;
+    // Speaker priority: explicit saved default > first speaker in the
+    // list > nothing. Without a target we just no-op rather than guess.
     const target = (defaultSpeakerId && (speakers || []).find(s => s.id === defaultSpeakerId)?.id)
       || (speakers || [])[0]?.id
       || null;
     if (!target) return;
-    // Try Music Assistant first (handles play_media against MA URIs
-    // including library:// references cleanly), then plain
-    // media_player.play_media as a fallback for non-MA setups.
-    const fallback = () => hass.callService('media_player', 'play_media', {
-      entity_id: target,
-      media_content_id: pin.contentId,
-      media_content_type: pin.contentType || 'album',
-    }).catch(() => {});
-    hass.callService('music_assistant', 'play_media', {
+    // Pick the service to try first based on the target's platform.
+    // MA-mirrored speakers (or any speaker that exposes the MA queue
+    // attribute) play MA URIs cleanly via music_assistant.play_media;
+    // native Sonos or other integrations take media_player.play_media.
+    // If the first attempt rejects we fall through to the other —
+    // covers cases where a pin's URI was captured on a different
+    // speaker class than the current default.
+    const platform = hass?.entities?.[target]?.platform || '';
+    const targetSpeaker = (speakers || []).find(s => s.id === target);
+    const isMA = platform === 'music_assistant' || platform === 'mass' || !!targetSpeaker?.isMAAttr;
+
+    // Call services directly via the WS layer instead of hass.callService
+    // — the HA frontend's wrapper auto-surfaces every rejection as a
+    // global toast, which we don't want for a try-then-fallback flow.
+    const send = (domain, service, service_data) => hass.connection.sendMessagePromise({
+      type: 'call_service', domain, service, service_data,
+    });
+    const tryMA = () => send('music_assistant', 'play_media', {
       entity_id: target,
       media_id: pin.contentId,
       enqueue: 'play',
-    }).catch(fallback);
+    });
+    const tryPlain = () => send('media_player', 'play_media', {
+      entity_id: target,
+      media_content_id: pin.contentId,
+      media_content_type: pin.contentType || 'album',
+    });
+
+    try { await (isMA ? tryMA() : tryPlain()); return; } catch {}
+    try { await (isMA ? tryPlain() : tryMA()); } catch {}
   };
 
   const unpin = (id) => {
