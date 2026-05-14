@@ -75,7 +75,10 @@ const MusicView = ({ ctx }) => {
         if (s.isSonosAttr) tags.push('sonos_attr');
         if (s.isMAAttr) tags.push('ma_attr');
         if ((s.supportedFeatures & GROUPING_FEATURE) !== 0) tags.push('group');
-        return `${s.name}[${s.id}]=${m[s.id] || '?'}${tags.length ? '(' + tags.join('+') + ')' : ''}`;
+        const live = s.playing
+          ? `▶ "${s.haMediaTitle || '?'}"`
+          : (s.haMediaTitle ? `⏸ "${s.haMediaTitle}"` : '⏸');
+        return `${s.name}[${s.id}]=${m[s.id] || '?'}${tags.length ? '(' + tags.join('+') + ')' : ''} ${live}`;
       }).join(' | ');
       pushDiag(`music: speakers — ${summary || '(none)'}`);
     };
@@ -143,20 +146,32 @@ const MusicView = ({ ctx }) => {
     // auto-advancing to the next track leaves NowPlayingHero stuck on
     // the previous title while the mini player and dashboard (both of
     // which read from native Sonos) already show the new song. Blend
-    // the freshest display attributes from the Sonos sibling into the
+    // the freshest display attributes from a non-MA sibling into the
     // MA entity, but keep MA's id + MA-specific attributes so
     // music_assistant.* service calls and browse_media still route
     // correctly. Volume / grouping intentionally stay on the MA entity
     // — those go through MA actions and consume MA's group_members.
-    const sonosByName = new Map();
+    //
+    // Sibling lookup is permissive: any non-MA entity sharing the
+    // (case-insensitive) name. Among multiple, prefer one that's
+    // actually `playing` and reports a media title — that's the entity
+    // with the freshest data.
+    const siblingsByName = new Map();
     for (const s of (state.speakers || [])) {
-      if (!s.isSonosAttr || s.isMAAttr) continue;
+      if (looksMA(s)) continue;
       const k = (s.name || '').toLowerCase().trim();
-      if (!sonosByName.has(k)) sonosByName.set(k, s);
+      if (!k) continue;
+      if (!siblingsByName.has(k)) siblingsByName.set(k, []);
+      siblingsByName.get(k).push(s);
     }
     const blend = (sp) => {
-      const sib = sonosByName.get((sp.name || '').toLowerCase().trim());
-      if (!sib || sib.id === sp.id) return sp;
+      const k = (sp.name || '').toLowerCase().trim();
+      const sibs = (siblingsByName.get(k) || []).filter(s => s.id !== sp.id);
+      if (!sibs.length) return sp;
+      const sib = sibs.find(s => s.playing && s.haMediaTitle)
+               || sibs.find(s => s.playing)
+               || sibs.find(s => s.haMediaTitle)
+               || sibs[0];
       return {
         ...sp,
         haMediaTitle: sib.haMediaTitle ?? sp.haMediaTitle,
